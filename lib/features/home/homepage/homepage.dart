@@ -1,0 +1,849 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:trackai/core/constants/appcolors.dart';
+import 'package:trackai/core/services/auth_services.dart';
+import 'package:trackai/core/services/streak_service.dart';
+import 'package:trackai/core/themes/theme_provider.dart';
+import 'package:trackai/features/analytics/analyticsscreen.dart';
+import 'package:trackai/features/home/homepage/desc%20and%20scan/food_desc.dart';
+import 'package:trackai/features/home/presentation/homescreen.dart';
+import 'package:trackai/features/settings/service/cam_Screen.dart';
+import 'package:trackai/features/settings/presentation/settingsscreen.dart';
+import 'package:trackai/features/tracker/trackerscreen.dart';
+import 'package:trackai/features/admin/services/announcement_notification_service.dart';
+import 'package:trackai/core/routes/routes.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  int currentIndex = 0;
+  late PageController _pageController;
+  late AnimationController _fabAnimationController;
+  late AnimationController _fabExpandController;
+  late Animation<double> _fabAnimation;
+  late Animation<double> _fabExpandAnimation;
+  late Animation<Offset> _fabSlideAnimation1;
+  late Animation<Offset> _fabSlideAnimation2;
+  late Animation<double> _fabRotationAnimation;
+  bool _isFabExpanded = false;
+  bool _patternBackgroundEnabled = false;
+  late List<Widget> _pages;
+
+  int _currentStreak = 0;
+  int _longestStreak = 0;
+  bool _isLoadingStreak = true;
+
+  final List<BottomNavItem> _navItems = [
+    BottomNavItem(
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Home',
+    ),
+    BottomNavItem(
+      icon: Icons.track_changes_outlined,
+      activeIcon: Icons.track_changes,
+      label: 'Trackers',
+    ),
+    BottomNavItem(
+      icon: Icons.analytics_outlined,
+      activeIcon: Icons.analytics,
+      label: 'Analytics',
+    ),
+    BottomNavItem(
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings,
+      label: 'Settings',
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const Homescreen(),
+      const Trackerscreen(),
+      const AnalyticsScreen(),
+      Settingsscreen(
+        onPatternBackgroundChanged: _savePatternPreference,
+        patternBackgroundEnabled: _patternBackgroundEnabled,
+      ),
+    ];
+
+    _loadPreferences();
+    _loadStreakData();
+    _pageController = PageController(initialPage: currentIndex);
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fabExpandController = AnimationController(
+      duration: const Duration(milliseconds: 350),
+      vsync: this,
+    );
+    _fabAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fabAnimationController, curve: Curves.easeOut),
+    );
+    _fabExpandAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fabExpandController, curve: Curves.easeOutBack),
+    );
+
+    _fabSlideAnimation1 =
+        Tween<Offset>(
+          begin: const Offset(1.2, 0.0),
+          end: const Offset(0.0, 0.0),
+        ).animate(
+          CurvedAnimation(
+            parent: _fabExpandController,
+            curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+          ),
+        );
+
+    _fabSlideAnimation2 =
+        Tween<Offset>(
+          begin: const Offset(1.2, 0.0),
+          end: const Offset(0.0, 0.0),
+        ).animate(
+          CurvedAnimation(
+            parent: _fabExpandController,
+            curve: const Interval(0.2, 0.9, curve: Curves.easeOutBack),
+          ),
+        );
+
+    _fabRotationAnimation = Tween<double>(begin: 0.0, end: 0.125).animate(
+      CurvedAnimation(parent: _fabExpandController, curve: Curves.easeInOut),
+    );
+
+    _fabAnimationController.forward();
+  }
+
+  void _loadPreferences() async {
+    setState(() {
+      _patternBackgroundEnabled = false;
+    });
+  }
+
+  void _savePatternPreference(bool enabled) async {
+    setState(() {
+      _patternBackgroundEnabled = enabled;
+    });
+  }
+
+  Future<void> _loadStreakData() async {
+    try {
+      final currentStreak = await StreakService.getCurrentStreakCount();
+      final longestStreak = await StreakService.getLongestStreak();
+
+      setState(() {
+        _currentStreak = currentStreak;
+        _longestStreak = longestStreak;
+        _isLoadingStreak = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingStreak = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _fabAnimationController.dispose();
+    _fabExpandController.dispose();
+    super.dispose();
+  }
+
+  void _onItemTapped(int index) {
+    if (index != currentIndex) {
+      setState(() => currentIndex = index);
+      if ((index - _pageController.page!.round()).abs() == 1) {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+        );
+      } else {
+        _pageController.jumpToPage(index);
+      }
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => currentIndex = index);
+  }
+
+  void _toggleFabExpansion() {
+    setState(() => _isFabExpanded = !_isFabExpanded);
+    if (_isFabExpanded) {
+      _fabExpandController.forward();
+    } else {
+      _fabExpandController.reverse();
+    }
+    HapticFeedback.lightImpact();
+  }
+
+  void _onDescribeFood() async {
+    _toggleFabExpansion();
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const FoodDescriptionScreen()),
+      );
+    }
+  }
+
+  void _onScanNutrition() async {
+    _toggleFabExpansion();
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const ImageAnalysisScreen(analysisType: 'scan'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await FirebaseService.signOut();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Logout failed: $e'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showStreakDialog(bool isDark, double font(double size)) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground(isDark),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: AppColors.primary(isDark).withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.local_fire_department,
+              color: AppColors.primary(isDark),
+              size: font(0.06),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Streak Stats',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontWeight: FontWeight.bold,
+                fontSize: font(0.05),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStreakStatRow(
+              'Current Streak',
+              '$_currentStreak days',
+              Icons.whatshot,
+              isDark,
+              font,
+            ),
+            const SizedBox(height: 16),
+            _buildStreakStatRow(
+              'Longest Streak',
+              '$_longestStreak days',
+              Icons.emoji_events,
+              isDark,
+              font,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Keep logging in daily to maintain your streak!',
+              style: TextStyle(
+                color: AppColors.textSecondary(isDark),
+                fontSize: font(0.035),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Close',
+              style: TextStyle(
+                color: AppColors.primary(isDark),
+                fontSize: font(0.04),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStreakStatRow(
+    String title,
+    String value,
+    IconData icon,
+    bool isDark,
+    double Function(double) font,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: AppColors.primary(isDark), size: font(0.045)),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: AppColors.textSecondary(isDark),
+                fontSize: font(0.04),
+              ),
+            ),
+          ],
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: AppColors.textPrimary(isDark),
+            fontSize: font(0.045),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    double font(double size) => screenWidth * size;
+    double space(double h) => screenHeight * h;
+
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        final isDark = themeProvider.isDarkMode;
+
+        return Scaffold(
+          extendBody: false,
+          backgroundColor: AppColors.background(isDark),
+          appBar: _buildAppBar(isDark, themeProvider, font),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: AppColors.backgroundLinearGradient(isDark),
+            ),
+            child: Stack(
+              children: [
+                if (_patternBackgroundEnabled)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: CustomPaint(
+                        painter: PatternBackgroundPainter(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.12)
+                              : Colors.black.withOpacity(0.08),
+                        ),
+                      ),
+                    ),
+                  ),
+                PageView(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  children: _pages.map((page) {
+                    if (page is Settingsscreen) {
+                      return Settingsscreen(
+                        onPatternBackgroundChanged: _savePatternPreference,
+                        patternBackgroundEnabled: _patternBackgroundEnabled,
+                      );
+                    }
+                    return page;
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: _buildBottomNavigationBar(isDark, font),
+          floatingActionButton: _buildExpandableFAB(isDark, font),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(
+    bool isDark,
+    ThemeProvider themeProvider,
+    double Function(double) font,
+  ) {
+    return AppBar(
+      automaticallyImplyLeading: false,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.backgroundLinearGradient(isDark),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? AppColors.black : AppColors.lightGrey)
+                  .withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+      ),
+      title: Row(
+        children: [
+          const SizedBox(width: 12),
+          ShaderMask(
+            shaderCallback: (bounds) =>
+                AppColors.appBarGradient.createShader(bounds),
+            child: Text(
+              'TrackAI',
+              style: TextStyle(
+                fontSize: font(0.06),
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.white : AppColors.black,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        // Announcements bell icon with unseen count
+        StreamBuilder<int>(
+          stream: AnnouncementNotificationService.getUnseenAnnouncementsCountStream(),
+          builder: (context, snapshot) {
+            final unseenCount = snapshot.data ?? 0;
+            
+            return GestureDetector(
+              onTap: () => Navigator.pushNamed(context, AppRoutes.announcements),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground(isDark).withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.darkPrimary.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.notifications_outlined,
+                        color: isDark ? Colors.white : Colors.black,
+                        size: font(0.06),
+                      ),
+                      if (unseenCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: unseenCount > 9 ? 4 : 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppColors.cardBackground(isDark),
+                                width: 1,
+                              ),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              unseenCount > 99 ? '99+' : unseenCount.toString(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: font(0.025),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        
+        // Streak stats (fire icon)
+        GestureDetector(
+          onTap: () => _showStreakDialog(isDark, font),
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground(isDark).withOpacity(0.8),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.darkPrimary.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: _isLoadingStreak
+                ? Container(
+                    padding: const EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: font(0.04),
+                      height: font(0.04),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                      ),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.local_fire_department,
+                          color: Colors.red,
+                          size: font(0.06),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _currentStreak > 99
+                              ? '99+'
+                              : _currentStreak.toString(),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                            fontSize: font(0.04),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+        // Container(
+        //   margin: const EdgeInsets.only(right: 12),
+        //   decoration: BoxDecoration(
+        //     color: AppColors.cardBackground(isDark).withOpacity(0.8),
+        //     borderRadius: BorderRadius.circular(52),
+        //     border: Border.all(
+        //       color: AppColors.primary(isDark).withOpacity(0.3),
+        //       width: 1,
+        //     ),
+        //   ),
+        //   child: SizedBox(
+        //     width: font(0.1),
+        //     height: font(0.1),
+        //     child: IconButton(
+        //       onPressed: () {
+        //         HapticFeedback.lightImpact();
+        //         themeProvider.toggleTheme();
+        //       },
+        //       icon: Icon(
+        //         isDark ? Icons.light_mode : Icons.dark_mode,
+        //         color: AppColors.primary(isDark),
+        //         size: font(0.05),
+        //       ),
+        //       iconSize: font(0.05),
+        //       padding: EdgeInsets.zero,
+        //       constraints: const BoxConstraints(),
+        //     ),
+        //   ),
+        // ),
+      ],
+    );
+  }
+
+  Widget _buildBottomNavigationBar(bool isDark, double Function(double) font) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground(isDark),
+        boxShadow: [
+          BoxShadow(
+            color: (isDark ? AppColors.black : AppColors.lightGrey).withOpacity(
+              0.1,
+            ),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedItemColor: Colors.black,
+        unselectedItemColor: Colors.black,
+        selectedFontSize: font(0.035),
+        unselectedFontSize: font(0.035),
+        items: _navItems.map((item) {
+          final isSelected = _navItems.indexOf(item) == currentIndex;
+          return BottomNavigationBarItem(
+            icon: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Icon(
+                isSelected ? item.activeIcon : item.icon,
+                size: font(0.07),
+              ),
+            ),
+            label: item.label,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildExpandableFAB(bool isDark, double Function(double) font) {
+  return AnimatedBuilder(
+    animation: _fabExpandController,
+    builder: (context, child) {
+      return Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (_fabExpandController.value > 0.0)
+                SlideTransition(
+                  position: _fabSlideAnimation2,
+                  child: FadeTransition(
+                    opacity: _fabExpandAnimation,
+                    child: GestureDetector(
+                      onTap: _onScanNutrition,
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 16, bottom: 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground(isDark)
+                                    .withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                'Scan Nutrition',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary(isDark),
+                                  fontSize: font(0.035),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground(isDark)
+                                    .withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.qr_code_scanner,
+                                color: const Color(0xFF26A69A),
+                                size: font(0.05),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_fabExpandController.value > 0.0)
+                SlideTransition(
+                  position: _fabSlideAnimation1,
+                  child: FadeTransition(
+                    opacity: _fabExpandAnimation,
+                    child: GestureDetector(
+                      onTap: _onDescribeFood,
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 16, bottom: 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground(isDark)
+                                    .withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                'Describe Food',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary(isDark),
+                                  fontSize: font(0.035),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground(isDark)
+                                    .withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.restaurant_menu,
+                                color: const Color(0xFF26A69A),
+                                size: font(0.05),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              AnimatedBuilder(
+                animation: _fabAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _fabAnimation.value,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: FloatingActionButton(
+                        heroTag: "main_fab",
+                        onPressed: _toggleFabExpansion,
+                        backgroundColor: AppColors.primary(isDark), // Changed from green to theme-based color
+                        child: AnimatedBuilder(
+                          animation: _fabRotationAnimation,
+                          builder: (context, child) {
+                            return Transform.rotate(
+                              angle:
+                                  _fabRotationAnimation.value * 2 * 3.14159,
+                              child: Icon(
+                                Icons.add,
+                                color: AppColors.textPrimary(isDark), // Ensures white in dark, black in light
+                                size: font(0.07),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
+}
+}
+
+class PatternBackgroundPainter extends CustomPainter {
+  final Color color;
+  PatternBackgroundPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    const spacing = 25.0;
+    const dotRadius = 1.0;
+    for (double x = spacing; x < size.width; x += spacing) {
+      for (double y = spacing; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), dotRadius, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+class BottomNavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  BottomNavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
+}
