@@ -5,7 +5,9 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/auth/views/login_page.dart';
 import 'package:trackai/features/admin/announcement_management_screen.dart';
-import 'package:trackai/features/recipes/presentation/recipe_management_screen.dart';
+import 'package:trackai/features/home/ai-options/recipeGenerator.dart';
+
+import '../recipes/presentation/admin_recipe_upload_screen.dart';
 
 class AdminPanelScreen extends StatelessWidget {
   const AdminPanelScreen({Key? key}) : super(key: key);
@@ -211,7 +213,7 @@ class AdminPanelScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const RecipeManagementScreen(),
+                                  builder: (context) =>  AdminRecipeUploadScreen(),
                                 ),
                               );
                             },

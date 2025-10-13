@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart'
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
-/// ```dart
+/// ```
 /// import 'firebase_options.dart';
 /// // ...
 /// await Firebase.initializeApp(
@@ -31,7 +31,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+              'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -41,51 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC0z7m8GNx1EpjC-ZAh3fqX4ltlFo6w67o',
-    appId: '1:763346326168:web:79795dae90c1338007f6ed',
-    messagingSenderId: '763346326168',
-    projectId: 'trackai-3648c',
-    authDomain: 'trackai-3648c.firebaseapp.com',
-    storageBucket: 'trackai-3648c.firebasestorage.app',
+    apiKey: 'AIzaSyDDN2LXqZRGtCCA9NEQb31-KEWPkDpJq04',
+    appId: '1:552598421713:web:cdba4f1f413c4bfc3605f0',
+    messagingSenderId: '552598421713',
+    projectId: 'trackai-d6976',
+    authDomain: 'trackai-d6976.firebaseapp.com',
+    storageBucket: 'trackai-d6976.firebasestorage.app',
+    measurementId: 'G-H6PY79VE0M',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyD-jTDQOlYlZpXA6UMgM3rGcYFi11kLCXs',
-    appId: '1:763346326168:android:12d9989c46bf831007f6ed',
-    messagingSenderId: '763346326168',
-    projectId: 'trackai-3648c',
-    storageBucket: 'trackai-3648c.firebasestorage.app',
+    apiKey: 'AIzaSyB5NGhwfzA0ur3n87V8gXFZ8o5Z-lQfF04',
+    appId: '1:552598421713:android:aca0ea8fb0c64e163605f0',
+    messagingSenderId: '552598421713',
+    projectId: 'trackai-d6976',
+    storageBucket: 'trackai-d6976.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDiBI56GbkffEBzoAnkCmizZ0qzSdgshjU',
-    appId: '1:763346326168:ios:9408634b48d5380207f6ed',
-    messagingSenderId: '763346326168',
-    projectId: 'trackai-3648c',
-    storageBucket: 'trackai-3648c.firebasestorage.app',
-    androidClientId: '763346326168-0851bnimjpqkb344snljkm4dhu1ko637.apps.googleusercontent.com',
-    iosClientId: '763346326168-jq8lkrsuqlapcint6np2h6boucee22ca.apps.googleusercontent.com',
+    apiKey: 'AIzaSyB5NGhwfzA0ur3n87V8gXFZ8o5Z-lQfF04',
+    appId: '1:552598421713:ios:a108f80421ed344f3605f0',
+    messagingSenderId: '552598421713',
+    projectId: 'trackai-d6976',
+    storageBucket: 'trackai-d6976.firebasestorage.app',
     iosBundleId: 'com.example.trackai',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDiBI56GbkffEBzoAnkCmizZ0qzSdgshjU',
-    appId: '1:763346326168:ios:9408634b48d5380207f6ed',
-    messagingSenderId: '763346326168',
-    projectId: 'trackai-3648c',
-    storageBucket: 'trackai-3648c.firebasestorage.app',
-    androidClientId: '763346326168-0851bnimjpqkb344snljkm4dhu1ko637.apps.googleusercontent.com',
-    iosClientId: '763346326168-jq8lkrsuqlapcint6np2h6boucee22ca.apps.googleusercontent.com',
+    apiKey: 'AIzaSyB5NGhwfzA0ur3n87V8gXFZ8o5Z-lQfF04',
+    appId: '1:552598421713:ios:a108f80421ed344f3605f0',
+    messagingSenderId: '552598421713',
+    projectId: 'trackai-d6976',
+    storageBucket: 'trackai-d6976.firebasestorage.app',
     iosBundleId: 'com.example.trackai',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyC0z7m8GNx1EpjC-ZAh3fqX4ltlFo6w67o',
-    appId: '1:763346326168:web:07cae36217a9b58d07f6ed',
-    messagingSenderId: '763346326168',
-    projectId: 'trackai-3648c',
-    authDomain: 'trackai-3648c.firebaseapp.com',
-    storageBucket: 'trackai-3648c.firebasestorage.app',
+    apiKey: 'AIzaSyDDN2LXqZRGtCCA9NEQb31-KEWPkDpJq04',
+    appId: '1:552598421713:web:cdba4f1f413c4bfc3605f0',
+    messagingSenderId: '552598421713',
+    projectId: 'trackai-d6976',
+    authDomain: 'trackai-d6976.firebaseapp.com',
+    storageBucket: 'trackai-d6976.firebasestorage.app',
   );
-
 }

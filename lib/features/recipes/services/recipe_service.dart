@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+
+import '../../../library/services/cloudinary_service.dart';
 
 class RecipeService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirebaseStorage _storage = FirebaseStorage.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
   static const String _collection = 'recipes';
 
-  /// Create a new recipe
+  /// Create recipe: Upload image to Cloudinary, save data to Firestore
   static Future<String> createRecipe({
     required String title,
     required String description,
@@ -21,14 +22,47 @@ class RecipeService {
     XFile? imageFile,
   }) async {
     try {
-      String? imageUrl;
+      print('👨‍🍳 Creating recipe: $title');
 
-      // Upload image if provided
+      String? imageUrl;
+      String? imagePublicId;
+
+      // Upload image to Cloudinary
       if (imageFile != null) {
-        imageUrl = await _uploadRecipeImage(imageFile);
+        try {
+          print('📤 Uploading to Cloudinary...');
+          final uploadResult = await CloudinaryService.uploadImage(
+            imageFile: imageFile,
+            folder: 'recipes',
+            tags: {
+              'type': 'recipe',
+              'difficulty': difficulty.toLowerCase(),
+              'timestamp': DateTime.now().millisecondsSinceEpoch.toString(),
+            },
+          );
+
+          imageUrl = uploadResult.secureUrl;
+          imagePublicId = uploadResult.publicId;
+          print('✅ Image uploaded: $imageUrl');
+        } catch (e) {
+          print('❌ Cloudinary upload error: $e');
+          // Continue without image
+        }
       }
 
-      final docRef = await _firestore.collection(_collection).add({
+      // Validate data
+      if (title.trim().isEmpty) {
+        throw RecipeException('Recipe title is required.');
+      }
+      if (ingredients.isEmpty) {
+        throw RecipeException('At least one ingredient is required.');
+      }
+      if (instructions.isEmpty) {
+        throw RecipeException('Cooking instructions are required.');
+      }
+
+      // Save to Firestore
+      final recipeData = {
         'title': title.trim(),
         'description': description.trim(),
         'ingredients': ingredients.map((e) => e.trim()).toList(),
@@ -37,125 +71,240 @@ class RecipeService {
         'prepTime': prepTime,
         'cookTime': cookTime,
         'servings': servings,
+
+        // Cloudinary image data
         'imageUrl': imageUrl,
+        'imagePublicId': imagePublicId,
+
+        // Metadata with sorting timestamp
         'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'sortTimestamp': DateTime.now().millisecondsSinceEpoch, // For manual sorting
+        'createdBy': _auth.currentUser?.uid ?? 'anonymous',
+        'createdByEmail': _auth.currentUser?.email ?? 'anonymous',
         'isActive': true,
         'views': 0,
         'likes': 0,
-      });
+        'rating': 0.0,
+        'platform': 'cloudinary',
+        'uploadedFrom': 'mobile_app',
+      };
+
+      final docRef = await _firestore.collection(_collection).add(recipeData);
+      print('✅ Recipe saved: ${docRef.id}');
 
       return docRef.id;
+    } on RecipeException {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to create recipe: $e');
+      print('❌ Recipe creation error: $e');
+      throw RecipeException('Failed to create recipe: ${e.toString()}');
     }
   }
 
-  /// Upload recipe image to Firebase Storage
-  static Future<String> _uploadRecipeImage(XFile imageFile) async {
-    try {
-      final String fileName = 'recipe_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final Reference ref = _storage.ref().child('recipes').child(fileName);
-      final UploadTask uploadTask = ref.putFile(File(imageFile.path));
-      final TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
-    } catch (e) {
-      throw Exception('Failed to upload image: $e');
-    }
-  }
-
-  /// Get all recipes stream
+  /// SMART Get all recipes - Automatically handles index issues
   static Stream<List<Map<String, dynamic>>> getRecipesStream() {
+    print('🔍 Starting smart recipes stream...');
+
+    // Try optimized query first, fallback to simple query if index missing
+    return _tryOptimizedQuery().handleError((error) {
+      print('⚠️ Optimized query failed, using fallback: $error');
+      return _getFallbackQuery();
+    });
+  }
+
+  /// Try the optimized query with compound index
+  static Stream<List<Map<String, dynamic>>> _tryOptimizedQuery() {
+    print('🚀 Trying optimized query with index...');
+
     return _firestore
         .collection(_collection)
         .where('isActive', isEqualTo: true)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
+        .map((snapshot) => _processRecipeSnapshots(snapshot))
+        .handleError((error) {
+      print('❌ Optimized query failed: $error');
+      throw error; // This will trigger the fallback
     });
   }
 
-  /// Get all recipes (one-time fetch)
-  static Future<List<Map<String, dynamic>>> getRecipes() async {
-    try {
-      final QuerySnapshot snapshot = await _firestore
-          .collection(_collection)
-          .where('isActive', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
-          .get();
+  /// Fallback query without compound index requirement
+  static Stream<List<Map<String, dynamic>>> _getFallbackQuery() {
+    print('🔄 Using fallback query (no index required)...');
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-    } catch (e) {
-      throw Exception('Failed to fetch recipes: $e');
-    }
+    return _firestore
+        .collection(_collection)
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+      print('📊 Fallback found ${snapshot.docs.length} recipes');
+
+      // Sort manually by sortTimestamp (faster than createdAt comparison)
+      final sortedDocs = snapshot.docs.toList();
+      sortedDocs.sort((a, b) {
+        final aTime = a.data()['sortTimestamp'] as int? ?? 0;
+        final bTime = b.data()['sortTimestamp'] as int? ?? 0;
+        return bTime.compareTo(aTime); // Descending order (newest first)
+      });
+
+      return _processRecipeList(sortedDocs);
+    });
   }
 
-  /// Get recipe by ID
+  /// Process Firestore snapshots into recipe list
+  static List<Map<String, dynamic>> _processRecipeSnapshots(QuerySnapshot snapshot) {
+    print('📊 Processing ${snapshot.docs.length} recipes from optimized query');
+    return _processRecipeList(snapshot.docs);
+  }
+
+  /// Process list of documents into recipe data
+  static List<Map<String, dynamic>> _processRecipeList(List<QueryDocumentSnapshot> docs) {
+    return docs.map((doc) {
+      try {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+
+        print('📄 Processing recipe: ${data['title']}');
+
+        // Generate Cloudinary URLs for cards
+        if (data['imagePublicId'] != null) {
+          try {
+            data['cardImageUrl'] = CloudinaryService.getOptimizedUrl(
+              data['imagePublicId'],
+              width: 400,
+              height: 300,
+              quality: '80',
+            );
+            data['thumbnailUrl'] = CloudinaryService.getOptimizedUrl(
+              data['imagePublicId'],
+              width: 200,
+              height: 150,
+              quality: '60',
+            );
+            print('✅ Generated image URLs for: ${data['title']}');
+          } catch (e) {
+            print('❌ Error generating image URLs for ${data['title']}: $e');
+            data['cardImageUrl'] = data['imageUrl']; // Fallback
+            data['thumbnailUrl'] = data['imageUrl'];
+          }
+        } else {
+          print('ℹ️ No image for recipe: ${data['title']}');
+        }
+
+        return data;
+      } catch (e) {
+        print('❌ Error processing recipe doc: $e');
+        return <String, dynamic>{
+          'id': doc.id,
+          'title': 'Error loading recipe',
+          'error': true,
+        };
+      }
+    }).toList();
+  }
+
+  /// Get single recipe by ID
   static Future<Map<String, dynamic>?> getRecipeById(String id) async {
     try {
-      final DocumentSnapshot doc = await _firestore.collection(_collection).doc(id).get();
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        return data;
+      print('🔍 Fetching recipe: $id');
+
+      if (id.trim().isEmpty) {
+        throw RecipeException('Invalid recipe ID.');
       }
-      return null;
-    } catch (e) {
-      throw Exception('Failed to fetch recipe: $e');
-    }
-  }
 
-  /// Update recipe
-  static Future<void> updateRecipe(String id, Map<String, dynamic> updates) async {
-    try {
-      updates['updatedAt'] = FieldValue.serverTimestamp();
-      await _firestore.collection(_collection).doc(id).update(updates);
-    } catch (e) {
-      throw Exception('Failed to update recipe: $e');
-    }
-  }
+      final doc = await _firestore.collection(_collection).doc(id).get();
 
-  /// Delete recipe
-  static Future<void> deleteRecipe(String id) async {
-    try {
-      await _firestore.collection(_collection).doc(id).update({
-        'isActive': false,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      if (!doc.exists) {
+        throw RecipeException('Recipe not found. It may have been deleted.');
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+
+      print('✅ Found recipe: ${data['title']}');
+
+      // Generate high-quality image URL for details
+      if (data['imagePublicId'] != null) {
+        try {
+          data['highResImageUrl'] = CloudinaryService.getOptimizedUrl(
+            data['imagePublicId'],
+            width: 800,
+            height: 600,
+            quality: 'auto',
+          );
+        } catch (e) {
+          print('❌ Error generating high-res image URL: $e');
+          data['highResImageUrl'] = data['imageUrl'];
+        }
+      }
+
+      return data;
     } catch (e) {
-      throw Exception('Failed to delete recipe: $e');
+      print('❌ Error fetching recipe: $e');
+      if (e is RecipeException) {
+        rethrow;
+      }
+      throw RecipeException('Failed to load recipe details: ${e.toString()}');
     }
   }
 
   /// Increment recipe views
   static Future<void> incrementViews(String id) async {
     try {
+      if (id.trim().isEmpty) return;
+
       await _firestore.collection(_collection).doc(id).update({
         'views': FieldValue.increment(1),
+        'lastViewed': FieldValue.serverTimestamp(),
       });
+      print('✅ Incremented views for: $id');
     } catch (e) {
-      // Fail silently for view counting
-      print('Failed to increment views: $e');
+      print('❌ Failed to increment views: $e');
     }
   }
 
-  /// Like/Unlike recipe
-  static Future<void> toggleLike(String id) async {
+  /// Get recipes count
+  static Future<int> getRecipesCount() async {
     try {
-      await _firestore.collection(_collection).doc(id).update({
-        'likes': FieldValue.increment(1),
-      });
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('isActive', isEqualTo: true)
+          .count()
+          .get();
+      return snapshot.count ?? 0;
     } catch (e) {
-      throw Exception('Failed to update likes: $e');
+      print('❌ Error getting recipe count: $e');
+      return 0;
     }
   }
+
+  /// Test connection
+  static Future<bool> testConnection() async {
+    try {
+      print('🔥 Testing Recipe Service connections...');
+
+      // Test Firestore
+      await _firestore.collection('test').limit(1).get();
+      print('✅ Firestore: Connected');
+
+      // Test if recipes collection exists
+      final recipesSnapshot = await _firestore.collection(_collection).limit(1).get();
+      print('✅ Recipes collection: ${recipesSnapshot.docs.length} docs found');
+
+      print('🎉 All services working!');
+      return true;
+    } catch (e) {
+      print('❌ Connection test failed: $e');
+      return false;
+    }
+  }
+}
+
+/// Custom Recipe Exception
+class RecipeException implements Exception {
+  final String message;
+  RecipeException(this.message);
+
+  @override
+  String toString() => message;
 }
