@@ -5,6 +5,7 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/auth/views/login_page.dart';
 import 'package:trackai/features/admin/announcement_management_screen.dart';
+import 'package:trackai/features/recipes/presentation/recipe_management_screen.dart';
 
 class AdminPanelScreen extends StatelessWidget {
   const AdminPanelScreen({Key? key}) : super(key: key);
@@ -139,25 +140,25 @@ class AdminPanelScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           _buildInfoRow(
                             'Logged in as:',
                             user?.email ?? 'admin1@gmail.com',
                             isDarkTheme,
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           _buildInfoRow(
                             'User ID:',
                             user?.uid ?? 'offline-admin',
                             isDarkTheme,
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           _buildInfoRow(
                             'Role:',
                             'Administrator',
@@ -166,9 +167,9 @@ class AdminPanelScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Action Buttons
                     Row(
                       children: [
@@ -203,9 +204,43 @@ class AdminPanelScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        
                         const SizedBox(width: 16),
-                        
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const RecipeManagementScreen(),
+                                ),
+                              );
+                            },
+                            icon: Icon(
+                              Icons.restaurant_menu,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              'Recipes',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
@@ -223,6 +258,40 @@ class AdminPanelScreen extends StatelessWidget {
                             ),
                             label: Text(
                               'Users',
+                              style: TextStyle(
+                                color: isDarkTheme ? AppColors.white : AppColors.black,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: isDarkTheme ? AppColors.white : AppColors.black,
+                                width: 2,
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Analytics coming soon!'),
+                                  backgroundColor: isDarkTheme ? AppColors.white : AppColors.black,
+                                ),
+                              );
+                            },
+                            icon: Icon(
+                              Icons.analytics,
+                              color: isDarkTheme ? AppColors.white : AppColors.black,
+                            ),
+                            label: Text(
+                              'Analytics',
                               style: TextStyle(
                                 color: isDarkTheme ? AppColors.white : AppColors.black,
                                 fontWeight: FontWeight.w600,

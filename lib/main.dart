@@ -18,6 +18,22 @@ import 'package:trackai/core/wrappers/authwrapper.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: ".env");
+
+  // Initialize Firebase once
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Now other Firebase-dependent services
+  await FirebaseService.initializeFirebase();
+  await FileDownloadService.requestStoragePermission();
+  await StreakService.recordDailyLogin();
+
+
+
+
+
   try {
     await dotenv.load(fileName: ".env");
     await Firebase.initializeApp(

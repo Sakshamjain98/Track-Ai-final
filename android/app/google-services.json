@@ -1,44 +1,26 @@
 {
   "project_info": {
-    "project_number": "763346326168",
-    "project_id": "trackai-3648c",
-    "storage_bucket": "trackai-3648c.firebasestorage.app"
+    "project_number": "552598421713",
+    "project_id": "trackai-d6976",
+    "storage_bucket": "trackai-d6976.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:763346326168:android:12d9989c46bf831007f6ed",
+        "mobilesdk_app_id": "1:552598421713:android:aca0ea8fb0c64e163605f0",
         "android_client_info": {
           "package_name": "com.example.trackai"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "763346326168-0851bnimjpqkb344snljkm4dhu1ko637.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.trackai",
-            "certificate_hash": "88ca82d0af1194d24e77080a9c4954f415f04451"
-          }
-        },
-        {
-          "client_id": "763346326168-9cnji04vu9s15bqk8jgrs2afjdr2c30p.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD-jTDQOlYlZpXA6UMgM3rGcYFi11kLCXs"
+          "current_key": "AIzaSyB5NGhwfzA0ur3n87V8gXFZ8o5Z-lQfF04"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "763346326168-9cnji04vu9s15bqk8jgrs2afjdr2c30p.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

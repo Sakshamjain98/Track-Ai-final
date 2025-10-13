@@ -129,8 +129,7 @@ class _HomescreenState extends State<Homescreen> {
 
   Color _getDateColor(DateTime date) {
     final today = DateTime.now();
-    final isToday =
-        date.day == today.day &&
+    final isToday = date.day == today.day &&
         date.month == today.month &&
         date.year == today.year;
     final dateString = StreakService.formatDateStatic(date);
@@ -148,7 +147,8 @@ class _HomescreenState extends State<Homescreen> {
       }
     }
 
-    if (isToday) return Colors.green;
+    // Modified: Today's date should have white background
+    if (isToday) return Colors.white;
     if (date.isAfter(today)) return Colors.transparent;
     if (isLoggedIn) return Colors.green.withOpacity(0.3);
     return Colors.red.withOpacity(0.3);
@@ -156,11 +156,12 @@ class _HomescreenState extends State<Homescreen> {
 
   Color _getDateTextColor(DateTime date) {
     final today = DateTime.now();
-    final isToday =
-        date.day == today.day &&
+    final isToday = date.day == today.day &&
         date.month == today.month &&
         date.year == today.year;
-    if (isToday) return Colors.white;
+
+    // Modified: Today's date should have black text
+    if (isToday) return Colors.black;
     return Colors.black87;
   }
 
@@ -294,10 +295,10 @@ class _HomescreenState extends State<Homescreen> {
 
   // ---------------- Calendar ----------------
   Widget _buildCalendar(
-    double screenWidth,
-    double screenHeight,
-    List<DateTime> weekDates,
-  ) {
+      double screenWidth,
+      double screenHeight,
+      List<DateTime> weekDates,
+      ) {
     return Container(
       padding: EdgeInsets.all(screenWidth * 0.02),
       child: Column(
@@ -340,39 +341,69 @@ class _HomescreenState extends State<Homescreen> {
             children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
                 .map(
                   (d) => Expanded(
-                    child: Center(
-                      child: Text(
-                        d,
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: screenWidth * 0.035,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                child: Center(
+                  child: Text(
+                    d,
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: screenWidth * 0.035,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                )
+                ),
+              ),
+            )
                 .toList(),
           ),
           SizedBox(height: screenHeight * 0.015),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: weekDates.map((date) {
+              final today = DateTime.now();
+              final isToday = date.day == today.day &&
+                  date.month == today.month &&
+                  date.year == today.year;
+
               return Expanded(
                 child: Container(
                   margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.005),
                   height: screenWidth * 0.1,
-                  decoration: BoxDecoration(
-                    color: _getDateColor(date),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${date.day}',
-                      style: TextStyle(
-                        color: _getDateTextColor(date),
-                        fontSize: screenWidth * 0.04,
-                        fontWeight: FontWeight.w600,
+                  child: isToday
+                      ? CustomPaint(
+                    painter: DashedCirclePainter(
+                      color: Colors.grey[400]!,
+                      strokeWidth: 2,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: screenWidth * 0.04,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                      : Container(
+                    decoration: BoxDecoration(
+                      color: _getDateColor(date),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          color: _getDateTextColor(date),
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -455,88 +486,104 @@ class _HomescreenState extends State<Homescreen> {
 
   // ---------------- Content Cards ----------------
   Widget _buildMainContentCard() {
-  final sw = MediaQuery.of(context).size.width;
-  final sh = MediaQuery.of(context).size.height;
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
 
-  if (_isLoadingGoals) return _loadingCard("Loading your targets...");
-  if (_goalsError != null)
-    return _errorCard("Unable to load targets", _loadGoalsData);
-  if (_goalsData == null)
-    return _errorCard(
-      "Set Your Daily Targets",
-      () => Navigator.pushNamed(context, AppRoutes.adjustGoals),
-    );
+    if (_isLoadingGoals) return _loadingCard("Loading your targets...");
+    if (_goalsError != null)
+      return _errorCard("Unable to load targets", _loadGoalsData);
+    if (_goalsData == null)
+      return _errorCard(
+        "Set Your Daily Targets",
+            () => Navigator.pushNamed(context, AppRoutes.adjustGoals),
+      );
 
-  return Container(
-    padding: EdgeInsets.all(sw * 0.05),
-    decoration: _getCardDecoration(),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              lucide.LucideIcons.target, // Updated to TargetIcon
-              color: Colors.blue,
-              size: sw * 0.05,
-            ),
-            SizedBox(width: sw * 0.02),
-            Expanded(
-              child: Text(
-                "Your Daily Macro Targets",
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: sw * 0.045,
-                  fontWeight: FontWeight.w600,
+    return Container(
+      padding: EdgeInsets.all(sw * 0.05),
+      decoration: _getCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                lucide.LucideIcons.target,
+                color: Colors.blue,
+                size: sw * 0.05,
+              ),
+              SizedBox(width: sw * 0.02),
+              Expanded(
+                child: Text(
+                  "Your Daily Macro Targets",
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: sw * 0.045,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: sh * 0.005),
-        Text(
-          "Personalized goals based on your profile.",
-          style: TextStyle(
-            color: Colors.black54,
-            fontSize: sw * 0.032,
+            ],
           ),
-        ),
-        SizedBox(height: sh * 0.01),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Calories Remaining",
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: sw * 0.035,
+          SizedBox(height: sh * 0.005),
+          Text(
+            "Personalized goals based on your profile.",
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: sw * 0.032,
+            ),
+          ),
+          SizedBox(height: sh * 0.01),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Calories Remaining",
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: sw * 0.035,
+                    ),
+                  ),
+                  SizedBox(height: sh * 0.008),
+                  Text(
+                    "${_goalsData!['calories'] ?? 0} kcal",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: sw * 0.07,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              // Updated fire icon with circular grey border
+              Container(
+                width: sw * 0.15,
+                height: sw * 0.15,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.grey[300]!, // Grey border color
+                    width: 2,
+                  ),
+                  color: Colors.transparent, // Transparent background
+                ),
+                child: Center(
+                  child: Icon(
+                    lucide.LucideIcons.flame,
+                    size: sw * 0.075,
+                    color: Colors.orange,
                   ),
                 ),
-                SizedBox(height: sh * 0.008),
-                Text(
-                  "${_goalsData!['calories'] ?? 0} kcal",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: sw * 0.07,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            Icon(
-              lucide.LucideIcons.flame, // Updated to FlameIcon
-              size: sw * 0.075,
-              color: Colors.orange,
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _loadingCard(String text) {
     final sw = MediaQuery.of(context).size.width;
@@ -594,139 +641,159 @@ class _HomescreenState extends State<Homescreen> {
   }
 
   Widget _buildMacroTrackingSection() {
-  final sw = MediaQuery.of(context).size.width;
-  return Row(
-    children: [
-      Expanded(
-        child: _macroCard(
-          "Protein",
-          "${_goalsData?['protein'] ?? 0}",
-          "g left",
-          lucide.LucideIcons.zap, // Updated to ZapIcon
-          Colors.amber,
+    final sw = MediaQuery.of(context).size.width;
+    return Row(
+      children: [
+        Expanded(
+          child: _macroCard(
+            "Protein",
+            "${_goalsData?['protein'] ?? 0}",
+            "g left",
+            lucide.LucideIcons.zap, // Updated to ZapIcon
+            Colors.amber,
+          ),
         ),
-      ),
-      SizedBox(width: sw * 0.03),
-      Expanded(
-        child: _macroCard(
-          "Carbs",
-          "${_goalsData?['carbs'] ?? 0}",
-          "g left",
-          lucide.LucideIcons.wheat, // Updated to WheatIcon
-          Colors.green,
+        SizedBox(width: sw * 0.03),
+        Expanded(
+          child: _macroCard(
+            "Carbs",
+            "${_goalsData?['carbs'] ?? 0}",
+            "g left",
+            lucide.LucideIcons.wheat, // Updated to WheatIcon
+            Colors.green,
+          ),
         ),
-      ),
-      SizedBox(width: sw * 0.03),
-      Expanded(
-        child: _macroCard(
-          "Fats",
-          "${_goalsData?['fat'] ?? 0}",
-          "g left",
-          lucide.LucideIcons.droplet, // Updated to DropletIcon
-          Colors.blue,
+        SizedBox(width: sw * 0.03),
+        Expanded(
+          child: _macroCard(
+            "Fats",
+            "${_goalsData?['fat'] ?? 0}",
+            "g left",
+            lucide.LucideIcons.droplet, // Updated to DropletIcon
+            Colors.blue,
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   Widget _macroCard(
-  String title,
-  String value,
-  String unit,
-  IconData icon,
-  Color iconColor,
-) {
-  final sw = MediaQuery.of(context).size.width;
-  final sh = MediaQuery.of(context).size.height;
-  return Container(
-    padding: EdgeInsets.all(sw * 0.03),
-    decoration: _getCardDecoration(),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.black54,
-            fontSize: sw * 0.035,
-            fontWeight: FontWeight.w600,
+      String title,
+      String value,
+      String unit,
+      IconData icon,
+      Color iconColor,
+      ) {
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+    return Container(
+      padding: EdgeInsets.all(sw * 0.03),
+      decoration: _getCardDecoration(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: sw * 0.035,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        SizedBox(height: sh * 0.01),
-        Icon(icon, color: iconColor, size: sw * 0.06),
-        SizedBox(height: sh * 0.01),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: sw * 0.05,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          unit,
-          style: TextStyle(
-            color: Colors.black54,
-            fontSize: sw * 0.03,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-  Widget _buildFiberSection() {
-  final sw = MediaQuery.of(context).size.width;
-  final sh = MediaQuery.of(context).size.height;
-  return Container(
-    padding: EdgeInsets.all(sw * 0.04),
-    decoration: _getCardDecoration(),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Fiber Remaining",
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: sw * 0.04,
-                fontWeight: FontWeight.w600,
+          SizedBox(height: sh * 0.01),
+          // Circular bordered icon container
+          Container(
+            width: sw * 0.15,
+            height: sw * 0.13,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.grey[300]!, // Grey border color
+                width: 2,
+              ),
+              color: Colors.transparent, // Transparent background
+            ),
+            child: Center(
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: sw * 0.07,
               ),
             ),
-            Row(
-              children: [
-                Text(
-                  "${_goalsData?['fiber'] ?? 0}",
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: sw * 0.08,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(width: sw * 0.008),
-                Text(
-                  "g",
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: sw * 0.03,
-                  ),
-                ),
-              ],
+          ),
+          SizedBox(height: sh * 0.01),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: sw * 0.05,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
-        Icon(
-          lucide.LucideIcons.leaf, // Updated to LeafIcon
-          size: sw * 0.08,
-          color: Colors.green,
-        ),
-      ],
-    ),
-  );
-}
+          ),
+          Text(
+            unit,
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: sw * 0.03,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFiberSection() {
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+    return Container(
+      padding: EdgeInsets.all(sw * 0.04),
+      decoration: _getCardDecoration(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Fiber Remaining",
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: sw * 0.04,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    "${_goalsData?['fiber'] ?? 0}",
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: sw * 0.08,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: sw * 0.008),
+                  Text(
+                    "g",
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: sw * 0.03,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Icon(
+            lucide.LucideIcons.leaf, // Updated to LeafIcon
+            size: sw * 0.08,
+            color: Colors.green,
+          ),
+        ],
+      ),
+    );
+  }
 
   // ---------------- AI Lab ----------------
   Widget _buildFullAILabSection() {
@@ -817,126 +884,264 @@ class _HomescreenState extends State<Homescreen> {
               ),
             ],
           ),
+          // New "Coming Soon" cards row
+          SizedBox(height: sh * 0.015),
+          Row(
+            children: [
+              Expanded(
+                child: _comingSoonCard(
+                  "AI Nutrition Coach",
+                  "Smart nutrition guidance.",
+                  lucide.LucideIcons.brain,
+                ),
+              ),
+              SizedBox(width: sw * 0.03),
+              Expanded(
+                child: _comingSoonCard(
+                  "AI Fitness Tracker",
+                  "Intelligent workout tracking.",
+                  lucide.LucideIcons.trophy,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Widget _aiLabCard(String title, String desc, IconData icon, String action) {
-  final sw = MediaQuery.of(context).size.width;
-  final sh = MediaQuery.of(context).size.height;
-  return GestureDetector(
-    onTap: () => _handleAILabAction(action),
-    child: Container(
-      padding: EdgeInsets.all(sw * 0.035),
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+    return GestureDetector(
+      onTap: () => _handleAILabAction(action),
+      child: Container(
+        padding: EdgeInsets.all(sw * 0.035),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey[200]!,
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Color(0xFF26A69A), size: sw * 0.07),
+            SizedBox(height: sh * 0.008),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: sw * 0.036,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              desc,
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: sw * 0.028,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  Widget _comingSoonCard(String title, String desc, IconData icon) {
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+    return GestureDetector(
+      onTap: () => _showSnackBar('Feature coming soon!'),
+      child: Container(
+        padding: EdgeInsets.all(sw * 0.035),
+        decoration: BoxDecoration(
+          color: Colors.grey[100], // Slightly different background for "coming soon"
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey[300]!, // Slightly more prominent border
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.grey[500], // Greyed out icon
+                  size: sw * 0.07,
+                ),
+                SizedBox(width: sw * 0.02),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: sw * 0.02,
+                    vertical: sw * 0.01,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "SOON",
+                    style: TextStyle(
+                      color: Colors.orange[700],
+                      fontSize: sw * 0.025,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: sh * 0.008),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.grey[600], // Greyed out text
+                fontSize: sw * 0.036,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              desc,
+              style: TextStyle(
+                color: Colors.grey[500], // Greyed out description
+                fontSize: sw * 0.028,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------- Wellness Tips ----------------
+  Widget _buildWellnessTipsSection() {
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+    return Container(
+      padding: EdgeInsets.all(sw * 0.05),
+      decoration: _getCardDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                lucide.LucideIcons.lightbulb, // Matches LightbulbIcon
+                color: Colors.amber,
+                size: sw * 0.06,
+              ),
+              SizedBox(width: sw * 0.03),
+              Text(
+                "Wellness Tips",
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: sw * 0.045,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: sh * 0.02),
+          _tip("Aim for 7-9 hours of sleep per night."),
+          SizedBox(height: sh * 0.015),
+          _tip("Stay hydrated with at least 8 glasses of water daily."),
+          SizedBox(height: sh * 0.015),
+          _tip("Exercise at least 30 minutes a day to boost energy."),
+        ],
+      ),
+    );
+  }
+
+  Widget _tip(String text) {
+    final sw = MediaQuery.of(context).size.width;
+    return Container(
+      padding: EdgeInsets.all(sw * 0.03),
       decoration: BoxDecoration(
         color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Colors.grey[200]!,
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(icon, color: Color(0xFF26A69A), size: sw * 0.07),
-          SizedBox(height: sh * 0.008),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: sw * 0.036,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Icon(
+            lucide.LucideIcons.check, // Updated to check (closest match to CheckCircleIcon)
+            size: sw * 0.04,
+            color: Colors.green,
           ),
-          Text(
-            desc,
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: sw * 0.028,
+          SizedBox(width: sw * 0.03),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: sw * 0.033,
+              ),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-  // ---------------- Wellness Tips ----------------
-  Widget _buildWellnessTipsSection() {
-  final sw = MediaQuery.of(context).size.width;
-  final sh = MediaQuery.of(context).size.height;
-  return Container(
-    padding: EdgeInsets.all(sw * 0.05),
-    decoration: _getCardDecoration(),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              lucide.LucideIcons.lightbulb, // Matches LightbulbIcon
-              color: Colors.amber,
-              size: sw * 0.06,
-            ),
-            SizedBox(width: sw * 0.03),
-            Text(
-              "Wellness Tips",
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: sw * 0.045,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: sh * 0.02),
-        _tip("Aim for 7-9 hours of sleep per night."),
-        SizedBox(height: sh * 0.015),
-        _tip("Stay hydrated with at least 8 glasses of water daily."),
-        SizedBox(height: sh * 0.015),
-        _tip("Exercise at least 30 minutes a day to boost energy."),
-      ],
-    ),
-  );
-}
+// Custom painter for dashed circle border
+class DashedCirclePainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
 
-Widget _tip(String text) {
-  final sw = MediaQuery.of(context).size.width;
-  return Container(
-    padding: EdgeInsets.all(sw * 0.03),
-    decoration: BoxDecoration(
-      color: Colors.grey[50],
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: Colors.grey[200]!,
-        width: 1,
-      ),
-    ),
-    child: Row(
-      children: [
-        Icon(
-          lucide.LucideIcons.check, // Updated to check (closest match to CheckCircleIcon)
-          size: sw * 0.04,
-          color: Colors.green,
-        ),
-        SizedBox(width: sw * 0.03),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: sw * 0.033,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
+  DashedCirclePainter({
+    required this.color,
+    this.strokeWidth = 2.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    const dashWidth = 3.0;
+    const dashSpace = 3.0;
+
+    double currentAngle = 0;
+    const totalAngle = 2 * 3.14159; // 2π
+
+    while (currentAngle < totalAngle) {
+      final startAngle = currentAngle;
+      final endAngle = (currentAngle + dashWidth / radius).clamp(0.0, totalAngle);
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        endAngle - startAngle,
+        false,
+        paint,
+      );
+
+      currentAngle = endAngle + dashSpace / radius;
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

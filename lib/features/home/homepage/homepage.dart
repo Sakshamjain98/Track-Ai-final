@@ -14,6 +14,8 @@ import 'package:trackai/features/tracker/trackerscreen.dart';
 import 'package:trackai/features/admin/services/announcement_notification_service.dart';
 import 'package:trackai/core/routes/routes.dart';
 
+import '../../../library/presentation/library_screen.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -51,6 +53,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       label: 'Trackers',
     ),
     BottomNavItem(
+      icon: Icons.library_books_outlined,
+      activeIcon: Icons.library_books,
+      label: 'Library',
+    ),
+    BottomNavItem(
       icon: Icons.analytics_outlined,
       activeIcon: Icons.analytics,
       label: 'Analytics',
@@ -68,6 +75,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _pages = [
       const Homescreen(),
       const Trackerscreen(),
+      const LibraryScreen(),
       const AnalyticsScreen(),
       Settingsscreen(
         onPatternBackgroundChanged: _savePatternPreference,

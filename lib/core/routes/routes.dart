@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:trackai/feedback/services/feedback_service.dart';
 import 'package:trackai/features/auth/views/login_page.dart';
 import 'package:trackai/features/auth/views/signup_page.dart';
 import 'package:trackai/features/onboarding/onboardingflow.dart';
@@ -17,11 +18,15 @@ import 'package:trackai/features/settings/presentation/settingsscreen.dart';
 import 'package:trackai/features/admin/admin_panel_screen.dart';
 import 'package:trackai/features/announcements/announcements_page.dart';
 
+import '../../feedback/presentation/feedback_screen.dart';
+
 class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String onboarding = '/onboarding';
   static const String home = '/home';
+  static const String feedback = '/feedback';
+
   static const String homeScreen = '/home-screen';
   static const String trackerScreen = '/tracker-screen';
   static const String analyticsScreen = '/analytics-screen';
@@ -42,8 +47,13 @@ class AppRoutes {
         return _createRoute(const LoginPage());
       case '/signup':
         return _createRoute(const SignupPage());
+
+
       case '/onboarding':
         return _createRoute(const OnboardingFlow());
+      case '/feedback':
+        return _createRoute(const FeedbackScreen());
+
       case '/home':
         return _createRoute(const HomePage());
       case '/home-screen':
