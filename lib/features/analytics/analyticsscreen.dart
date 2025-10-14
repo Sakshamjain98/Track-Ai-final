@@ -164,8 +164,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         return Icons.scatter_plot;
       case 'Progress Overview':
         return Icons.trending_up;
-      case 'Period Cycle':
-        return Icons.calendar_today;
+
       default:
         return Icons.analytics;
     }
@@ -179,8 +178,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         return const CorrelationLabsPage();
       case 'Progress Overview':
         return const ProgressOverviewPage();
-      case 'Period Cycle':
-        return const PeriodCyclePage();
+
       default:
         return const DashboardSummaryPage();
     }

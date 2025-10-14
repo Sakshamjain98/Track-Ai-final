@@ -212,39 +212,28 @@ class _BmiResultsPageState extends State<BmiResultsPage>
       textAlign: TextAlign.center,
     );
   }
-
   Widget _buildSubtitle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.primary(true).withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              'Based on your inputs, here\'s a snapshot\nof your current wellness.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.primary(true),
-                fontWeight: FontWeight.w400,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            'Based on your inputs, here\'s a snapshot of your current wellness.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.primary(true),
+              fontWeight: FontWeight.w400,
+              height: 1.4,
             ),
+            textAlign: TextAlign.center,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   Widget _buildResultsCard() {
     return Container(

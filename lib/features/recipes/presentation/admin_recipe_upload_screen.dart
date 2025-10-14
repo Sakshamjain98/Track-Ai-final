@@ -132,6 +132,8 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         final isDarkTheme = themeProvider.isDarkMode;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
 
         return Scaffold(
           backgroundColor: AppColors.background(isDarkTheme),
@@ -143,27 +145,40 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                 gradient: AppColors.cardLinearGradient(isDarkTheme),
               ),
             ),
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDarkTheme)),
-              onPressed: () => Navigator.pop(context),
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary(isDarkTheme).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new,
+                    color: AppColors.textPrimary(isDarkTheme), size: 18),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
             title: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    gradient: LinearGradient(colors: [Colors.orange, Colors.orange.shade600]),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.upload, color: Colors.orange, size: 20),
+                  child: Icon(Icons.upload, color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Upload Recipe',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(isDarkTheme),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Upload Recipe',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDarkTheme),
+                        fontSize: screenWidth < 400 ? 18 : 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -171,21 +186,26 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             actions: [
               Container(
                 margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth < 400 ? 8 : 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(colors: [Colors.green, Colors.green.shade600]),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.public, size: 16, color: Colors.green),
+                    Icon(Icons.public,
+                        size: screenWidth < 400 ? 14 : 16,
+                        color: Colors.white),
                     const SizedBox(width: 4),
                     Text(
                       'Public',
                       style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 12,
+                        color: Colors.white,
+                        fontSize: screenWidth < 400 ? 10 : 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -199,105 +219,39 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
               gradient: AppColors.backgroundLinearGradient(isDarkTheme),
             ),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.04,
+                vertical: 16,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Header Card - Updated to show no auth required
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.green.withOpacity(0.1),
-                            Colors.blue.withOpacity(0.05),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(Icons.public, color: Colors.green, size: 24),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Share Your Recipe',
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary(isDarkTheme),
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      'No login required - Upload directly!',
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  'Cloudinary CDN',
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Compact Header Card
+                    _buildHeaderCard(isDarkTheme, screenWidth),
+                    const SizedBox(height: 16),
 
-                    const SizedBox(height: 20),
+                    // Upload Progress (compact)
+                    if (_isUploading) _buildUploadProgress(isDarkTheme, screenWidth),
 
-                    // Upload Progress
-                    if (_isUploading) _buildUploadProgress(isDarkTheme),
+                    // Image Upload Section (optimized height)
+                    _buildImageUpload(isDarkTheme, screenWidth),
+                    const SizedBox(height: 16),
 
-                    // Image Upload Section
-                    _buildImageUpload(isDarkTheme),
-                    const SizedBox(height: 20),
+                    // Basic Info (compact)
+                    _buildBasicInfo(isDarkTheme, screenWidth),
+                    const SizedBox(height: 16),
 
-                    // Basic Info
-                    _buildBasicInfo(isDarkTheme),
-                    const SizedBox(height: 20),
+                    // Recipe Details (streamlined)
+                    _buildRecipeDetails(isDarkTheme, screenWidth),
+                    const SizedBox(height: 16),
 
-                    // Recipe Details
-                    _buildRecipeDetails(isDarkTheme),
-                    const SizedBox(height: 20),
+                    // Ingredients & Instructions (optimized)
+                    _buildIngredientsInstructions(isDarkTheme, screenWidth),
+                    const SizedBox(height: 24),
 
-                    // Ingredients & Instructions
-                    _buildIngredientsInstructions(isDarkTheme),
-                    const SizedBox(height: 30),
-
-                    // Upload Button
-                    _buildUploadButton(isDarkTheme),
+                    // Upload Button (normal height)
+                    _buildUploadButton(isDarkTheme, screenWidth),
                   ],
                 ),
               ),
@@ -308,25 +262,107 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     );
   }
 
-  Widget _buildUploadProgress(bool isDarkTheme) {
+  Widget _buildHeaderCard(bool isDarkTheme, double screenWidth) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.withOpacity(0.1),
+            Colors.blue.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Colors.green, Colors.green.shade600]),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.public, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Recipe Admin Pannel',
+                    style: TextStyle(
+                      color: AppColors.textPrimary(isDarkTheme),
+                      fontSize: screenWidth < 400 ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Upload directly!',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: screenWidth < 400 ? 12 : 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth < 400 ? 6 : 8,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'CDN',
+              style: TextStyle(
+                color: Colors.blue,
+                fontSize: screenWidth < 400 ? 9 : 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUploadProgress(bool isDarkTheme, double screenWidth) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              CircularProgressIndicator(
-                value: _uploadProgress,
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation(Colors.orange),
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  value: _uploadProgress,
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation(Colors.orange),
+                ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,7 +371,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                       'Uploading Recipe...',
                       style: TextStyle(
                         color: Colors.orange,
-                        fontSize: 16,
+                        fontSize: screenWidth < 400 ? 14 : 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -343,7 +379,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                       'Image → Cloudinary | Data → Firestore',
                       style: TextStyle(
                         color: Colors.orange.withOpacity(0.8),
-                        fontSize: 12,
+                        fontSize: screenWidth < 400 ? 10 : 12,
                       ),
                     ),
                   ],
@@ -351,20 +387,21 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           LinearProgressIndicator(
             value: _uploadProgress,
             backgroundColor: Colors.orange.withOpacity(0.2),
             valueColor: AlwaysStoppedAnimation(Colors.orange),
+            minHeight: 4,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildImageUpload(bool isDarkTheme) {
+  Widget _buildImageUpload(bool isDarkTheme, double screenWidth) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -372,7 +409,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.textSecondary(isDarkTheme).withOpacity(0.1)),
       ),
       child: Column(
@@ -384,48 +421,48 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                 'Recipe Image',
                 style: TextStyle(
                   color: AppColors.textPrimary(isDarkTheme),
-                  fontSize: 16,
+                  fontSize: screenWidth < 400 ? 14 : 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
                   color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '→ Cloudinary CDN',
                   style: TextStyle(
                     color: Colors.blue,
-                    fontSize: 11,
+                    fontSize: screenWidth < 400 ? 9 : 11,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           GestureDetector(
             onTap: _pickImage,
             child: Container(
               width: double.infinity,
-              height: 180,
+              height: screenWidth < 400 ? 140 : 160, // Responsive height
               decoration: BoxDecoration(
                 color: _selectedImage != null ? Colors.transparent : Colors.orange.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: Colors.orange.withOpacity(0.3),
                   width: 2,
-                  style: _selectedImage != null ? BorderStyle.solid : BorderStyle.solid,
+                  style: BorderStyle.solid,
                 ),
               ),
               child: _selectedImage != null
                   ? Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     child: Image.file(
                       File(_selectedImage!.path),
                       width: double.infinity,
@@ -434,8 +471,8 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                     ),
                   ),
                   Positioned(
-                    top: 8,
-                    right: 8,
+                    top: 6,
+                    right: 6,
                     child: GestureDetector(
                       onTap: () => setState(() => _selectedImage = null),
                       child: Container(
@@ -443,6 +480,13 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Icon(Icons.close, color: Colors.white, size: 16),
                       ),
@@ -453,22 +497,31 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                   : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate, size: 40, color: Colors.orange),
-                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.add_photo_alternate,
+                        size: screenWidth < 400 ? 32 : 40,
+                        color: Colors.orange),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     'Tap to add recipe image',
                     style: TextStyle(
                       color: AppColors.textSecondary(isDarkTheme),
-                      fontSize: 14,
+                      fontSize: screenWidth < 400 ? 12 : 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'No login needed - Upload directly!',
+                    'click now!',
                     style: TextStyle(
                       color: Colors.green,
-                      fontSize: 12,
+                      fontSize: screenWidth < 400 ? 10 : 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -481,9 +534,9 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     );
   }
 
-  Widget _buildBasicInfo(bool isDarkTheme) {
+  Widget _buildBasicInfo(bool isDarkTheme, double screenWidth) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -491,7 +544,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,28 +553,32 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             'Basic Information',
             style: TextStyle(
               color: AppColors.textPrimary(isDarkTheme),
-              fontSize: 16,
+              fontSize: screenWidth < 400 ? 14 : 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _titleController,
             decoration: InputDecoration(
               labelText: 'Recipe Title',
               hintText: 'Enter recipe name',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             ),
+            style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
             validator: (value) => value?.trim().isEmpty == true ? 'Title required' : null,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _descriptionController,
             decoration: InputDecoration(
               labelText: 'Description',
               hintText: 'Brief recipe description',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             ),
+            style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
             maxLines: 3,
             validator: (value) => value?.trim().isEmpty == true ? 'Description required' : null,
           ),
@@ -530,9 +587,9 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     );
   }
 
-  Widget _buildRecipeDetails(bool isDarkTheme) {
+  Widget _buildRecipeDetails(bool isDarkTheme, double screenWidth) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -540,7 +597,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,14 +606,20 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             'Recipe Details',
             style: TextStyle(
               color: AppColors.textPrimary(isDarkTheme),
-              fontSize: 16,
+              fontSize: screenWidth < 400 ? 14 : 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Difficulty Selection
-          Text('Difficulty Level', style: TextStyle(color: AppColors.textPrimary(isDarkTheme))),
+          Text(
+            'Difficulty Level',
+            style: TextStyle(
+              color: AppColors.textPrimary(isDarkTheme),
+              fontSize: screenWidth < 400 ? 13 : 14,
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: _difficulties.map((difficulty) {
@@ -566,10 +629,15 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                   onTap: () => setState(() => _selectedDifficulty = difficulty),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenWidth < 400 ? 10 : 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.orange.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: isSelected
+                          ? LinearGradient(colors: [Colors.orange, Colors.orange.shade600])
+                          : null,
+                      color: !isSelected ? Colors.grey.withOpacity(0.1) : null,
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isSelected ? Colors.orange : Colors.grey.withOpacity(0.3),
                       ),
@@ -578,8 +646,9 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                       child: Text(
                         difficulty,
                         style: TextStyle(
-                          color: isSelected ? Colors.orange : AppColors.textSecondary(isDarkTheme),
+                          color: isSelected ? Colors.white : AppColors.textSecondary(isDarkTheme),
                           fontWeight: FontWeight.w600,
+                          fontSize: screenWidth < 400 ? 13 : 14,
                         ),
                       ),
                     ),
@@ -589,9 +658,9 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             }).toList(),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Time & Servings
+          // Time & Servings in responsive grid
           Row(
             children: [
               Expanded(
@@ -599,30 +668,36 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                   controller: _prepTimeController,
                   decoration: InputDecoration(
                     labelText: 'Prep (min)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                   ),
+                  style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: TextFormField(
                   controller: _cookTimeController,
                   decoration: InputDecoration(
                     labelText: 'Cook (min)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                   ),
+                  style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: TextFormField(
                   controller: _servingsController,
                   decoration: InputDecoration(
                     labelText: 'Servings',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                   ),
+                  style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
                   keyboardType: TextInputType.number,
                   validator: (value) => value?.trim().isEmpty == true ? 'Required' : null,
                 ),
@@ -634,9 +709,9 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     );
   }
 
-  Widget _buildIngredientsInstructions(bool isDarkTheme) {
+  Widget _buildIngredientsInstructions(bool isDarkTheme, double screenWidth) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -644,7 +719,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,30 +728,34 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
             'Ingredients & Instructions',
             style: TextStyle(
               color: AppColors.textPrimary(isDarkTheme),
-              fontSize: 16,
+              fontSize: screenWidth < 400 ? 14 : 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _ingredientsController,
             decoration: InputDecoration(
               labelText: 'Ingredients',
-              hintText: 'One ingredient per line\n2 cups flour\n1 tsp salt\n3 eggs',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              hintText: 'One ingredient per line\n2 cups flour\n1 tsp salt',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
-            maxLines: 6,
+            style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
+            maxLines: screenWidth < 400 ? 4 : 5, // Responsive lines
             validator: (value) => value?.trim().isEmpty == true ? 'Ingredients required' : null,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           TextFormField(
             controller: _instructionsController,
             decoration: InputDecoration(
               labelText: 'Instructions',
-              hintText: 'One step per line\nPreheat oven to 350°F\nMix ingredients\nBake for 30 minutes',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              hintText: 'One step per line\nPreheat oven to 350°F\nMix ingredients',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
-            maxLines: 8,
+            style: TextStyle(fontSize: screenWidth < 400 ? 14 : 16),
+            maxLines: screenWidth < 400 ? 5 : 6, // Responsive lines
             validator: (value) => value?.trim().isEmpty == true ? 'Instructions required' : null,
           ),
         ],
@@ -684,20 +763,20 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     );
   }
 
-  Widget _buildUploadButton(bool isDarkTheme) {
+  Widget _buildUploadButton(bool isDarkTheme, double screenWidth) {
     return Container(
       width: double.infinity,
-      height: 56,
+      height: 50, // Normal button height
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.orange, Colors.deepOrange],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.orange.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -705,26 +784,26 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _isUploading ? null : _uploadRecipe,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: Center(
             child: _isUploading
                 ? Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation(Colors.white),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Text(
-                  'Uploading Recipe...',
+                  'Uploading...',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: screenWidth < 400 ? 14 : 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -733,13 +812,13 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                 : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.publish, color: Colors.white),
+                Icon(Icons.publish, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Share Recipe',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: screenWidth < 400 ? 14 : 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/recipes/presentation/recipe_library_screen.dart';
+import '../../features/analytics/screens/period_cycle.dart';
+import '../../features/recipes/presentation/ReadMeWhenFreeScreen.dart';
+
 
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({Key? key}) : super(key: key);
@@ -65,7 +68,7 @@ class LibraryScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Your personal collection of saved plans and content.',
+                              'Your personal collection of wellness tools and content.',
                               style: TextStyle(
                                 color: AppColors.textSecondary(isDarkTheme),
                                 fontSize: 16,
@@ -120,50 +123,69 @@ class LibraryScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // Second Row - WH Library & Saved Items
+                  // Second Row - Period Cycle Tracker & Saved Items
                   Row(
                     children: [
                       Expanded(
                         child: _buildLibraryCard(
                           context,
-                          'WH Library',
-                          'Track your cycle and explore women\'s health topics.',
+                          'Period Cycle',
+                          'Track your menstrual cycle and health insights.',
                           Icons.favorite_outline,
                           Colors.pink,
                           isDarkTheme,
                           screenWidth,
-                          onTap: () => _showComingSoon(context),
+                          isNew: true, // Add "New" badge
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PeriodCycleScreen(),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildLibraryCard(
-                          context,
-                          'Saved Items',
-                          'View your saved meal and workout plans.',
-                          Icons.bookmark_outline,
-                          Colors.purple,
-                          isDarkTheme,
-                          screenWidth,
-                          onTap: () => _showComingSoon(context),
-                        ),
-                      ),
+
                     ],
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Third Row - Read Me When (Full Width)
+                  // Third Row - Read Me When Free (Full Width)
                   _buildLibraryCard(
                     context,
-                    'Read Me When',
-                    'Notes for when you\'re feeling a certain way.',
-                    Icons.psychology_outlined,
-                    Colors.green,
+                    'Read Me When Free',
+                    'Ancient wisdom and inspiring thoughts for reflection.',
+                    Icons.auto_stories,
+                    Colors.deepPurple,
                     isDarkTheme,
                     screenWidth,
                     isFullWidth: true,
                     isBeta: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ReadMeWhenFreeScreen(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Fourth Row - Health Library (Full Width)
+                  _buildLibraryCard(
+                    context,
+                    'Health & Wellness Hub',
+                    'Comprehensive women\'s health resources and guides.',
+                    Icons.health_and_safety_outlined,
+                    Colors.teal,
+                    isDarkTheme,
+                    screenWidth,
+                    isFullWidth: true,
                     onTap: () => _showComingSoon(context),
                   ),
 
@@ -263,6 +285,7 @@ class LibraryScreen extends StatelessWidget {
       double screenWidth, {
         bool isFullWidth = false,
         bool isBeta = false,
+        bool isNew = false,
         required VoidCallback onTap,
       }) {
     return GestureDetector(
@@ -281,8 +304,10 @@ class LibraryScreen extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.textSecondary(isDarkTheme).withOpacity(0.1),
-            width: 1,
+            color: isNew
+                ? Colors.pink.withOpacity(0.3)
+                : AppColors.textSecondary(isDarkTheme).withOpacity(0.1),
+            width: isNew ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
@@ -297,6 +322,12 @@ class LibraryScreen extends StatelessWidget {
               blurRadius: 10,
               offset: const Offset(-3, -3),
             ),
+            if (isNew)
+              BoxShadow(
+                color: Colors.pink.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
         child: Column(
@@ -308,43 +339,87 @@ class LibraryScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.1),
+                    gradient: isNew
+                        ? LinearGradient(colors: [iconColor, iconColor.withOpacity(0.7)])
+                        : null,
+                    color: !isNew ? iconColor.withOpacity(0.1) : null,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: iconColor.withOpacity(0.2),
                       width: 1,
                     ),
+                    boxShadow: isNew
+                        ? [
+                      BoxShadow(
+                        color: iconColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                        : null,
                   ),
                   child: Icon(
                     icon,
-                    color: iconColor,
+                    color: isNew ? Colors.white : iconColor,
                     size: 24,
                   ),
                 ),
-                if (isBeta)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.blue.withOpacity(0.3),
-                        width: 1,
+                Row(
+                  children: [
+                    if (isNew)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [Colors.pink, Colors.pink.shade400]),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.pink.withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          'New',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      'Beta',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                    if (isBeta)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.blue.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Beta',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 16),

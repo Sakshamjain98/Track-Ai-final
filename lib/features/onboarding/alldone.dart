@@ -66,24 +66,14 @@ class AllDonePage extends StatelessWidget {
                       // Checkmark with text - matching GoalSelectionPage _buildSubtitle style for container
                       Container(
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(true).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.primary(true).withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
+
                         child: Row(
                           children: [
                             // Small check icon - matching non-selected goal card icon style
                             Container(
                               width: 56,
                               height: 56,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                shape: BoxShape.circle,
-                              ),
+
                               child: Icon(
                                 Icons.check,
                                 color: AppColors.primary(true),

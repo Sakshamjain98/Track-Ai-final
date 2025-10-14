@@ -216,34 +216,27 @@ class _DateOfBirthPageState extends State<DateOfBirthPage>
   }
 
   Widget _buildSubtitle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white24, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.info_outline, color: Colors.white, size: 16),
-          SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              'This helps us provide age-appropriate\nrecommendations.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-                fontWeight: FontWeight.w400,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: const [
+        Icon(Icons.info_outline, color: Colors.white, size: 16),
+        SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            'This helps us provide age-appropriate recommendations.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+              fontWeight: FontWeight.w400,
+              height: 1.4,
             ),
+            textAlign: TextAlign.center,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   Widget _buildDateSelector() {
     return Center(
@@ -314,15 +307,7 @@ class _DateOfBirthPageState extends State<DateOfBirthPage>
           ),
           const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary(true).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.primary(true).withOpacity(0.3),
-                width: 1,
-              ),
-            ),
+
             child: Row(
               children: [
                 Icon(Icons.security, color: AppColors.primary(true), size: 20),

@@ -85,7 +85,7 @@ class AnalyticsProvider extends ChangeNotifier {
     'Dashboard & Summary',
     'Correlation Labs',
     'Progress Overview',
-    'Period Cycle',
+
   ];
 
   final List<String> timeframes = [

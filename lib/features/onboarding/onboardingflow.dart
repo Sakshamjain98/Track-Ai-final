@@ -39,7 +39,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
   OnboardingData onboardingData = OnboardingData();
 
   List<Widget> _pages = [];
-  int _totalPages = 13; // Updated for maintain weight (13 pages now)
+  int _totalPages = 12; // Updated for maintain weight (13 pages now)
 
   @override
   void initState() {
@@ -141,7 +141,8 @@ class _OnboardingFlowState extends State<OnboardingFlow>
 
       if (goal == 'lose_weight' || goal == 'gain_weight') {
         // For weight loss/gain goals - 15 pages total (added 2 new pages)
-        _totalPages = 15;
+        _totalPages = 14
+        ;
 
         // Rebuild the entire pages list with target pages inserted after goal selection
         _pages = [
@@ -208,12 +209,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
           ),
           // Page 11: BMI Results
           _buildBmiPage(),
-          // Page 12: Diet Preference
-          DietPreferencePage(
-            onNext: _nextPage,
-            onBack: _previousPage,
-            onDataUpdate: (data) => _updateData('dietPreference', data),
-          ),
+
           // Page 13: All Done
           AllDonePage(onComplete: _nextPage, onBack: _previousPage),
           // Page 14: Personalized Plan (NEW)
@@ -230,7 +226,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
         ];
       } else {
         // For maintain weight goal - 13 pages total (added 2 new pages)
-        _totalPages = 13;
+        _totalPages = 12;
         // Keep the original flow with new pages added at the end
         _initializePages();
       }

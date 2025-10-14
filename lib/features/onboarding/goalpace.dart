@@ -199,37 +199,27 @@ class _GoalPacePageState extends State<GoalPacePage>
   }
 
   Widget _buildSubtitle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.darkPrimary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.info_outline, color: AppColors.darkPrimary, size: 16),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              'Choose your preferred pace to achieve\nyour fitness goals.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary(true),
-                fontWeight: FontWeight.w400,
-                height: 1.4,
-              ),
-              textAlign: TextAlign.center,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.info_outline, color: AppColors.darkPrimary, size: 16),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            'Choose your preferred pace to achieve your fitness goals.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(true),
+              fontWeight: FontWeight.w400,
+              height: 1.4,
             ),
+            textAlign: TextAlign.center,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
 
   Widget _buildPaceOptions() {
     return Column(

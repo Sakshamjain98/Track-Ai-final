@@ -5,58 +5,71 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/tracker/service/tracker_service.dart';
 
-class MeditationTrackerScreen extends StatefulWidget {
-  const MeditationTrackerScreen({Key? key}) : super(key: key);
+// Enhanced Menstrual Tracker Screen
+class MenstrualTrackerScreen extends StatefulWidget {
+  const MenstrualTrackerScreen({Key? key}) : super(key: key);
 
   @override
-  State<MeditationTrackerScreen> createState() => _MeditationTrackerScreenState();
+  State<MenstrualTrackerScreen> createState() => _MenstrualTrackerScreenState();
 }
 
-class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
+class _MenstrualTrackerScreenState extends State<MenstrualTrackerScreen>
     with TickerProviderStateMixin {
   PageController _pageController = PageController();
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _scaleController;
-  late AnimationController _breatheController;
+  late AnimationController _waveController;
 
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _breatheAnimation;
+  late Animation<double> _waveAnimation;
 
   int _currentStep = 0;
   final int _totalSteps = 6;
 
-  // Controllers for each field
-  final _valueController = TextEditingController();
-  final _typeController = TextEditingController();
-  final _afterEffectController = TextEditingController();
+  // Controllers
+  final _flowController = TextEditingController();
+  final _notesController = TextEditingController();
 
   final List<Map<String, TextEditingController>> _customFields = [];
   bool _isLoading = false;
-  int _selectedDifficulty = 3;
-  String? _selectedType;
+  DateTime? _selectedDate;
+  String? _selectedFlow;
+  List<String> _selectedSymptoms = [];
+  String? _selectedMood;
 
-  // Meditation types with icons and colors
-  final List<Map<String, dynamic>> _meditationTypes = [
-    {'name': 'Mindfulness', 'icon': Icons.self_improvement, 'color': Color(0xFF4CAF50), 'description': 'Present moment awareness'},
-    {'name': 'Focused Breathing', 'icon': Icons.air, 'color': Color(0xFF2196F3), 'description': 'Breath concentration'},
-    {'name': 'Body Scan', 'icon': Icons.accessibility_new, 'color': Color(0xFF9C27B0), 'description': 'Progressive relaxation'},
-    {'name': 'Loving Kindness', 'icon': Icons.favorite, 'color': Color(0xFFE91E63), 'description': 'Compassion practice'},
-    {'name': 'Walking Meditation', 'icon': Icons.directions_walk, 'color': Color(0xFFFF9800), 'description': 'Mindful movement'},
-    {'name': 'Transcendental', 'icon': Icons.blur_on, 'color': Color(0xFF673AB7), 'description': 'Mantra-based'},
-    {'name': 'Zen', 'icon': Icons.spa, 'color': Color(0xFF795548), 'description': 'Seated meditation'},
-    {'name': 'Guided Meditation', 'icon': Icons.headset, 'color': Color(0xFF607D8B), 'description': 'Audio-guided'},
+  // Enhanced flow levels with colors and descriptions
+  final List<Map<String, dynamic>> _flowLevels = [
+    {'name': 'Light', 'description': 'Spotting or light bleeding', 'color': Color(0xFFFFB3BA), 'icon': Icons.water_drop_outlined},
+    {'name': 'Normal', 'description': 'Regular flow', 'color': Color(0xFFFF6B6B), 'icon': Icons.water_drop},
+    {'name': 'Heavy', 'description': 'Heavy bleeding', 'color': Color(0xFFE53935), 'icon': Icons.opacity},
+    {'name': 'Very Heavy', 'description': 'Extremely heavy flow', 'color': Color(0xFFB71C1C), 'icon': Icons.invert_colors},
   ];
 
-  // Difficulty levels with descriptions
-  final List<Map<String, dynamic>> _difficultyLevels = [
-    {'level': 1, 'label': 'Beginner', 'description': 'New to meditation', 'color': Color(0xFF4CAF50)},
-    {'level': 2, 'label': 'Easy', 'description': 'Basic practice', 'color': Color(0xFF8BC34A)},
-    {'level': 3, 'label': 'Medium', 'description': 'Regular practice', 'color': Color(0xFFFFC107)},
-    {'level': 4, 'label': 'Hard', 'description': 'Advanced practice', 'color': Color(0xFFFF9800)},
-    {'level': 5, 'label': 'Expert', 'description': 'Deep meditation', 'color': Color(0xFFE53935)},
+  // Enhanced symptoms with icons and colors
+  final List<Map<String, dynamic>> _symptoms = [
+    {'name': 'Cramps', 'icon': Icons.flash_on, 'color': Color(0xFFFF5722)},
+    {'name': 'Headache', 'icon': Icons.psychology_alt, 'color': Color(0xFF9C27B0)},
+    {'name': 'Bloating', 'icon': Icons.circle, 'color': Color(0xFF2196F3)},
+    {'name': 'Fatigue', 'icon': Icons.battery_0_bar, 'color': Color(0xFF607D8B)},
+    {'name': 'Mood Swings', 'icon': Icons.mood, 'color': Color(0xFFFF9800)},
+    {'name': 'Breast Tenderness', 'icon': Icons.favorite, 'color': Color(0xFFE91E63)},
+    {'name': 'Back Pain', 'icon': Icons.accessibility_new, 'color': Color(0xFF795548)},
+    {'name': 'Nausea', 'icon': Icons.sick, 'color': Color(0xFF4CAF50)},
+  ];
+
+  // Enhanced moods with colors and emojis
+  final List<Map<String, dynamic>> _moods = [
+    {'name': 'Happy', 'emoji': '😊', 'color': Color(0xFFFFD700)},
+    {'name': 'Sad', 'emoji': '😢', 'color': Color(0xFF2196F3)},
+    {'name': 'Anxious', 'emoji': '😰', 'color': Color(0xFFFF9800)},
+    {'name': 'Irritable', 'emoji': '😠', 'color': Color(0xFFE53935)},
+    {'name': 'Calm', 'emoji': '😌', 'color': Color(0xFF4CAF50)},
+    {'name': 'Energetic', 'emoji': '⚡', 'color': Color(0xFFFF6B6B)},
+    {'name': 'Tired', 'emoji': '😴', 'color': Color(0xFF9E9E9E)},
+    {'name': 'Normal', 'emoji': '🙂', 'color': Color(0xFF607D8B)},
   ];
 
   @override
@@ -78,10 +91,10 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       duration: const Duration(milliseconds: 300),
     );
 
-    _breatheController = AnimationController(
+    _waveController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )..repeat(reverse: true);
+    )..repeat();
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
@@ -96,10 +109,11 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
     );
 
-    _breatheAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
-      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
+    _waveAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _waveController, curve: Curves.easeInOut),
     );
 
+    _selectedDate = DateTime.now();
     _startAnimations();
   }
 
@@ -115,10 +129,9 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     _fadeController.dispose();
     _slideController.dispose();
     _scaleController.dispose();
-    _breatheController.dispose();
-    _valueController.dispose();
-    _typeController.dispose();
-    _afterEffectController.dispose();
+    _waveController.dispose();
+    _flowController.dispose();
+    _notesController.dispose();
 
     for (var field in _customFields) {
       field['key']?.dispose();
@@ -197,15 +210,16 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       }
 
       final entryData = {
-        'value': double.tryParse(_valueController.text) ?? 0.0,
-        'type': _selectedType ?? _typeController.text.trim(),
-        'afterEffect': _afterEffectController.text.trim(),
-        'difficulty': _selectedDifficulty,
+        'date': _selectedDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        'flow': _selectedFlow ?? '',
+        'symptoms': _selectedSymptoms,
+        'mood': _selectedMood ?? '',
+        'notes': _notesController.text.trim(),
         'customData': customData,
-        'trackerType': 'meditation',
+        'trackerType': 'menstrual',
       };
 
-      await TrackerService.saveTrackerEntry('meditation', entryData);
+      await TrackerService.saveTrackerEntry('menstrual', entryData);
 
       HapticFeedback.heavyImpact();
 
@@ -216,10 +230,10 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 12),
-                Text('Meditation entry saved successfully! 🧘‍♀️'),
+                Text('Menstrual entry saved successfully! 🩸'),
               ],
             ),
-            backgroundColor: _getCurrentMeditationColor(),
+            backgroundColor: _getCurrentMenstrualColor(),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
@@ -257,38 +271,26 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     }
   }
 
-  Color _getCurrentMeditationColor() {
-    if (_selectedType != null) {
-      final type = _meditationTypes.firstWhere(
-            (type) => type['name'] == _selectedType,
-        orElse: () => _meditationTypes[0],
+  Color _getCurrentMenstrualColor() {
+    if (_selectedFlow != null) {
+      final flow = _flowLevels.firstWhere(
+            (f) => f['name'] == _selectedFlow,
+        orElse: () => _flowLevels[1],
       );
-      return type['color'];
+      return flow['color'];
     }
-    return const Color(0xFF6B73FF);
+    return const Color(0xFFFF6B6B);
   }
 
-  IconData _getCurrentMeditationIcon() {
-    if (_selectedType != null) {
-      final type = _meditationTypes.firstWhere(
-            (type) => type['name'] == _selectedType,
-        orElse: () => _meditationTypes[0],
+  IconData _getCurrentMenstrualIcon() {
+    if (_selectedFlow != null) {
+      final flow = _flowLevels.firstWhere(
+            (f) => f['name'] == _selectedFlow,
+        orElse: () => _flowLevels[1],
       );
-      return type['icon'];
+      return flow['icon'];
     }
-    return Icons.self_improvement;
-  }
-
-  Color _getCurrentDifficultyColor() {
-    return _difficultyLevels.firstWhere(
-          (level) => level['level'] == _selectedDifficulty,
-    )['color'];
-  }
-
-  String _getCurrentDifficultyLabel() {
-    return _difficultyLevels.firstWhere(
-          (level) => level['level'] == _selectedDifficulty,
-    )['label'];
+    return Icons.water_drop;
   }
 
   @override
@@ -320,11 +322,11 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         controller: _pageController,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          _buildStep1(isDark), // Duration
-                          _buildStep2(isDark), // Meditation Type
-                          _buildStep3(isDark), // Difficulty
-                          _buildStep4(isDark), // After Effects
-                          _buildStep5(isDark), // Custom Fields
+                          _buildStep1(isDark), // Date Selection
+                          _buildStep2(isDark), // Flow Level
+                          _buildStep3(isDark), // Symptoms
+                          _buildStep4(isDark), // Mood
+                          _buildStep5(isDark), // Custom Fields & Notes
                           _buildStep6(isDark), // Review & Save
                         ],
                       ),
@@ -448,15 +450,15 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            _getCurrentMeditationColor(),
-                            _getCurrentMeditationColor().withValues(alpha: 0.7),
+                            _getCurrentMenstrualColor(),
+                            _getCurrentMenstrualColor().withValues(alpha: 0.7),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
                         child: Icon(
-                          _getCurrentMeditationIcon(),
+                          _getCurrentMenstrualIcon(),
                           color: Colors.white,
                           size: 18,
                         ),
@@ -469,7 +471,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Meditation Tracker',
+                            'Period Tracker',
                             style: TextStyle(
                               color: isDark ? Colors.white : Colors.black,
                               fontSize: 18,
@@ -518,7 +520,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         strokeWidth: 3,
                         backgroundColor: Colors.transparent,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          _getCurrentMeditationColor(),
+                          _getCurrentMenstrualColor(),
                         ),
                       ),
                     ),
@@ -558,7 +560,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                 value: (_currentStep + 1) / _totalSteps,
                 backgroundColor: Colors.transparent,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  _getCurrentMeditationColor(),
+                  _getCurrentMenstrualColor(),
                 ),
               ),
             ),
@@ -570,17 +572,17 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Duration';
-      case 1: return 'Meditation Type';
-      case 2: return 'Difficulty';
-      case 3: return 'After Effects';
-      case 4: return 'Custom Data';
+      case 0: return 'Date';
+      case 1: return 'Flow Level';
+      case 2: return 'Symptoms';
+      case 3: return 'Mood';
+      case 4: return 'Notes & Custom';
       case 5: return 'Review';
       default: return '';
     }
   }
 
-  // Step 1: Duration
+  // Step 1: Date Selection
   Widget _buildStep1(bool isDark) {
     return SlideTransition(
       position: _slideAnimation,
@@ -588,19 +590,19 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '⏰ Meditation Duration',
-          subtitle: 'How long did you meditate?',
+          title: '📅 Period Date',
+          subtitle: 'When did your period start?',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 10),
 
-                // Animated Meditation Icon
+                // Animated Calendar Icon
                 AnimatedBuilder(
-                  animation: _breatheAnimation,
+                  animation: _waveAnimation,
                   builder: (context, child) {
                     return Transform.scale(
-                      scale: _breatheAnimation.value,
+                      scale: _waveAnimation.value,
                       child: Container(
                         width: 100,
                         height: 100,
@@ -608,20 +610,20 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFF6B73FF).withValues(alpha: 0.3),
-                              const Color(0xFF9575CD).withValues(alpha: 0.1),
+                              const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                              const Color(0xFFFFB3BA).withValues(alpha: 0.1),
                             ],
                           ),
                           border: Border.all(
-                            color: const Color(0xFF6B73FF),
+                            color: const Color(0xFFFF6B6B),
                             width: 2,
                           ),
                         ),
                         child: Center(
                           child: Icon(
-                            Icons.self_improvement,
+                            Icons.calendar_today,
                             size: 50,
-                            color: const Color(0xFF6B73FF),
+                            color: const Color(0xFFFF6B6B),
                           ),
                         ),
                       ),
@@ -631,281 +633,8 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
 
                 const SizedBox(height: 20),
 
-                _buildEnhancedTextField(
-                  controller: _valueController,
-                  label: 'Duration (minutes)',
-                  hint: 'e.g., 20',
-                  keyboardType: TextInputType.number,
-                  isDark: isDark,
-                  autofocus: true,
-                  prefixIcon: Icons.timer,
-                  helpText: 'Enter meditation session duration in minutes',
-                ),
-
-                const SizedBox(height: 20),
-
-                // Duration Suggestions
-                _buildDurationSuggestions(isDark),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDurationSuggestions(bool isDark) {
-    final suggestions = [5, 10, 15, 20, 30, 45, 60];
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick suggestions:',
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: suggestions.map((duration) => GestureDetector(
-              onTap: () {
-                _valueController.text = duration.toString();
-                HapticFeedback.selectionClick();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6B73FF).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF6B73FF).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  '$duration min',
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            )).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Step 2: Meditation Type
-  Widget _buildStep2(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '🧘‍♀️ Meditation Type',
-          subtitle: 'What type of meditation did you practice?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // Meditation Types Grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                  ),
-                  itemCount: _meditationTypes.length,
-                  itemBuilder: (context, index) {
-                    final type = _meditationTypes[index];
-                    final isSelected = _selectedType == type['name'];
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedType = type['name'];
-                        });
-                        HapticFeedback.selectionClick();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: isSelected
-                              ? LinearGradient(
-                            colors: [
-                              type['color'].withValues(alpha: 0.2),
-                              type['color'].withValues(alpha: 0.1),
-                            ],
-                          )
-                              : LinearGradient(
-                            colors: [
-                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected
-                                ? type['color']
-                                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? type['color']
-                                    : type['color'].withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                type['icon'],
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              type['name'],
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black,
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              type['description'],
-                              style: TextStyle(
-                                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                                fontSize: 9,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // Custom Type Input
-                if (_selectedType == null) ...[
-                  Text(
-                    'Or enter custom type:',
-                    style: TextStyle(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildCompactTextField(
-                    controller: _typeController,
-                    label: 'Custom Type',
-                    hint: 'Enter custom meditation type',
-                    isDark: isDark,
-                  ),
-                ],
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Step 3: Difficulty
-  Widget _buildStep3(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '💪 Difficulty Level',
-          subtitle: 'How challenging was your meditation?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // Current Difficulty Display
                 Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        _getCurrentDifficultyColor().withValues(alpha: 0.3),
-                        _getCurrentDifficultyColor().withValues(alpha: 0.1),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: _getCurrentDifficultyColor(),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$_selectedDifficulty',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: _getCurrentDifficultyColor(),
-                          ),
-                        ),
-                        Text(
-                          _getCurrentDifficultyLabel(),
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: isDark
@@ -929,102 +658,67 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                   child: Column(
                     children: [
                       Text(
-                        'Select difficulty level (1-5)',
+                        'Selected Date',
                         style: TextStyle(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                          color: isDark ? Colors.white : Colors.black,
                           fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
-                      // Difficulty Slider
-                      Slider(
-                        value: _selectedDifficulty.toDouble(),
-                        min: 1,
-                        max: 5,
-                        divisions: 4,
-                        activeColor: _getCurrentDifficultyColor(),
-                        inactiveColor: _getCurrentDifficultyColor().withValues(alpha: 0.3),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedDifficulty = value.round();
-                          });
-                          HapticFeedback.selectionClick();
-                        },
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // Difficulty Level Cards
-                      SizedBox(
-                        height: 60,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _difficultyLevels.length,
-                          itemBuilder: (context, index) {
-                            final difficulty = _difficultyLevels[index];
-                            final isSelected = difficulty['level'] == _selectedDifficulty;
-
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedDifficulty = difficulty['level'];
-                                });
-                                HapticFeedback.selectionClick();
-                              },
-                              child: Container(
-                                width: 55,
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isSelected
-                                            ? difficulty['color']
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: difficulty['color'],
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '${difficulty['level']}',
-                                          style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : difficulty['color'],
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      difficulty['label'],
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? (isDark ? Colors.white : Colors.black)
-                                            : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.5),
-                                        fontSize: 8,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
+                      GestureDetector(
+                        onTap: () => _selectDate(context),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFFF6B6B),
+                                const Color(0xFFFF6B6B).withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _selectedDate != null
+                                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                                    : 'Select Date',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                // Quick date options
+                _buildQuickDateOptions(isDark),
                 const SizedBox(height: 20),
               ],
             ),
@@ -1034,71 +728,10 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  // Step 4: After Effects
-  Widget _buildStep4(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '✨ After Effects',
-          subtitle: 'How did you feel after meditation?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFFFD700).withValues(alpha: 0.2),
-                        const Color(0xFFFFA500).withValues(alpha: 0.2),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 40,
-                    color: const Color(0xFFFFD700),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                _buildEnhancedTextField(
-                  controller: _afterEffectController,
-                  label: 'After Effects',
-                  hint: 'e.g., relaxed, peaceful, energized, focused...',
-                  isDark: isDark,
-                  maxLines: 3,
-                  autofocus: true,
-                  prefixIcon: Icons.sentiment_satisfied,
-                  helpText: 'Describe how you felt after your meditation',
-                ),
-
-                const SizedBox(height: 15),
-
-                // After Effects Suggestions
-                _buildAfterEffectsSuggestions(isDark),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAfterEffectsSuggestions(bool isDark) {
-    final suggestions = [
-      'Relaxed', 'Peaceful', 'Focused', 'Energized', 'Clear',
-      'Calm', 'Centered', 'Refreshed', 'Balanced', 'Mindful'
-    ];
+  Widget _buildQuickDateOptions(bool isDark) {
+    final today = DateTime.now();
+    final yesterday = today.subtract(Duration(days: 1));
+    final twoDaysAgo = today.subtract(Duration(days: 2));
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1110,73 +743,517 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Common effects:',
+            'Quick options:',
             style: TextStyle(
               color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: suggestions.map((effect) => GestureDetector(
-              onTap: () {
-                final current = _afterEffectController.text;
-                if (current.isEmpty) {
-                  _afterEffectController.text = effect;
-                } else {
-                  _afterEffectController.text = '$current, $effect';
-                }
-                HapticFeedback.selectionClick();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFD700).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  effect,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 11,
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDate = today;
+                    });
+                    HapticFeedback.selectionClick();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'Today',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
-            )).toList(),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDate = yesterday;
+                    });
+                    HapticFeedback.selectionClick();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'Yesterday',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDate = twoDaysAgo;
+                    });
+                    HapticFeedback.selectionClick();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFFF6B6B).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      '2 Days Ago',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Step 5: Custom Fields
-  Widget _buildStep5(bool isDark) {
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(Duration(days: 365)),
+      lastDate: DateTime.now().add(Duration(days: 7)),
+      helpText: 'Select period start date',
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFF6B6B),
+              brightness: isDark ? Brightness.dark : Brightness.light,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+      HapticFeedback.selectionClick();
+    }
+  }
+
+  // Step 2: Flow Level
+  Widget _buildStep2(bool isDark) {
     return SlideTransition(
       position: _slideAnimation,
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '🔧 Custom Data',
-          subtitle: 'Add personalized meditation metrics',
-          child: _customFields.isEmpty
-              ? _buildEmptyCustomFields(isDark)
-              : SingleChildScrollView(
+          title: '🩸 Flow Level',
+          subtitle: 'How heavy is your flow today?',
+          child: SingleChildScrollView(
             child: Column(
               children: [
-                // Custom Fields List
-                ..._customFields.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final field = entry.value;
+                const SizedBox(height: 10),
+
+                // Flow Level Cards
+                ..._flowLevels.map((flow) {
+                  final isSelected = _selectedFlow == flow['name'];
 
                   return Container(
+                    width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 12),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedFlow = flow['name'];
+                        });
+                        HapticFeedback.selectionClick();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? LinearGradient(
+                            colors: [
+                              flow['color'].withValues(alpha: 0.2),
+                              flow['color'].withValues(alpha: 0.1),
+                            ],
+                          )
+                              : LinearGradient(
+                            colors: [
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? flow['color']
+                                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? flow['color']
+                                    : flow['color'].withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                flow['icon'],
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    flow['name'],
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    flow['description'],
+                                    style: TextStyle(
+                                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: flow['color'],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Step 3: Symptoms
+  Widget _buildStep3(bool isDark) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: _buildStepContainer(
+          isDark: isDark,
+          title: '🤕 Symptoms',
+          subtitle: 'What symptoms are you experiencing?',
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+
+                Text(
+                  'Select all that apply (optional):',
+                  style: TextStyle(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                    fontSize: 14,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Symptoms Grid
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.2,
+                  ),
+                  itemCount: _symptoms.length,
+                  itemBuilder: (context, index) {
+                    final symptom = _symptoms[index];
+                    final isSelected = _selectedSymptoms.contains(symptom['name']);
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedSymptoms.remove(symptom['name']);
+                          } else {
+                            _selectedSymptoms.add(symptom['name']);
+                          }
+                        });
+                        HapticFeedback.selectionClick();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? LinearGradient(
+                            colors: [
+                              symptom['color'].withValues(alpha: 0.2),
+                              symptom['color'].withValues(alpha: 0.1),
+                            ],
+                          )
+                              : LinearGradient(
+                            colors: [
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? symptom['color']
+                                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? symptom['color']
+                                    : symptom['color'].withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                symptom['icon'],
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              symptom['name'],
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (isSelected)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: symptom['color'],
+                                  size: 16,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                if (_selectedSymptoms.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Selected symptoms:',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _selectedSymptoms.join(', '),
+                          style: TextStyle(
+                            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Step 4: Mood
+  Widget _buildStep4(bool isDark) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: _buildStepContainer(
+          isDark: isDark,
+          title: '😊 Your Mood',
+          subtitle: 'How are you feeling today?',
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+
+                // Mood Grid
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 0.9,
+                  ),
+                  itemCount: _moods.length,
+                  itemBuilder: (context, index) {
+                    final mood = _moods[index];
+                    final isSelected = _selectedMood == mood['name'];
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedMood = mood['name'];
+                        });
+                        HapticFeedback.selectionClick();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? LinearGradient(
+                            colors: [
+                              mood['color'].withValues(alpha: 0.2),
+                              mood['color'].withValues(alpha: 0.1),
+                            ],
+                          )
+                              : LinearGradient(
+                            colors: [
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? mood['color']
+                                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              mood['emoji'],
+                              style: TextStyle(fontSize: 24),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              mood['name'],
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontSize: 10,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                if (_selectedMood != null)
+                  Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: isDark
@@ -1188,8 +1265,8 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                       )
                           : LinearGradient(
                         colors: [
-                          Colors.white.withValues(alpha: 0.8),
-                          const Color(0xFFF8FAFF).withValues(alpha: 0.6),
+                          Colors.white.withValues(alpha: 0.9),
+                          const Color(0xFFF8FAFF).withValues(alpha: 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -1197,49 +1274,150 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
                       ),
                     ),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildCompactTextField(
-                                controller: field['key']!,
-                                label: 'Field Name',
-                                hint: 'e.g., Position',
-                                isDark: isDark,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: () => _removeCustomField(index),
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                  size: 18,
+                        Text(
+                          _moods.firstWhere((m) => m['name'] == _selectedMood)['emoji'],
+                          style: TextStyle(fontSize: 32),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'You\'re feeling $_selectedMood',
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCompactTextField(
-                          controller: field['value']!,
-                          label: 'Field Value',
-                          hint: 'e.g., Lotus position',
-                          isDark: isDark,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Mood tracking helps identify patterns in your cycle',
+                                style: TextStyle(
+                                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  );
-                }),
+                  ),
+
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Step 5: Notes & Custom Fields
+  Widget _buildStep5(bool isDark) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: _buildStepContainer(
+          isDark: isDark,
+          title: '📝 Additional Notes',
+          subtitle: 'Any other details you\'d like to track?',
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+
+                // Notes Field
+                _buildEnhancedTextField(
+                  controller: _notesController,
+                  label: 'Notes (Optional)',
+                  hint: 'Add any notes about today...',
+                  isDark: isDark,
+                  maxLines: 4,
+                  prefixIcon: Icons.note_add,
+                  helpText: 'Track sleep, exercise, diet, or any other details',
+                ),
+
+                const SizedBox(height: 20),
+
+                // Custom Fields Section
+                if (_customFields.isEmpty)
+                  _buildEmptyCustomFields(isDark)
+                else
+                  ..._customFields.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final field = entry.value;
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: isDark
+                            ? LinearGradient(
+                          colors: [
+                            const Color(0xFF1A1A2E).withValues(alpha: 0.6),
+                            const Color(0xFF16213E).withValues(alpha: 0.4),
+                          ],
+                        )
+                            : LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.8),
+                            const Color(0xFFF8FAFF).withValues(alpha: 0.6),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildCompactTextField(
+                                  controller: field['key']!,
+                                  label: 'Field Name',
+                                  hint: 'e.g., Sleep Hours',
+                                  isDark: isDark,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () => _removeCustomField(index),
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildCompactTextField(
+                            controller: field['value']!,
+                            label: 'Field Value',
+                            hint: 'e.g., 8 hours',
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
 
                 const SizedBox(height: 16),
                 _buildAddCustomFieldButton(isDark),
@@ -1253,13 +1431,20 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
   }
 
   Widget _buildEmptyCustomFields(bool isDark) {
-    return Center(
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+        ),
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -1271,34 +1456,34 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
             ),
             child: Icon(
               Icons.add_circle_outline,
-              size: 40,
+              size: 30,
               color: const Color(0xFF00BCD4),
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           Text(
             'No custom fields yet',
             style: TextStyle(
               color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
           Text(
-            'Add custom metrics like position,\nenvironment, or music',
+            'Add custom metrics like sleep hours,\nexercise, or medication',
             style: TextStyle(
               color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
-              fontSize: 12,
+              fontSize: 11,
             ),
             textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(width: 16),
 
           _buildAddCustomFieldButton(isDark),
         ],
@@ -1311,18 +1496,18 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _addCustomField,
-        icon: Icon(Icons.add, color: Colors.white, size: 18),
+        icon: Icon(Icons.add, color: Colors.white, size: 16),
         label: Text(
           'Add Custom Field',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF00BCD4),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          elevation: 4,
+          elevation: 2,
         ),
       ),
     );
@@ -1336,18 +1521,27 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '✅ Review Your Session',
-          subtitle: 'Confirm your meditation data before saving',
+          title: '✅ Review Your Entry',
+          subtitle: 'Confirm your period data before saving',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 // Review Cards
-                _buildReviewCard('Duration', '${_valueController.text} minutes', Icons.timer, const Color(0xFF6B73FF), isDark),
-                _buildReviewCard('Type', _selectedType ?? _typeController.text, _getCurrentMeditationIcon(), _getCurrentMeditationColor(), isDark),
-                _buildReviewCard('Difficulty', '$_selectedDifficulty/5 (${_getCurrentDifficultyLabel()})', Icons.trending_up, _getCurrentDifficultyColor(), isDark),
+                _buildReviewCard('Date', _selectedDate != null
+                    ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
+                    : 'Not selected', Icons.calendar_today, _getCurrentMenstrualColor(), isDark),
 
-                if (_afterEffectController.text.isNotEmpty)
-                  _buildReviewCard('After Effects', _afterEffectController.text, Icons.auto_awesome, Colors.amber, isDark),
+                if (_selectedFlow != null)
+                  _buildReviewCard('Flow Level', _selectedFlow!, _getCurrentMenstrualIcon(), _getCurrentMenstrualColor(), isDark),
+
+                if (_selectedSymptoms.isNotEmpty)
+                  _buildReviewCard('Symptoms', _selectedSymptoms.join(', '), Icons.healing, Colors.orange, isDark),
+
+                if (_selectedMood != null)
+                  _buildReviewCard('Mood', _selectedMood!, Icons.mood, Colors.purple, isDark),
+
+                if (_notesController.text.isNotEmpty)
+                  _buildReviewCard('Notes', _notesController.text, Icons.note, Colors.blue, isDark),
 
                 // Custom Fields Review
                 if (_customFields.isNotEmpty) ...[
@@ -1370,14 +1564,14 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        _getCurrentMeditationColor(),
-                        _getCurrentMeditationColor().withValues(alpha: 0.8),
+                        _getCurrentMenstrualColor(),
+                        _getCurrentMenstrualColor().withValues(alpha: 0.8),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: _getCurrentMeditationColor().withValues(alpha: 0.4),
+                        color: _getCurrentMenstrualColor().withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -1416,13 +1610,13 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _getCurrentMeditationIcon(),
+                              _getCurrentMenstrualIcon(),
                               color: Colors.white,
                               size: 18,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Save Meditation Entry',
+                              'Save Period Entry',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -1510,6 +1704,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
+  // Helper methods (same structure as other trackers)
   Widget _buildStepContainer({
     required bool isDark,
     required String title,
@@ -1775,14 +1970,14 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _getCurrentMeditationColor(),
-                      _getCurrentMeditationColor().withValues(alpha: 0.8),
+                      _getCurrentMenstrualColor(),
+                      _getCurrentMenstrualColor().withValues(alpha: 0.8),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: _getCurrentMeditationColor().withValues(alpha: 0.3),
+                      color: _getCurrentMenstrualColor().withValues(alpha: 0.3),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),

@@ -47,6 +47,7 @@ dependencies:
   fl_chart:
   flutter_dotenv:
   http:
+  intl:
   flutter_spinkit:
   share_plus:
   path_provider:

@@ -705,13 +705,13 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   }
 
   Widget _buildBMICalculator(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+      BuildContext context,
+      AnalyticsProvider provider,
+      bool isDark,
+      ) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(MediaQuery.of(context).size.width > 600 ? 24 : 16),
       decoration: _getCardDecoration(isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,15 +724,17 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                 size: 20,
               ),
               const SizedBox(width: 8),
-              Text(
-                'BMI Categories & Calculator',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(isDark),
+              Expanded(
+                child: Text(
+                  'BMI Categories & Calculator',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 8),
               Icon(
                 lucide.LucideIcons.info,
                 color: AppColors.textSecondary(isDark),
@@ -756,6 +758,7 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
       ),
     );
   }
+
 
   Widget _buildBMIScale(double? currentBMI, bool isDark) {
     return Column(

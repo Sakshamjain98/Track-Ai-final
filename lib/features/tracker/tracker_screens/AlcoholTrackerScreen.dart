@@ -5,58 +5,63 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/tracker/service/tracker_service.dart';
 
-class MeditationTrackerScreen extends StatefulWidget {
-  const MeditationTrackerScreen({Key? key}) : super(key: key);
+// Enhanced Alcohol Tracker Screen with Premium Multi-Step UI
+class AlcoholTrackerScreen extends StatefulWidget {
+  const AlcoholTrackerScreen({Key? key}) : super(key: key);
 
   @override
-  State<MeditationTrackerScreen> createState() => _MeditationTrackerScreenState();
+  State<AlcoholTrackerScreen> createState() => _AlcoholTrackerScreenState();
 }
 
-class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
+class _AlcoholTrackerScreenState extends State<AlcoholTrackerScreen>
     with TickerProviderStateMixin {
   PageController _pageController = PageController();
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _scaleController;
-  late AnimationController _breatheController;
+  late AnimationController _rotateController;
 
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _breatheAnimation;
+  late Animation<double> _rotateAnimation;
 
   int _currentStep = 0;
   final int _totalSteps = 6;
 
-  // Controllers for each field
+  // Controllers
   final _valueController = TextEditingController();
-  final _typeController = TextEditingController();
-  final _afterEffectController = TextEditingController();
+  final _occasionController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _reasonController = TextEditingController();
 
   final List<Map<String, TextEditingController>> _customFields = [];
   bool _isLoading = false;
-  int _selectedDifficulty = 3;
-  String? _selectedType;
+  int _selectedCraving = 3;
+  String? _selectedDrinkType;
+  String? _selectedSituation;
 
-  // Meditation types with icons and colors
-  final List<Map<String, dynamic>> _meditationTypes = [
-    {'name': 'Mindfulness', 'icon': Icons.self_improvement, 'color': Color(0xFF4CAF50), 'description': 'Present moment awareness'},
-    {'name': 'Focused Breathing', 'icon': Icons.air, 'color': Color(0xFF2196F3), 'description': 'Breath concentration'},
-    {'name': 'Body Scan', 'icon': Icons.accessibility_new, 'color': Color(0xFF9C27B0), 'description': 'Progressive relaxation'},
-    {'name': 'Loving Kindness', 'icon': Icons.favorite, 'color': Color(0xFFE91E63), 'description': 'Compassion practice'},
-    {'name': 'Walking Meditation', 'icon': Icons.directions_walk, 'color': Color(0xFFFF9800), 'description': 'Mindful movement'},
-    {'name': 'Transcendental', 'icon': Icons.blur_on, 'color': Color(0xFF673AB7), 'description': 'Mantra-based'},
-    {'name': 'Zen', 'icon': Icons.spa, 'color': Color(0xFF795548), 'description': 'Seated meditation'},
-    {'name': 'Guided Meditation', 'icon': Icons.headset, 'color': Color(0xFF607D8B), 'description': 'Audio-guided'},
+  // Enhanced drink types with icons and colors
+  final List<Map<String, dynamic>> _drinkTypes = [
+    {'name': 'Beer', 'icon': Icons.sports_bar, 'color': Color(0xFFFFB74D), 'description': 'Light & refreshing'},
+    {'name': 'Wine', 'icon': Icons.wine_bar, 'color': Color(0xFF8E24AA), 'description': 'Elegant & sophisticated'},
+    {'name': 'Whiskey', 'icon': Icons.local_bar, 'color': Color(0xFF6D4C41), 'description': 'Strong & smooth'},
+    {'name': 'Vodka', 'icon': Icons.liquor, 'color': Color(0xFF42A5F5), 'description': 'Clean & crisp'},
+    {'name': 'Rum', 'icon': Icons.emoji_food_beverage, 'color': Color(0xFFD4AF37), 'description': 'Sweet & tropical'},
+    {'name': 'Cocktail', 'icon': Icons.local_drink, 'color': Color(0xFFEC407A), 'description': 'Mixed & fruity'},
+    {'name': 'Champagne', 'icon': Icons.celebration, 'color': Color(0xFFFFD700), 'description': 'Celebration drink'},
+    {'name': 'Other', 'icon': Icons.more_horiz, 'color': Color(0xFF78909C), 'description': 'Other beverages'},
   ];
 
-  // Difficulty levels with descriptions
-  final List<Map<String, dynamic>> _difficultyLevels = [
-    {'level': 1, 'label': 'Beginner', 'description': 'New to meditation', 'color': Color(0xFF4CAF50)},
-    {'level': 2, 'label': 'Easy', 'description': 'Basic practice', 'color': Color(0xFF8BC34A)},
-    {'level': 3, 'label': 'Medium', 'description': 'Regular practice', 'color': Color(0xFFFFC107)},
-    {'level': 4, 'label': 'Hard', 'description': 'Advanced practice', 'color': Color(0xFFFF9800)},
-    {'level': 5, 'label': 'Expert', 'description': 'Deep meditation', 'color': Color(0xFFE53935)},
+  // Enhanced situations with icons and colors
+  final List<Map<String, dynamic>> _situations = [
+    {'name': 'Social Gathering', 'icon': Icons.group, 'color': Color(0xFF4CAF50), 'description': 'With friends & family'},
+    {'name': 'Dinner', 'icon': Icons.restaurant, 'color': Color(0xFFFF9800), 'description': 'During meals'},
+    {'name': 'Celebration', 'icon': Icons.celebration, 'color': Color(0xFFE91E63), 'description': 'Special occasions'},
+    {'name': 'Relaxation', 'icon': Icons.self_improvement, 'color': Color(0xFF9C27B0), 'description': 'To unwind'},
+    {'name': 'Work Event', 'icon': Icons.work, 'color': Color(0xFF3F51B5), 'description': 'Business occasions'},
+    {'name': 'Date', 'icon': Icons.favorite, 'color': Color(0xFFF44336), 'description': 'Romantic setting'},
+    {'name': 'Alone', 'icon': Icons.person, 'color': Color(0xFF607D8B), 'description': 'Solo drinking'},
   ];
 
   @override
@@ -78,10 +83,10 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       duration: const Duration(milliseconds: 300),
     );
 
-    _breatheController = AnimationController(
+    _rotateController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
@@ -96,8 +101,8 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
     );
 
-    _breatheAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
-      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
+    _rotateAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _rotateController, curve: Curves.linear),
     );
 
     _startAnimations();
@@ -115,10 +120,11 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     _fadeController.dispose();
     _slideController.dispose();
     _scaleController.dispose();
-    _breatheController.dispose();
+    _rotateController.dispose();
     _valueController.dispose();
-    _typeController.dispose();
-    _afterEffectController.dispose();
+    _occasionController.dispose();
+    _locationController.dispose();
+    _reasonController.dispose();
 
     for (var field in _customFields) {
       field['key']?.dispose();
@@ -198,14 +204,18 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
 
       final entryData = {
         'value': double.tryParse(_valueController.text) ?? 0.0,
-        'type': _selectedType ?? _typeController.text.trim(),
-        'afterEffect': _afterEffectController.text.trim(),
-        'difficulty': _selectedDifficulty,
+        'drinkType': _selectedDrinkType ?? '',
+        'situation': _selectedSituation ?? '',
+        'location': _locationController.text.trim(),
+        'reason': _reasonController.text.trim(),
+        'occasion': _occasionController.text.trim(),
+        'craving': _selectedCraving,
         'customData': customData,
-        'trackerType': 'meditation',
+        'trackerType': 'alcohol',
+        'timestamp': DateTime.now().toIso8601String(),
       };
 
-      await TrackerService.saveTrackerEntry('meditation', entryData);
+      await TrackerService.saveTrackerEntry('alcohol', entryData);
 
       HapticFeedback.heavyImpact();
 
@@ -216,10 +226,10 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 12),
-                Text('Meditation entry saved successfully! 🧘‍♀️'),
+                Text('Alcohol entry saved successfully! 🍻'),
               ],
             ),
-            backgroundColor: _getCurrentMeditationColor(),
+            backgroundColor: _getCurrentAlcoholColor(),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
@@ -257,38 +267,37 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     }
   }
 
-  Color _getCurrentMeditationColor() {
-    if (_selectedType != null) {
-      final type = _meditationTypes.firstWhere(
-            (type) => type['name'] == _selectedType,
-        orElse: () => _meditationTypes[0],
+  Color _getCurrentAlcoholColor() {
+    if (_selectedDrinkType != null) {
+      final type = _drinkTypes.firstWhere(
+            (t) => t['name'] == _selectedDrinkType,
+        orElse: () => _drinkTypes[0],
       );
       return type['color'];
     }
-    return const Color(0xFF6B73FF);
+    return const Color(0xFFFFB74D);
   }
 
-  IconData _getCurrentMeditationIcon() {
-    if (_selectedType != null) {
-      final type = _meditationTypes.firstWhere(
-            (type) => type['name'] == _selectedType,
-        orElse: () => _meditationTypes[0],
+  IconData _getCurrentAlcoholIcon() {
+    if (_selectedDrinkType != null) {
+      final type = _drinkTypes.firstWhere(
+            (t) => t['name'] == _selectedDrinkType,
+        orElse: () => _drinkTypes[0],
       );
       return type['icon'];
     }
-    return Icons.self_improvement;
+    return Icons.local_bar;
   }
 
-  Color _getCurrentDifficultyColor() {
-    return _difficultyLevels.firstWhere(
-          (level) => level['level'] == _selectedDifficulty,
-    )['color'];
-  }
-
-  String _getCurrentDifficultyLabel() {
-    return _difficultyLevels.firstWhere(
-          (level) => level['level'] == _selectedDifficulty,
-    )['label'];
+  Color _getCurrentSituationColor() {
+    if (_selectedSituation != null) {
+      final situation = _situations.firstWhere(
+            (s) => s['name'] == _selectedSituation,
+        orElse: () => _situations[0],
+      );
+      return situation['color'];
+    }
+    return const Color(0xFF4CAF50);
   }
 
   @override
@@ -320,10 +329,10 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         controller: _pageController,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [
-                          _buildStep1(isDark), // Duration
-                          _buildStep2(isDark), // Meditation Type
-                          _buildStep3(isDark), // Difficulty
-                          _buildStep4(isDark), // After Effects
+                          _buildStep1(isDark), // Amount
+                          _buildStep2(isDark), // Drink Type
+                          _buildStep3(isDark), // Situation
+                          _buildStep4(isDark), // Location & Reason
                           _buildStep5(isDark), // Custom Fields
                           _buildStep6(isDark), // Review & Save
                         ],
@@ -448,15 +457,15 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            _getCurrentMeditationColor(),
-                            _getCurrentMeditationColor().withValues(alpha: 0.7),
+                            _getCurrentAlcoholColor(),
+                            _getCurrentAlcoholColor().withValues(alpha: 0.7),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
                         child: Icon(
-                          _getCurrentMeditationIcon(),
+                          _getCurrentAlcoholIcon(),
                           color: Colors.white,
                           size: 18,
                         ),
@@ -469,7 +478,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Meditation Tracker',
+                            'Alcohol Tracker',
                             style: TextStyle(
                               color: isDark ? Colors.white : Colors.black,
                               fontSize: 18,
@@ -518,7 +527,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         strokeWidth: 3,
                         backgroundColor: Colors.transparent,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          _getCurrentMeditationColor(),
+                          _getCurrentAlcoholColor(),
                         ),
                       ),
                     ),
@@ -558,7 +567,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                 value: (_currentStep + 1) / _totalSteps,
                 backgroundColor: Colors.transparent,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  _getCurrentMeditationColor(),
+                  _getCurrentAlcoholColor(),
                 ),
               ),
             ),
@@ -570,17 +579,17 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
 
   String _getStepTitle(int step) {
     switch (step) {
-      case 0: return 'Duration';
-      case 1: return 'Meditation Type';
-      case 2: return 'Difficulty';
-      case 3: return 'After Effects';
-      case 4: return 'Custom Data';
+      case 0: return 'Amount';
+      case 1: return 'Drink Type';
+      case 2: return 'Situation';
+      case 3: return 'Details';
+      case 4: return 'Custom Fields';
       case 5: return 'Review';
       default: return '';
     }
   }
 
-  // Step 1: Duration
+  // Step 1: Amount
   Widget _buildStep1(bool isDark) {
     return SlideTransition(
       position: _slideAnimation,
@@ -588,19 +597,19 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '⏰ Meditation Duration',
-          subtitle: 'How long did you meditate?',
+          title: '🍻 Alcohol Amount',
+          subtitle: 'How many drinks did you have?',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 10),
 
-                // Animated Meditation Icon
+                // Animated Alcohol Icon
                 AnimatedBuilder(
-                  animation: _breatheAnimation,
+                  animation: _rotateAnimation,
                   builder: (context, child) {
-                    return Transform.scale(
-                      scale: _breatheAnimation.value,
+                    return Transform.rotate(
+                      angle: _rotateAnimation.value * 0.1,
                       child: Container(
                         width: 100,
                         height: 100,
@@ -608,20 +617,20 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFF6B73FF).withValues(alpha: 0.3),
-                              const Color(0xFF9575CD).withValues(alpha: 0.1),
+                              const Color(0xFFFFB74D).withValues(alpha: 0.3),
+                              const Color(0xFFFFE082).withValues(alpha: 0.1),
                             ],
                           ),
                           border: Border.all(
-                            color: const Color(0xFF6B73FF),
+                            color: const Color(0xFFFFB74D),
                             width: 2,
                           ),
                         ),
                         child: Center(
                           child: Icon(
-                            Icons.self_improvement,
+                            Icons.local_bar,
                             size: 50,
-                            color: const Color(0xFF6B73FF),
+                            color: const Color(0xFFFFB74D),
                           ),
                         ),
                       ),
@@ -633,19 +642,19 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
 
                 _buildEnhancedTextField(
                   controller: _valueController,
-                  label: 'Duration (minutes)',
-                  hint: 'e.g., 20',
+                  label: 'Number of Drinks',
+                  hint: '1, 2, 3...',
                   keyboardType: TextInputType.number,
                   isDark: isDark,
                   autofocus: true,
-                  prefixIcon: Icons.timer,
-                  helpText: 'Enter meditation session duration in minutes',
+                  prefixIcon: Icons.local_bar,
+                  helpText: 'Enter the total number of drinks consumed',
                 ),
 
                 const SizedBox(height: 20),
 
-                // Duration Suggestions
-                _buildDurationSuggestions(isDark),
+                // Drink Count Suggestions
+                _buildDrinkSuggestions(isDark),
                 const SizedBox(height: 20),
               ],
             ),
@@ -655,8 +664,8 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  Widget _buildDurationSuggestions(bool isDark) {
-    final suggestions = [5, 10, 15, 20, 30, 45, 60];
+  Widget _buildDrinkSuggestions(bool isDark) {
+    final suggestions = [1, 2, 3, 4, 5, 6];
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -668,7 +677,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Quick suggestions:',
+            'Quick counts:',
             style: TextStyle(
               color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
               fontSize: 12,
@@ -677,28 +686,31 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
           ),
           const SizedBox(height: 6),
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: suggestions.map((duration) => GestureDetector(
+            spacing: 8,
+            runSpacing: 8,
+            children: suggestions.map((count) => GestureDetector(
               onTap: () {
-                _valueController.text = duration.toString();
+                _valueController.text = count.toString();
                 HapticFeedback.selectionClick();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6B73FF).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFFFFB74D).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF6B73FF).withValues(alpha: 0.3),
+                    color: const Color(0xFFFFB74D).withValues(alpha: 0.3),
                   ),
                 ),
-                child: Text(
-                  '$duration min',
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                child: Center(
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -709,7 +721,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  // Step 2: Meditation Type
+  // Step 2: Type
   Widget _buildStep2(bool isDark) {
     return SlideTransition(
       position: _slideAnimation,
@@ -717,14 +729,14 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '🧘‍♀️ Meditation Type',
-          subtitle: 'What type of meditation did you practice?',
+          title: '🥃 Alcohol Type',
+          subtitle: 'What type of alcohol did you drink?',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 10),
 
-                // Meditation Types Grid
+                // Alcohol Types Grid
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -734,15 +746,15 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.1,
                   ),
-                  itemCount: _meditationTypes.length,
+                  itemCount: _drinkTypes.length,
                   itemBuilder: (context, index) {
-                    final type = _meditationTypes[index];
-                    final isSelected = _selectedType == type['name'];
+                    final type = _drinkTypes[index];
+                    final isSelected = _selectedDrinkType == type['name'];
 
                     return GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedType = type['name'];
+                          _selectedDrinkType = type['name'];
                         });
                         HapticFeedback.selectionClick();
                       },
@@ -797,7 +809,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
-                              maxLines: 2,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
@@ -808,7 +820,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                                 fontSize: 9,
                               ),
                               textAlign: TextAlign.center,
-                              maxLines: 2,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -817,26 +829,6 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                     );
                   },
                 ),
-
-                const SizedBox(height: 16),
-
-                // Custom Type Input
-                if (_selectedType == null) ...[
-                  Text(
-                    'Or enter custom type:',
-                    style: TextStyle(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildCompactTextField(
-                    controller: _typeController,
-                    label: 'Custom Type',
-                    hint: 'Enter custom meditation type',
-                    isDark: isDark,
-                  ),
-                ],
                 const SizedBox(height: 20),
               ],
             ),
@@ -846,7 +838,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  // Step 3: Difficulty
+  // Step 3: Situation
   Widget _buildStep3(bool isDark) {
     return SlideTransition(
       position: _slideAnimation,
@@ -854,177 +846,112 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '💪 Difficulty Level',
-          subtitle: 'How challenging was your meditation?',
+          title: '👥 Drinking Situation',
+          subtitle: 'What was the occasion or setting?',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 10),
 
-                // Current Difficulty Display
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        _getCurrentDifficultyColor().withValues(alpha: 0.3),
-                        _getCurrentDifficultyColor().withValues(alpha: 0.1),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: _getCurrentDifficultyColor(),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$_selectedDifficulty',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: _getCurrentDifficultyColor(),
+                // Situations List
+                ...(_situations.map((situation) {
+                  final isSelected = _selectedSituation == situation['name'];
+
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedSituation = situation['name'];
+                        });
+                        HapticFeedback.selectionClick();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? LinearGradient(
+                            colors: [
+                              situation['color'].withValues(alpha: 0.2),
+                              situation['color'].withValues(alpha: 0.1),
+                            ],
+                          )
+                              : LinearGradient(
+                            colors: [
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected
+                                ? situation['color']
+                                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                            width: isSelected ? 2 : 1,
                           ),
                         ),
-                        Text(
-                          _getCurrentDifficultyLabel(),
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: isDark
-                        ? LinearGradient(
-                      colors: [
-                        const Color(0xFF1A1A2E).withValues(alpha: 0.6),
-                        const Color(0xFF16213E).withValues(alpha: 0.4),
-                      ],
-                    )
-                        : LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.9),
-                        const Color(0xFFF8FAFF).withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Select difficulty level (1-5)',
-                        style: TextStyle(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Difficulty Slider
-                      Slider(
-                        value: _selectedDifficulty.toDouble(),
-                        min: 1,
-                        max: 5,
-                        divisions: 4,
-                        activeColor: _getCurrentDifficultyColor(),
-                        inactiveColor: _getCurrentDifficultyColor().withValues(alpha: 0.3),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedDifficulty = value.round();
-                          });
-                          HapticFeedback.selectionClick();
-                        },
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // Difficulty Level Cards
-                      SizedBox(
-                        height: 60,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _difficultyLevels.length,
-                          itemBuilder: (context, index) {
-                            final difficulty = _difficultyLevels[index];
-                            final isSelected = difficulty['level'] == _selectedDifficulty;
-
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedDifficulty = difficulty['level'];
-                                });
-                                HapticFeedback.selectionClick();
-                              },
-                              child: Container(
-                                width: 55,
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isSelected
-                                            ? difficulty['color']
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: difficulty['color'],
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '${difficulty['level']}',
-                                          style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : difficulty['color'],
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? situation['color']
+                                    : situation['color'].withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                situation['icon'],
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    situation['name'],
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white : Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      difficulty['label'],
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? (isDark ? Colors.white : Colors.black)
-                                            : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.5),
-                                        fontSize: 8,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                      textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    situation['description'],
+                                    style: TextStyle(
+                                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                                      fontSize: 12,
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: situation['color'],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 16,
                                 ),
                               ),
-                            );
-                          },
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                })),
                 const SizedBox(height: 20),
               ],
             ),
@@ -1034,7 +961,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  // Step 4: After Effects
+  // Step 4: Location & Reason
   Widget _buildStep4(bool isDark) {
     return SlideTransition(
       position: _slideAnimation,
@@ -1042,49 +969,55 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '✨ After Effects',
-          subtitle: 'How did you feel after meditation?',
+          title: '📍 Additional Details',
+          subtitle: 'Where and why did you drink?',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 const SizedBox(height: 10),
 
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFFFD700).withValues(alpha: 0.2),
-                        const Color(0xFFFFA500).withValues(alpha: 0.2),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 40,
-                    color: const Color(0xFFFFD700),
-                  ),
+                _buildEnhancedTextField(
+                  controller: _locationController,
+                  label: 'Location (Optional)',
+                  hint: 'Where did you drink? e.g., Home, Restaurant, Bar...',
+                  isDark: isDark,
+                  prefixIcon: Icons.location_on,
+                  helpText: 'The place where you consumed alcohol',
                 ),
 
                 const SizedBox(height: 20),
 
                 _buildEnhancedTextField(
-                  controller: _afterEffectController,
-                  label: 'After Effects',
-                  hint: 'e.g., relaxed, peaceful, energized, focused...',
+                  controller: _reasonController,
+                  label: 'Reason (Optional)',
+                  hint: 'Why did you drink? e.g., Celebrating, Relaxing...',
                   isDark: isDark,
                   maxLines: 3,
-                  autofocus: true,
-                  prefixIcon: Icons.sentiment_satisfied,
-                  helpText: 'Describe how you felt after your meditation',
+                  prefixIcon: Icons.psychology,
+                  helpText: 'Your motivation or reason for drinking',
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(height: 20),
 
-                // After Effects Suggestions
-                _buildAfterEffectsSuggestions(isDark),
+                _buildEnhancedTextField(
+                  controller: _occasionController,
+                  label: 'Occasion (Optional)',
+                  hint: 'What was the occasion? e.g., Birthday, Dinner...',
+                  isDark: isDark,
+                  maxLines: 2,
+                  prefixIcon: Icons.event,
+                  helpText: 'Special occasion or event details',
+                ),
+
+                const SizedBox(height: 20),
+
+                _buildCravingScale(isDark),
+
+                const SizedBox(height: 20),
+
+                // Quick location suggestions
+                _buildLocationSuggestions(isDark),
+
                 const SizedBox(height: 20),
               ],
             ),
@@ -1094,11 +1027,8 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  Widget _buildAfterEffectsSuggestions(bool isDark) {
-    final suggestions = [
-      'Relaxed', 'Peaceful', 'Focused', 'Energized', 'Clear',
-      'Calm', 'Centered', 'Refreshed', 'Balanced', 'Mindful'
-    ];
+  Widget _buildLocationSuggestions(bool isDark) {
+    final locations = ['Home', 'Restaurant', 'Bar', 'Club', 'Friend\'s House', 'Outdoor Event'];
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1110,7 +1040,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Common effects:',
+            'Common locations:',
             style: TextStyle(
               color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
               fontSize: 12,
@@ -1121,30 +1051,26 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: suggestions.map((effect) => GestureDetector(
+            children: locations.map((location) => GestureDetector(
               onTap: () {
-                final current = _afterEffectController.text;
-                if (current.isEmpty) {
-                  _afterEffectController.text = effect;
-                } else {
-                  _afterEffectController.text = '$current, $effect';
-                }
+                _locationController.text = location;
                 HapticFeedback.selectionClick();
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.1),
+                  color: const Color(0xFFFFB74D).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: const Color(0xFFFFD700).withValues(alpha: 0.3),
+                    color: const Color(0xFFFFB74D).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
-                  effect,
+                  location,
                   style: TextStyle(
                     color: isDark ? Colors.white : Colors.black,
                     fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -1152,6 +1078,115 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCravingScale(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Craving Level (1-5)',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: isDark
+                ? LinearGradient(
+              colors: [
+                const Color(0xFF1A1A2E).withValues(alpha: 0.6),
+                const Color(0xFF16213E).withValues(alpha: 0.4),
+              ],
+            )
+                : LinearGradient(
+              colors: [
+                Colors.white.withValues(alpha: 0.9),
+                const Color(0xFFF8FAFF).withValues(alpha: 0.7),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Rate your alcohol craving',
+                style: TextStyle(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(5, (index) {
+                  final number = index + 1;
+                  final isSelected = number == _selectedCraving;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedCraving = number;
+                      });
+                      HapticFeedback.selectionClick();
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: isSelected ? _getCurrentAlcoholColor() : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected ? _getCurrentAlcoholColor() : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$number',
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Low',
+                    style: TextStyle(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    'High',
+                    style: TextStyle(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1164,7 +1199,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         child: _buildStepContainer(
           isDark: isDark,
           title: '🔧 Custom Data',
-          subtitle: 'Add personalized meditation metrics',
+          subtitle: 'Add personalized alcohol tracking',
           child: _customFields.isEmpty
               ? _buildEmptyCustomFields(isDark)
               : SingleChildScrollView(
@@ -1205,7 +1240,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                               child: _buildCompactTextField(
                                 controller: field['key']!,
                                 label: 'Field Name',
-                                hint: 'e.g., Position',
+                                hint: 'e.g., Brand Name',
                                 isDark: isDark,
                               ),
                             ),
@@ -1233,7 +1268,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                         _buildCompactTextField(
                           controller: field['value']!,
                           label: 'Field Value',
-                          hint: 'e.g., Lotus position',
+                          hint: 'e.g., Heineken',
                           isDark: isDark,
                         ),
                       ],
@@ -1290,7 +1325,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
           const SizedBox(height: 6),
 
           Text(
-            'Add custom metrics like position,\nenvironment, or music',
+            'Add custom metrics like brand name,\nalcohol percentage, or price',
             style: TextStyle(
               color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
               fontSize: 12,
@@ -1336,18 +1371,30 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         scale: _scaleAnimation,
         child: _buildStepContainer(
           isDark: isDark,
-          title: '✅ Review Your Session',
-          subtitle: 'Confirm your meditation data before saving',
+          title: '✅ Review Your Entry',
+          subtitle: 'Confirm your alcohol tracking data before saving',
           child: SingleChildScrollView(
             child: Column(
               children: [
                 // Review Cards
-                _buildReviewCard('Duration', '${_valueController.text} minutes', Icons.timer, const Color(0xFF6B73FF), isDark),
-                _buildReviewCard('Type', _selectedType ?? _typeController.text, _getCurrentMeditationIcon(), _getCurrentMeditationColor(), isDark),
-                _buildReviewCard('Difficulty', '$_selectedDifficulty/5 (${_getCurrentDifficultyLabel()})', Icons.trending_up, _getCurrentDifficultyColor(), isDark),
+                _buildReviewCard('Drinks Count', '${_valueController.text} drinks', Icons.local_bar, _getCurrentAlcoholColor(), isDark),
 
-                if (_afterEffectController.text.isNotEmpty)
-                  _buildReviewCard('After Effects', _afterEffectController.text, Icons.auto_awesome, Colors.amber, isDark),
+                if (_selectedDrinkType != null)
+                  _buildReviewCard('Alcohol Type', _selectedDrinkType!, _getCurrentAlcoholIcon(), _getCurrentAlcoholColor(), isDark),
+
+                if (_selectedSituation != null)
+                  _buildReviewCard('Situation', _selectedSituation!, Icons.group, _getCurrentSituationColor(), isDark),
+
+                if (_locationController.text.isNotEmpty)
+                  _buildReviewCard('Location', _locationController.text, Icons.location_on, Colors.blue, isDark),
+
+                if (_reasonController.text.isNotEmpty)
+                  _buildReviewCard('Reason', _reasonController.text, Icons.psychology, Colors.purple, isDark),
+
+                if (_occasionController.text.isNotEmpty)
+                  _buildReviewCard('Occasion', _occasionController.text, Icons.event, Colors.orange, isDark),
+
+                _buildReviewCard('Craving Level', '$_selectedCraving/5', Icons.favorite, Colors.red, isDark),
 
                 // Custom Fields Review
                 if (_customFields.isNotEmpty) ...[
@@ -1370,14 +1417,14 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        _getCurrentMeditationColor(),
-                        _getCurrentMeditationColor().withValues(alpha: 0.8),
+                        _getCurrentAlcoholColor(),
+                        _getCurrentAlcoholColor().withValues(alpha: 0.8),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: _getCurrentMeditationColor().withValues(alpha: 0.4),
+                        color: _getCurrentAlcoholColor().withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -1416,13 +1463,13 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _getCurrentMeditationIcon(),
+                              _getCurrentAlcoholIcon(),
                               color: Colors.white,
                               size: 18,
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Save Meditation Entry',
+                              'Save Alcohol Entry',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -1510,6 +1557,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
+  // Helper methods
   Widget _buildStepContainer({
     required bool isDark,
     required String title,
@@ -1775,14 +1823,14 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _getCurrentMeditationColor(),
-                      _getCurrentMeditationColor().withValues(alpha: 0.8),
+                      _getCurrentAlcoholColor(),
+                      _getCurrentAlcoholColor().withValues(alpha: 0.8),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: _getCurrentMeditationColor().withValues(alpha: 0.3),
+                      color: _getCurrentAlcoholColor().withValues(alpha: 0.3),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
