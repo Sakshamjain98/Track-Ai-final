@@ -5,12 +5,10 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/provider/favourite_provider.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/tracker/edit_screen.dart';
-import 'package:trackai/features/tracker/tracker_screens/MenstrualTrackerScreen.dart';
 import 'package:trackai/features/tracker/tracker_screens/MentalWellbeingTrackerScreen.dart';
-import 'package:trackai/features/tracker/tracker_screens/StudyTrackerScreen.dart';
 import 'package:trackai/features/tracker/tracker_screens/WeightTrackerScreen.dart';
 import 'package:trackai/features/tracker/tracker_screens/WorkoutTrackerScreen.dart';
-import 'package:trackai/features/tracker/tracker_screens/expense_saving_alcohol_money_etc.dart' hide AlcoholTrackerScreen;
+import 'package:trackai/features/tracker/tracker_screens/expense_saving_alcohol_money_etc.dart';
 import 'package:trackai/features/tracker/tracker_screens/alcohol_mental_etc.dart';
 import 'package:trackai/features/tracker/tracker_screens/meditation.dart';
 import 'package:trackai/features/tracker/tracker_screens/mood_tracker.dart';
@@ -30,106 +28,106 @@ class _TrackerscreenState extends State<Trackerscreen> {
 
   // Tracker-specific icons and colors
   final List<TrackerItem> allTrackers = [
-  TrackerItem(
-    id: 'sleep',
-    title: 'Sleep Tracker',
-    description: 'Track your sleep duration and quality.',
-    unit: 'hours',
-    icon: Icons.bedtime,
-    color: const Color(0xFF26A69A),
-    screen: SleepTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'mood',
-    title: 'Mood Tracker',
-    description: 'Log your daily mood and notes.',
-    unit: '1-10 scale',
-    icon: Icons.sentiment_satisfied,
-    color: const Color(0xFF26A69A),
-    screen: MoodTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'meditation',
-    title: 'Meditation Tracker',
-    description: 'Log your meditation sessions and duration.',
-    unit: 'minutes',
-    icon: Icons.self_improvement,
-    color: const Color(0xFF26A69A),
-    screen: MeditationTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'expense',
-    title: 'Expense Tracker',
-    description: 'Monitor your spending and budget.',
-    unit: 'currency',
-    icon: Icons.attach_money,
-    color: const Color(0xFF26A69A),
-    screen: ExpenseTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'savings',
-    title: 'Savings Tracker',
-    description: 'Keep track of your savings goals.',
-    unit: 'currency',
-    icon: Icons.savings,
-    color: const Color(0xFF26A69A),
-    screen: SavingsTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'alcohol',
-    title: 'Alcohol Tracker',
-    description: 'Track your alcohol consumption.',
-    unit: 'drinks',
-    icon: Icons.local_drink,
-    color: const Color(0xFF26A69A),
-    screen: AlcoholTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'study',
-    title: 'Study Time Tracker',
-    description: 'Log your study sessions and focus periods.',
-    unit: 'hours',
-    icon: Icons.book,
-    color: const Color(0xFF26A69A),
-    screen: StudyTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'mental_wellbeing',
-    title: 'Mental Well-being Tracker',
-    description: 'Reflect on your mental state and well-being.',
-    unit: '1-5 scale',
-    icon: Icons.favorite,
-    color: const Color(0xFF26A69A),
-    screen: MentalWellbeingTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'workout',
-    title: 'Workout Tracker',
-    description: 'Log your workouts, sets, reps, and duration.',
-    unit: 'details',
-    icon: Icons.fitness_center,
-    color: const Color(0xFF26A69A),
-    screen: WorkoutTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'weight',
-    title: 'Weight Tracker',
-    description: 'Monitor your body weight.',
-    unit: 'kg / lbs',
-    icon: Icons.scale,
-    color: const Color(0xFF26A69A),
-    screen: WeightTrackerScreen(),
-  ),
-  TrackerItem(
-    id: 'menstrual',
-    title: 'Menstrual Cycle',
-    description: 'Log your period start date to predict the next one.',
-    unit: 'date',
-    icon: Icons.water_drop,
-    color: const Color(0xFF26A69A),
-    screen: MenstrualTrackerScreen(),
-  ),
-];
+    TrackerItem(
+      id: 'sleep',
+      title: 'Sleep Tracker',
+      description: 'Track your sleep duration and quality.',
+      unit: 'hours',
+      icon: Icons.bedtime,
+      color: const Color(0xFF26A69A),
+      screen: SleepTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'mood',
+      title: 'Mood Tracker',
+      description: 'Log your daily mood and notes.',
+      unit: '1-10 scale',
+      icon: Icons.sentiment_satisfied,
+      color: const Color(0xFF26A69A),
+      screen: MoodTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'meditation',
+      title: 'Meditation Tracker',
+      description: 'Log your meditation sessions and duration.',
+      unit: 'minutes',
+      icon: Icons.self_improvement,
+      color: const Color(0xFF26A69A),
+      screen: MeditationTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'expense',
+      title: 'Expense Tracker',
+      description: 'Monitor your spending and budget.',
+      unit: 'currency',
+      icon: Icons.attach_money,
+      color: const Color(0xFF26A69A),
+      screen: ExpenseTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'savings',
+      title: 'Savings Tracker',
+      description: 'Keep track of your savings goals.',
+      unit: 'currency',
+      icon: Icons.savings,
+      color: const Color(0xFF26A69A),
+      screen: SavingsTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'alcohol',
+      title: 'Alcohol Tracker',
+      description: 'Track your alcohol consumption.',
+      unit: 'drinks',
+      icon: Icons.local_drink,
+      color: const Color(0xFF26A69A),
+      screen: AlcoholTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'study',
+      title: 'Study Time Tracker',
+      description: 'Log your study sessions and focus periods.',
+      unit: 'hours',
+      icon: Icons.book,
+      color: const Color(0xFF26A69A),
+      screen: StudyTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'mental_wellbeing',
+      title: 'Mental Well-being Tracker',
+      description: 'Reflect on your mental state and well-being.',
+      unit: '1-5 scale',
+      icon: Icons.favorite,
+      color: const Color(0xFF26A69A),
+      screen: MentalWellbeingTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'workout',
+      title: 'Workout Tracker',
+      description: 'Log your workouts, sets, reps, and duration.',
+      unit: 'details',
+      icon: Icons.fitness_center,
+      color: const Color(0xFF26A69A),
+      screen: WorkoutTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'weight',
+      title: 'Weight Tracker',
+      description: 'Monitor your body weight.',
+      unit: 'kg / lbs',
+      icon: Icons.scale,
+      color: const Color(0xFF26A69A),
+      screen: WeightTrackerScreen(),
+    ),
+    TrackerItem(
+      id: 'menstrual',
+      title: 'Menstrual Cycle',
+      description: 'Log your period start date to predict the next one.',
+      unit: 'date',
+      icon: Icons.water_drop,
+      color: const Color(0xFF26A69A),
+      screen: MenstrualTrackerScreen(),
+    ),
+  ];
 
   List<TrackerItem> getFilteredTrackers(Set<String> favoriteTrackers) {
     List<TrackerItem> filtered = allTrackers;
@@ -144,13 +142,13 @@ class _TrackerscreenState extends State<Trackerscreen> {
       filtered = filtered
           .where(
             (tracker) =>
-                tracker.title.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                ) ||
-                tracker.description.toLowerCase().contains(
-                  searchQuery.toLowerCase(),
-                ),
-          )
+        tracker.title.toLowerCase().contains(
+          searchQuery.toLowerCase(),
+        ) ||
+            tracker.description.toLowerCase().contains(
+              searchQuery.toLowerCase(),
+            ),
+      )
           .toList();
     }
 
@@ -369,17 +367,17 @@ class _TrackerscreenState extends State<Trackerscreen> {
                       ),
                       suffixIcon: searchQuery.isNotEmpty
                           ? IconButton(
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() {
-                                  searchQuery = '';
-                                });
-                              },
-                              icon: Icon(
-                                Icons.clear_rounded,
-                                color: AppColors.black,
-                              ),
-                            )
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            searchQuery = '';
+                          });
+                        },
+                        icon: Icon(
+                          Icons.clear_rounded,
+                          color: AppColors.black,
+                        ),
+                      )
                           : null,
                       filled: true,
                       fillColor: AppColors.inputFill(isDark),
@@ -418,266 +416,266 @@ class _TrackerscreenState extends State<Trackerscreen> {
                 Expanded(
                   child: filteredTrackers.isEmpty
                       ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: AppColors.inputFill(isDark),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Icon(
-                                  showFavoritesOnly
-                                      ? Icons.star_outline_rounded
-                                      : Icons.search_off_rounded,
-                                  size: 48,
-                                  color: AppColors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                showFavoritesOnly
-                                    ? 'No favorite trackers yet'
-                                    : 'No trackers found',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary(isDark),
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                showFavoritesOnly
-                                  ? 'Star some trackers to see them here'
-                                  : 'Try adjusting your search query',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary(isDark),
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.inputFill(isDark),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        )
+                          child: Icon(
+                            showFavoritesOnly
+                                ? Icons.star_outline_rounded
+                                : Icons.search_off_rounded,
+                            size: 48,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          showFavoritesOnly
+                              ? 'No favorite trackers yet'
+                              : 'No trackers found',
+                          style: TextStyle(
+                            color: AppColors.textPrimary(isDark),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          showFavoritesOnly
+                              ? 'Star some trackers to see them here'
+                              : 'Try adjusting your search query',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(isDark),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: filteredTrackers.length,
-                          itemBuilder: (context, index) {
-                            final tracker = filteredTrackers[index];
-                            final isFavorite = favoritesProvider.isFavorite(
-                              tracker.id,
-                            );
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: filteredTrackers.length,
+                    itemBuilder: (context, index) {
+                      final tracker = filteredTrackers[index];
+                      final isFavorite = favoritesProvider.isFavorite(
+                        tracker.id,
+                      );
 
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 20),
-                              decoration: _getCardDecoration(isDark),
-                              child: InkWell(
-                                onTap: () {
-                                  HapticFeedback.lightImpact();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => tracker.screen,
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(16),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.inputFill(isDark),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Icon(
-                                              tracker.icon,
-                                              color: tracker.color,
-                                              size: 28,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  tracker.title,
-                                                  style: TextStyle(
-                                                    color:
-                                                        AppColors.textPrimary(
-                                                          isDark,
-                                                        ),
-                                                    fontSize: 18,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Unit: ${tracker.unit}',
-                                                  style: TextStyle(
-                                                    color:
-                                                        AppColors.textSecondary(
-                                                          isDark,
-                                                        ),
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          IconButton(
-                                            onPressed: () {
-                                              favoritesProvider.toggleFavorite(
-                                                tracker.id,
-                                              );
-                                              HapticFeedback.lightImpact();
-                                            },
-                                            icon: AnimatedSwitcher(
-                                              duration: const Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              child: Icon(
-                                                isFavorite
-                                                    ? Icons.star_rounded
-                                                    : Icons
-                                                          .star_outline_rounded,
-                                                key: ValueKey(isFavorite),
-                                                color: AppColors.black,
-                                                size: 24,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        tracker.description,
-                                        style: TextStyle(
-                                          color: AppColors.textSecondary(
-                                            isDark,
-                                          ),
-                                          fontSize: 15,
-                                          height: 1.5,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 20),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            flex: 2,
-                                            child: ElevatedButton.icon(
-                                              onPressed: () {
-                                                HapticFeedback.lightImpact();
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        tracker.screen,
-                                                  ),
-                                                );
-                                              },
-                                              icon: const Icon(
-                                                Icons.add_rounded,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                              label: const Text(
-                                                'Log Data',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 15,
-                                                ),
-                                              ),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: AppColors.black,
-                                                foregroundColor: AppColors.black,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 14,
-                                                    ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                elevation: 0,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              onPressed: () {
-                                                HapticFeedback.lightImpact();
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        EditLogsScreen(
-                                                          trackerId: tracker.id,
-                                                          trackerTitle:
-                                                              tracker.title,
-                                                          trackerColor:
-                                                              AppColors.black,
-                                                          trackerIcon:
-                                                              tracker.icon,
-                                                        ),
-                                                  ),
-                                                );
-                                              },
-                                              icon: Icon(
-                                                Icons.edit_rounded,
-                                                color: AppColors.black,
-                                                size: 18,
-                                              ),
-                                              label: Text(
-                                                'Edit',
-                                                style: TextStyle(
-                                                  color: AppColors.black,
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppColors.inputFill(isDark),
-                                                foregroundColor: AppColors.black,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 14,
-                                                    ),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  side: BorderSide(
-                                                    color: AppColors.black,
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                elevation: 0,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: _getCardDecoration(isDark),
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => tracker.screen,
                               ),
                             );
                           },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.inputFill(isDark),
+                                        borderRadius:
+                                        BorderRadius.circular(12),
+                                      ),
+                                      child: Icon(
+                                        tracker.icon,
+                                        color: tracker.color,
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            tracker.title,
+                                            style: TextStyle(
+                                              color:
+                                              AppColors.textPrimary(
+                                                isDark,
+                                              ),
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Unit: ${tracker.unit}',
+                                            style: TextStyle(
+                                              color:
+                                              AppColors.textSecondary(
+                                                isDark,
+                                              ),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        favoritesProvider.toggleFavorite(
+                                          tracker.id,
+                                        );
+                                        HapticFeedback.lightImpact();
+                                      },
+                                      icon: AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        child: Icon(
+                                          isFavorite
+                                              ? Icons.star_rounded
+                                              : Icons
+                                              .star_outline_rounded,
+                                          key: ValueKey(isFavorite),
+                                          color: AppColors.black,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  tracker.description,
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(
+                                      isDark,
+                                    ),
+                                    fontSize: 15,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          HapticFeedback.lightImpact();
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                              tracker.screen,
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.add_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        label: const Text(
+                                          'Log Data',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.black,
+                                          foregroundColor: AppColors.black,
+                                          padding:
+                                          const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(12),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          HapticFeedback.lightImpact();
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  EditLogsScreen(
+                                                    trackerId: tracker.id,
+                                                    trackerTitle:
+                                                    tracker.title,
+                                                    trackerColor:
+                                                    AppColors.black,
+                                                    trackerIcon:
+                                                    tracker.icon,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        icon: Icon(
+                                          Icons.edit_rounded,
+                                          color: AppColors.black,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          'Edit',
+                                          style: TextStyle(
+                                            color: AppColors.black,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor:
+                                          AppColors.inputFill(isDark),
+                                          foregroundColor: AppColors.black,
+                                          padding:
+                                          const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(12),
+                                            side: BorderSide(
+                                              color: AppColors.black,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -689,10 +687,10 @@ class _TrackerscreenState extends State<Trackerscreen> {
 
   // Show dialog to confirm clearing all favorites
   void _showClearFavoritesDialog(
-    BuildContext context,
-    FavoritesProvider favoritesProvider,
-    bool isDark,
-  ) {
+      BuildContext context,
+      FavoritesProvider favoritesProvider,
+      bool isDark,
+      ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

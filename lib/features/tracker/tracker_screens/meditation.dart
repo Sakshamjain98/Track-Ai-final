@@ -12,158 +12,32 @@ class MeditationTrackerScreen extends StatefulWidget {
   State<MeditationTrackerScreen> createState() => _MeditationTrackerScreenState();
 }
 
-class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
-    with TickerProviderStateMixin {
-  PageController _pageController = PageController();
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late AnimationController _scaleController;
-  late AnimationController _breatheController;
-
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _breatheAnimation;
-
-  int _currentStep = 0;
-  final int _totalSteps = 6;
-
-  // Controllers for each field
+class _MeditationTrackerScreenState extends State<MeditationTrackerScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _valueController = TextEditingController();
   final _typeController = TextEditingController();
   final _afterEffectController = TextEditingController();
 
   final List<Map<String, TextEditingController>> _customFields = [];
+
   bool _isLoading = false;
   int _selectedDifficulty = 3;
+
+  final List<String> meditationTypes = [
+    'Mindfulness',
+    'Focused Breathing',
+    'Body Scan',
+    'Loving Kindness',
+    'Walking Meditation',
+    'Transcendental',
+    'Zen',
+    'Guided Meditation',
+    'Other'
+  ];
+
   String? _selectedType;
 
-  // Meditation types with icons and colors
-  final List<Map<String, dynamic>> _meditationTypes = [
-    {'name': 'Mindfulness', 'icon': Icons.self_improvement, 'color': Color(0xFF4CAF50), 'description': 'Present moment awareness'},
-    {'name': 'Focused Breathing', 'icon': Icons.air, 'color': Color(0xFF2196F3), 'description': 'Breath concentration'},
-    {'name': 'Body Scan', 'icon': Icons.accessibility_new, 'color': Color(0xFF9C27B0), 'description': 'Progressive relaxation'},
-    {'name': 'Loving Kindness', 'icon': Icons.favorite, 'color': Color(0xFFE91E63), 'description': 'Compassion practice'},
-    {'name': 'Walking Meditation', 'icon': Icons.directions_walk, 'color': Color(0xFFFF9800), 'description': 'Mindful movement'},
-    {'name': 'Transcendental', 'icon': Icons.blur_on, 'color': Color(0xFF673AB7), 'description': 'Mantra-based'},
-    {'name': 'Zen', 'icon': Icons.spa, 'color': Color(0xFF795548), 'description': 'Seated meditation'},
-    {'name': 'Guided Meditation', 'icon': Icons.headset, 'color': Color(0xFF607D8B), 'description': 'Audio-guided'},
-  ];
-
-  // Difficulty levels with descriptions
-  final List<Map<String, dynamic>> _difficultyLevels = [
-    {'level': 1, 'label': 'Beginner', 'description': 'New to meditation', 'color': Color(0xFF4CAF50)},
-    {'level': 2, 'label': 'Easy', 'description': 'Basic practice', 'color': Color(0xFF8BC34A)},
-    {'level': 3, 'label': 'Medium', 'description': 'Regular practice', 'color': Color(0xFFFFC107)},
-    {'level': 4, 'label': 'Hard', 'description': 'Advanced practice', 'color': Color(0xFFFF9800)},
-    {'level': 5, 'label': 'Expert', 'description': 'Deep meditation', 'color': Color(0xFFE53935)},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _breatheController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3000),
-    )..repeat(reverse: true);
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
-
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
-    );
-
-    _breatheAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
-      CurvedAnimation(parent: _breatheController, curve: Curves.easeInOut),
-    );
-
-    _startAnimations();
-  }
-
-  void _startAnimations() {
-    _fadeController.forward();
-    _slideController.forward();
-    _scaleController.forward();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _fadeController.dispose();
-    _slideController.dispose();
-    _scaleController.dispose();
-    _breatheController.dispose();
-    _valueController.dispose();
-    _typeController.dispose();
-    _afterEffectController.dispose();
-
-    for (var field in _customFields) {
-      field['key']?.dispose();
-      field['value']?.dispose();
-    }
-    super.dispose();
-  }
-
-  void _nextStep() {
-    if (_currentStep < _totalSteps - 1) {
-      HapticFeedback.lightImpact();
-      setState(() {
-        _currentStep++;
-      });
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOutCubic,
-      );
-      _restartAnimations();
-    }
-  }
-
-  void _previousStep() {
-    if (_currentStep > 0) {
-      HapticFeedback.lightImpact();
-      setState(() {
-        _currentStep--;
-      });
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOutCubic,
-      );
-      _restartAnimations();
-    }
-  }
-
-  void _restartAnimations() {
-    _slideController.reset();
-    _scaleController.reset();
-    _slideController.forward();
-    _scaleController.forward();
-  }
-
   void _addCustomField() {
-    HapticFeedback.selectionClick();
     setState(() {
       _customFields.add({
         'key': TextEditingController(),
@@ -173,7 +47,6 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
   }
 
   void _removeCustomField(int index) {
-    HapticFeedback.lightImpact();
     setState(() {
       _customFields[index]['key']?.dispose();
       _customFields[index]['value']?.dispose();
@@ -181,7 +54,26 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     });
   }
 
+  void _clearForm() {
+    _valueController.clear();
+    _typeController.clear();
+    _afterEffectController.clear();
+
+    for (var field in _customFields) {
+      field['key']?.clear();
+      field['value']?.clear();
+    }
+
+    setState(() {
+      _customFields.clear();
+      _selectedDifficulty = 3;
+      _selectedType = null;
+    });
+  }
+
   Future<void> _saveEntry() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -197,7 +89,7 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
       }
 
       final entryData = {
-        'value': double.tryParse(_valueController.text) ?? 0.0,
+        'value': double.parse(_valueController.text),
         'type': _selectedType ?? _typeController.text.trim(),
         'afterEffect': _afterEffectController.text.trim(),
         'difficulty': _selectedDifficulty,
@@ -207,44 +99,21 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
 
       await TrackerService.saveTrackerEntry('meditation', entryData);
 
-      HapticFeedback.heavyImpact();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 12),
-                Text('Meditation entry saved successfully! 🧘‍♀️'),
-              ],
-            ),
-            backgroundColor: _getCurrentMeditationColor(),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+            content: const Text('Meditation entry saved successfully!'),
+            backgroundColor: AppColors.successColor,
           ),
         );
-
-        await Future.delayed(const Duration(milliseconds: 1500));
-        Navigator.pop(context);
+        _clearForm();
       }
     } catch (e) {
-      HapticFeedback.heavyImpact();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Error saving entry: $e')),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+            content: Text('Error saving entry: $e'),
+            backgroundColor: AppColors.errorColor,
           ),
         );
       }
@@ -257,38 +126,18 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     }
   }
 
-  Color _getCurrentMeditationColor() {
-    if (_selectedType != null) {
-      final type = _meditationTypes.firstWhere(
-            (type) => type['name'] == _selectedType,
-        orElse: () => _meditationTypes[0],
-      );
-      return type['color'];
+  @override
+  void dispose() {
+    _valueController.dispose();
+    _typeController.dispose();
+    _afterEffectController.dispose();
+
+    for (var field in _customFields) {
+      field['key']?.dispose();
+      field['value']?.dispose();
     }
-    return const Color(0xFF6B73FF);
-  }
 
-  IconData _getCurrentMeditationIcon() {
-    if (_selectedType != null) {
-      final type = _meditationTypes.firstWhere(
-            (type) => type['name'] == _selectedType,
-        orElse: () => _meditationTypes[0],
-      );
-      return type['icon'];
-    }
-    return Icons.self_improvement;
-  }
-
-  Color _getCurrentDifficultyColor() {
-    return _difficultyLevels.firstWhere(
-          (level) => level['level'] == _selectedDifficulty,
-    )['color'];
-  }
-
-  String _getCurrentDifficultyLabel() {
-    return _difficultyLevels.firstWhere(
-          (level) => level['level'] == _selectedDifficulty,
-    )['label'];
+    super.dispose();
   }
 
   @override
@@ -298,42 +147,401 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
         final isDark = themeProvider.isDarkMode;
 
         return Scaffold(
-          backgroundColor: _getGradientBackground(isDark),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: _getBackgroundGradient(isDark),
+          backgroundColor: AppColors.background(isDark),
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: AppColors.cardBackground(isDark), // Light grey AppBar
+            leading: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: Icon(
+                Icons.arrow_back,
+                color: AppColors.textPrimary(isDark),
+              ),
             ),
-            child: SafeArea(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
+            title: Text(
+              'Log Meditation Tracker',
+              style: TextStyle(
+                color: AppColors.textPrimary(isDark),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          body: Container(
+            color: AppColors.background(isDark), // Solid background for clean theme
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Enhanced Progress Header - Fixed height
-                    SizedBox(
-                      height: 140,
-                      child: _buildEnhancedProgressHeader(isDark),
+                    Text(
+                      'Enter the details for your meditation tracker entry.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Value (minutes)
+                    _buildTextField(
+                      controller: _valueController,
+                      label: 'Value (minutes)',
+                      hint: 'Enter meditation duration in minutes',
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter meditation duration';
+                        }
+                        if (double.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                      isDark: isDark,
                     ),
 
-                    // Page View with proper constraints
-                    Expanded(
-                      child: PageView(
-                        controller: _pageController,
-                        physics: const NeverScrollableScrollPhysics(),
+                    const SizedBox(height: 16),
+
+                    // Type Dropdown
+                    Text(
+                      'Type',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground(isDark), // Light grey card
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.borderColor(isDark),
+                        ),
+                      ),
+                      child: DropdownButtonFormField<String>(
+                        value: _selectedType,
+                        items: meditationTypes.map((String type) {
+                          return DropdownMenuItem<String>(
+                            value: type,
+                            child: Text(
+                              type,
+                              style: TextStyle(
+                                color: AppColors.textPrimary(isDark),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedType = newValue;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Select meditation type',
+                          hintStyle: TextStyle(
+                            color: AppColors.textSecondary(isDark),
+                          ),
+                        ),
+                        isExpanded: true,
+                        validator: (value) {
+                          if (value == null && _typeController.text.isEmpty) {
+                            return 'Please select or enter a meditation type';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Or enter custom type:',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(isDark),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _typeController,
+                      label: '',
+                      hint: 'Enter custom meditation type',
+                      isDark: isDark,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Difficulty (1-5 scale)
+                    Text(
+                      'Difficulty (1-5 scale)',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(isDark),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground(isDark), // Light grey card
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.borderColor(isDark),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildStep1(isDark), // Duration
-                          _buildStep2(isDark), // Meditation Type
-                          _buildStep3(isDark), // Difficulty
-                          _buildStep4(isDark), // After Effects
-                          _buildStep5(isDark), // Custom Fields
-                          _buildStep6(isDark), // Review & Save
+                          Text(
+                            'Select difficulty (1-5)',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(isDark),
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Difficulty Scale Slider
+                          Slider(
+                            value: _selectedDifficulty.toDouble(),
+                            min: 1,
+                            max: 5,
+                            divisions: 4,
+                            activeColor: AppColors.black, // Black slider
+                            inactiveColor: AppColors.textSecondary(isDark).withOpacity(0.3),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedDifficulty = value.round();
+                              });
+                              HapticFeedback.selectionClick();
+                            },
+                          ),
+                          // Difficulty Scale Labels
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(5, (index) {
+                              final number = index + 1;
+                              final isSelected = number == _selectedDifficulty;
+                              return Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.black // Black for selected
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.black
+                                        : AppColors.textSecondary(isDark),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$number',
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? AppColors.white // White text for selected
+                                          : AppColors.textSecondary(isDark),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Text(
+                              'Selected: $_selectedDifficulty',
+                              style: TextStyle(
+                                color: AppColors.black, // Black text
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
 
-                    // Enhanced Navigation Buttons - Fixed height
-                    SizedBox(
-                      height: 120,
-                      child: _buildEnhancedNavigationButtons(isDark),
+                    const SizedBox(height: 16),
+
+                    // After Effect
+                    _buildTextField(
+                      controller: _afterEffectController,
+                      label: 'After Effect',
+                      hint: 'How did you feel after meditation?',
+                      maxLines: 3,
+                      isDark: isDark,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Custom Data Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Custom Data',
+                          style: TextStyle(
+                            color: AppColors.textPrimary(isDark),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _addCustomField,
+                          icon: Icon(
+                            Icons.add,
+                            color: AppColors.black, // Black icon
+                            size: 16,
+                          ),
+                          label: Text(
+                            'Add Custom Field',
+                            style: TextStyle(
+                              color: AppColors.black, // Black text
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Custom Fields
+                    ..._customFields.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final field = entry.value;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBackground(isDark), // Light grey card
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.borderColor(isDark),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: field['key']!,
+                                    label: 'Field Name',
+                                    hint: 'e.g., Position',
+                                    isDark: isDark,
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => _removeCustomField(index),
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: AppColors.errorColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            _buildTextField(
+                              controller: field['value']!,
+                              label: 'Field Value',
+                              hint: 'e.g., Sitting',
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+
+                    const SizedBox(height: 32),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(
+                                color: AppColors.black, // Black border
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              backgroundColor: AppColors.white, // White background
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: AppColors.black, // Black text
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _clearForm,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(
+                                color: AppColors.black, // Black border
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              backgroundColor: AppColors.white, // White background
+                            ),
+                            child: Text(
+                              'Clear Form',
+                              style: TextStyle(
+                                color: AppColors.black, // Black text
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _saveEntry,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.black, // Black button
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                              ),
+                            )
+                                : const Text(
+                              'Save Entry',
+                              style: TextStyle(
+                                color: AppColors.white, // White text
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -345,1481 +553,68 @@ class _MeditationTrackerScreenState extends State<MeditationTrackerScreen>
     );
   }
 
-  Color _getGradientBackground(bool isDark) {
-    return isDark
-        ? const Color(0xFF0A0A0F)
-        : const Color(0xFFF8FAFF);
-  }
-
-  Gradient _getBackgroundGradient(bool isDark) {
-    return LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: isDark
-          ? [
-        const Color(0xFF0A0A0F),
-        const Color(0xFF1A1A2E),
-        const Color(0xFF16213E),
-      ]
-          : [
-        const Color(0xFFF8FAFF),
-        const Color(0xFFE8F4FD),
-        const Color(0xFFDDF4FF),
-      ],
-      stops: const [0.0, 0.5, 1.0],
-    );
-  }
-
-  Widget _buildEnhancedProgressHeader(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-          colors: [
-            const Color(0xFF1A1A2E).withValues(alpha: 0.9),
-            const Color(0xFF16213E).withValues(alpha: 0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        )
-            : LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.95),
-            const Color(0xFFF8FAFF).withValues(alpha: 0.9),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header Row
-          Row(
-            children: [
-              // Back Button
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.black.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: _currentStep > 0 ? _previousStep : () => Navigator.pop(context),
-                  icon: Icon(
-                    Icons.arrow_back_ios_new,
-                    color: isDark ? Colors.white : Colors.black,
-                    size: 18,
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Title Section
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _getCurrentMeditationColor(),
-                            _getCurrentMeditationColor().withValues(alpha: 0.7),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          _getCurrentMeditationIcon(),
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Meditation Tracker',
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            '${_getStepTitle(_currentStep)}',
-                            style: TextStyle(
-                              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // **🔧 FIXED PROGRESS CIRCLE - PROPERLY CENTERED**
-              Container(
-                width: 50,
-                height: 50,
-                child: Stack(
-                  alignment: Alignment.center, // ✅ This centers everything
-                  children: [
-                    // Background Circle
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                      ),
-                    ),
-                    // Progress Circle - ✅ Properly sized and centered
-                    SizedBox(
-                      width: 46, // ✅ Slightly smaller than container
-                      height: 46,
-                      child: CircularProgressIndicator(
-                        value: (_currentStep + 1) / _totalSteps,
-                        strokeWidth: 3,
-                        backgroundColor: Colors.transparent,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          _getCurrentMeditationColor(),
-                        ),
-                      ),
-                    ),
-                    // Center Text - ✅ Perfectly centered
-                    Container(
-                      width: 50,
-                      height: 50,
-                      child: Center(
-                        child: Text(
-                          '${_currentStep + 1}',
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Enhanced Progress Bar
-          Container(
-            height: 4,
-            decoration: BoxDecoration(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: (_currentStep + 1) / _totalSteps,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _getCurrentMeditationColor(),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getStepTitle(int step) {
-    switch (step) {
-      case 0: return 'Duration';
-      case 1: return 'Meditation Type';
-      case 2: return 'Difficulty';
-      case 3: return 'After Effects';
-      case 4: return 'Custom Data';
-      case 5: return 'Review';
-      default: return '';
-    }
-  }
-
-  // Step 1: Duration
-  Widget _buildStep1(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '⏰ Meditation Duration',
-          subtitle: 'How long did you meditate?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // Animated Meditation Icon
-                AnimatedBuilder(
-                  animation: _breatheAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _breatheAnimation.value,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF6B73FF).withValues(alpha: 0.3),
-                              const Color(0xFF9575CD).withValues(alpha: 0.1),
-                            ],
-                          ),
-                          border: Border.all(
-                            color: const Color(0xFF6B73FF),
-                            width: 2,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.self_improvement,
-                            size: 50,
-                            color: const Color(0xFF6B73FF),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                _buildEnhancedTextField(
-                  controller: _valueController,
-                  label: 'Duration (minutes)',
-                  hint: 'e.g., 20',
-                  keyboardType: TextInputType.number,
-                  isDark: isDark,
-                  autofocus: true,
-                  prefixIcon: Icons.timer,
-                  helpText: 'Enter meditation session duration in minutes',
-                ),
-
-                const SizedBox(height: 20),
-
-                // Duration Suggestions
-                _buildDurationSuggestions(isDark),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDurationSuggestions(bool isDark) {
-    final suggestions = [5, 10, 15, 20, 30, 45, 60];
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick suggestions:',
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: suggestions.map((duration) => GestureDetector(
-              onTap: () {
-                _valueController.text = duration.toString();
-                HapticFeedback.selectionClick();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6B73FF).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF6B73FF).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  '$duration min',
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            )).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Step 2: Meditation Type
-  Widget _buildStep2(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '🧘‍♀️ Meditation Type',
-          subtitle: 'What type of meditation did you practice?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // Meditation Types Grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                  ),
-                  itemCount: _meditationTypes.length,
-                  itemBuilder: (context, index) {
-                    final type = _meditationTypes[index];
-                    final isSelected = _selectedType == type['name'];
-
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedType = type['name'];
-                        });
-                        HapticFeedback.selectionClick();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: isSelected
-                              ? LinearGradient(
-                            colors: [
-                              type['color'].withValues(alpha: 0.2),
-                              type['color'].withValues(alpha: 0.1),
-                            ],
-                          )
-                              : LinearGradient(
-                            colors: [
-                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.02),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected
-                                ? type['color']
-                                : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? type['color']
-                                    : type['color'].withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                type['icon'],
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              type['name'],
-                              style: TextStyle(
-                                color: isDark ? Colors.white : Colors.black,
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              type['description'],
-                              style: TextStyle(
-                                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                                fontSize: 9,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                // Custom Type Input
-                if (_selectedType == null) ...[
-                  Text(
-                    'Or enter custom type:',
-                    style: TextStyle(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildCompactTextField(
-                    controller: _typeController,
-                    label: 'Custom Type',
-                    hint: 'Enter custom meditation type',
-                    isDark: isDark,
-                  ),
-                ],
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Step 3: Difficulty
-  Widget _buildStep3(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '💪 Difficulty Level',
-          subtitle: 'How challenging was your meditation?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                // Current Difficulty Display
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        _getCurrentDifficultyColor().withValues(alpha: 0.3),
-                        _getCurrentDifficultyColor().withValues(alpha: 0.1),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: _getCurrentDifficultyColor(),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$_selectedDifficulty',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: _getCurrentDifficultyColor(),
-                          ),
-                        ),
-                        Text(
-                          _getCurrentDifficultyLabel(),
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: isDark
-                        ? LinearGradient(
-                      colors: [
-                        const Color(0xFF1A1A2E).withValues(alpha: 0.6),
-                        const Color(0xFF16213E).withValues(alpha: 0.4),
-                      ],
-                    )
-                        : LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.9),
-                        const Color(0xFFF8FAFF).withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Select difficulty level (1-5)',
-                        style: TextStyle(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Difficulty Slider
-                      Slider(
-                        value: _selectedDifficulty.toDouble(),
-                        min: 1,
-                        max: 5,
-                        divisions: 4,
-                        activeColor: _getCurrentDifficultyColor(),
-                        inactiveColor: _getCurrentDifficultyColor().withValues(alpha: 0.3),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedDifficulty = value.round();
-                          });
-                          HapticFeedback.selectionClick();
-                        },
-                      ),
-
-                      const SizedBox(height: 10),
-
-                      // Difficulty Level Cards
-                      SizedBox(
-                        height: 60,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _difficultyLevels.length,
-                          itemBuilder: (context, index) {
-                            final difficulty = _difficultyLevels[index];
-                            final isSelected = difficulty['level'] == _selectedDifficulty;
-
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedDifficulty = difficulty['level'];
-                                });
-                                HapticFeedback.selectionClick();
-                              },
-                              child: Container(
-                                width: 55,
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isSelected
-                                            ? difficulty['color']
-                                            : Colors.transparent,
-                                        border: Border.all(
-                                          color: difficulty['color'],
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '${difficulty['level']}',
-                                          style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : difficulty['color'],
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      difficulty['label'],
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? (isDark ? Colors.white : Colors.black)
-                                            : (isDark ? Colors.white : Colors.black).withValues(alpha: 0.5),
-                                        fontSize: 8,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Step 4: After Effects
-  Widget _buildStep4(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '✨ After Effects',
-          subtitle: 'How did you feel after meditation?',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFFFFD700).withValues(alpha: 0.2),
-                        const Color(0xFFFFA500).withValues(alpha: 0.2),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 40,
-                    color: const Color(0xFFFFD700),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                _buildEnhancedTextField(
-                  controller: _afterEffectController,
-                  label: 'After Effects',
-                  hint: 'e.g., relaxed, peaceful, energized, focused...',
-                  isDark: isDark,
-                  maxLines: 3,
-                  autofocus: true,
-                  prefixIcon: Icons.sentiment_satisfied,
-                  helpText: 'Describe how you felt after your meditation',
-                ),
-
-                const SizedBox(height: 15),
-
-                // After Effects Suggestions
-                _buildAfterEffectsSuggestions(isDark),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAfterEffectsSuggestions(bool isDark) {
-    final suggestions = [
-      'Relaxed', 'Peaceful', 'Focused', 'Energized', 'Clear',
-      'Calm', 'Centered', 'Refreshed', 'Balanced', 'Mindful'
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Common effects:',
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: suggestions.map((effect) => GestureDetector(
-              onTap: () {
-                final current = _afterEffectController.text;
-                if (current.isEmpty) {
-                  _afterEffectController.text = effect;
-                } else {
-                  _afterEffectController.text = '$current, $effect';
-                }
-                HapticFeedback.selectionClick();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFD700).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  effect,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            )).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Step 5: Custom Fields
-  Widget _buildStep5(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '🔧 Custom Data',
-          subtitle: 'Add personalized meditation metrics',
-          child: _customFields.isEmpty
-              ? _buildEmptyCustomFields(isDark)
-              : SingleChildScrollView(
-            child: Column(
-              children: [
-                // Custom Fields List
-                ..._customFields.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final field = entry.value;
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: isDark
-                          ? LinearGradient(
-                        colors: [
-                          const Color(0xFF1A1A2E).withValues(alpha: 0.6),
-                          const Color(0xFF16213E).withValues(alpha: 0.4),
-                        ],
-                      )
-                          : LinearGradient(
-                        colors: [
-                          Colors.white.withValues(alpha: 0.8),
-                          const Color(0xFFF8FAFF).withValues(alpha: 0.6),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildCompactTextField(
-                                controller: field['key']!,
-                                label: 'Field Name',
-                                hint: 'e.g., Position',
-                                isDark: isDark,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: () => _removeCustomField(index),
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                  size: 18,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCompactTextField(
-                          controller: field['value']!,
-                          label: 'Field Value',
-                          hint: 'e.g., Lotus position',
-                          isDark: isDark,
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-
-                const SizedBox(height: 16),
-                _buildAddCustomFieldButton(isDark),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyCustomFields(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF00BCD4).withValues(alpha: 0.2),
-                  const Color(0xFF009688).withValues(alpha: 0.2),
-                ],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.add_circle_outline,
-              size: 40,
-              color: const Color(0xFF00BCD4),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Text(
-            'No custom fields yet',
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-
-          const SizedBox(height: 6),
-
-          Text(
-            'Add custom metrics like position,\nenvironment, or music',
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 24),
-
-          _buildAddCustomFieldButton(isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddCustomFieldButton(bool isDark) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _addCustomField,
-        icon: Icon(Icons.add, color: Colors.white, size: 18),
-        label: Text(
-          'Add Custom Field',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF00BCD4),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 4,
-        ),
-      ),
-    );
-  }
-
-  // Step 6: Review & Save
-  Widget _buildStep6(bool isDark) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: _buildStepContainer(
-          isDark: isDark,
-          title: '✅ Review Your Session',
-          subtitle: 'Confirm your meditation data before saving',
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Review Cards
-                _buildReviewCard('Duration', '${_valueController.text} minutes', Icons.timer, const Color(0xFF6B73FF), isDark),
-                _buildReviewCard('Type', _selectedType ?? _typeController.text, _getCurrentMeditationIcon(), _getCurrentMeditationColor(), isDark),
-                _buildReviewCard('Difficulty', '$_selectedDifficulty/5 (${_getCurrentDifficultyLabel()})', Icons.trending_up, _getCurrentDifficultyColor(), isDark),
-
-                if (_afterEffectController.text.isNotEmpty)
-                  _buildReviewCard('After Effects', _afterEffectController.text, Icons.auto_awesome, Colors.amber, isDark),
-
-                // Custom Fields Review
-                if (_customFields.isNotEmpty) ...[
-                  ..._customFields.map((field) {
-                    final key = field['key']?.text ?? '';
-                    final value = field['value']?.text ?? '';
-                    if (key.isNotEmpty && value.isNotEmpty) {
-                      return _buildReviewCard(key, value, Icons.settings, Colors.teal, isDark);
-                    }
-                    return const SizedBox.shrink();
-                  }),
-                ],
-
-                const SizedBox(height: 24),
-
-                // Enhanced Save Button
-                Container(
-                  width: double.infinity,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _getCurrentMeditationColor(),
-                        _getCurrentMeditationColor().withValues(alpha: 0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _getCurrentMeditationColor().withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _isLoading ? null : _saveEntry,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Center(
-                        child: _isLoading
-                            ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Saving...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        )
-                            : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _getCurrentMeditationIcon(),
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Save Meditation Entry',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReviewCard(String label, String value, IconData icon, Color color, bool isDark) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-          colors: [
-            const Color(0xFF1A1A2E).withValues(alpha: 0.6),
-            const Color(0xFF16213E).withValues(alpha: 0.4),
-          ],
-        )
-            : LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.9),
-            const Color(0xFFF8FAFF).withValues(alpha: 0.7),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, color: color, size: 16),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  value.isEmpty ? 'Not provided' : value,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepContainer({
-    required bool isDark,
-    required String title,
-    required String subtitle,
-    required Widget child,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-              fontSize: 14,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Content - Use Expanded to prevent overflow
-          Expanded(child: child),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEnhancedTextField({
+  Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required bool isDark,
     TextInputType? keyboardType,
     int maxLines = 1,
-    bool autofocus = false,
-    IconData? prefixIcon,
-    String? helpText,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            gradient: isDark
-                ? LinearGradient(
-              colors: [
-                const Color(0xFF1A1A2E).withValues(alpha: 0.6),
-                const Color(0xFF16213E).withValues(alpha: 0.4),
-              ],
-            )
-                : LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.9),
-                const Color(0xFFF8FAFF).withValues(alpha: 0.7),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-            ),
-          ),
-          child: TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            autofocus: autofocus,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black,
-              fontSize: 14,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
-              ),
-              prefixIcon: prefixIcon != null
-                  ? Icon(
-                prefixIcon,
-                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6),
-                size: 18,
-              )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
-        ),
-        if (helpText != null) ...[
-          const SizedBox(height: 6),
+        if (label.isNotEmpty) ...[
           Text(
-            helpText,
+            label,
             style: TextStyle(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
-              fontSize: 11,
+              color: AppColors.textPrimary(isDark),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 8),
         ],
-      ],
-    );
-  }
-
-  Widget _buildCompactTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required bool isDark,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            gradient: isDark
-                ? LinearGradient(
-              colors: [
-                const Color(0xFF1A1A2E).withValues(alpha: 0.6),
-                const Color(0xFF16213E).withValues(alpha: 0.4),
-              ],
-            )
-                : LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.9),
-                const Color(0xFFF8FAFF).withValues(alpha: 0.7),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-            ),
-          ),
-          child: TextFormField(
-            controller: controller,
-            style: TextStyle(
-              color: isDark ? Colors.white : Colors.black,
-              fontSize: 12,
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(
-                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
-                fontSize: 12,
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          validator: validator,
+          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+            filled: true,
+            fillColor: AppColors.cardBackground(isDark), // Light grey input
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: AppColors.borderColor(isDark),
               ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: AppColors.borderColor(isDark),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: AppColors.black, // Black border when focused
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: AppColors.errorColor,
+              ),
             ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEnhancedNavigationButtons(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? LinearGradient(
-          colors: [
-            const Color(0xFF1A1A2E).withValues(alpha: 0.9),
-            const Color(0xFF16213E).withValues(alpha: 0.8),
-          ],
-        )
-            : LinearGradient(
-          colors: [
-            Colors.white.withValues(alpha: 0.95),
-            const Color(0xFFF8FAFF).withValues(alpha: 0.9),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? Colors.black : Colors.grey).withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Previous Button
-          if (_currentStep > 0)
-            Expanded(
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.2),
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _previousStep,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.arrow_back_ios,
-                            color: isDark ? Colors.white : Colors.black,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Previous',
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          if (_currentStep > 0) const SizedBox(width: 12),
-
-          // Next Button
-          if (_currentStep < _totalSteps - 1)
-            Expanded(
-              flex: 2,
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _getCurrentMeditationColor(),
-                      _getCurrentMeditationColor().withValues(alpha: 0.8),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _getCurrentMeditationColor().withValues(alpha: 0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _nextStep,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Next Step',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }
