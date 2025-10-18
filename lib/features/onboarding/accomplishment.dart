@@ -96,6 +96,9 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -104,32 +107,33 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
           child: SlideTransition(
             position: _slideAnimation,
             child: Container(
+              color: Colors.white,
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: screenWidth * 0.06,
+                    vertical: screenHeight * 0.02,
+                  ),
                   child: Column(
                     children: [
                       // Main content - scrollable
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 40),
-                              _buildIcon(),
-                              const SizedBox(height: 40),
                               _buildTitle(),
-                              const SizedBox(height: 24),
+                              SizedBox(height: screenHeight * 0.01),
                               _buildSubtitle(),
-                              const SizedBox(height: 48),
+                              SizedBox(height: screenHeight * 0.04),
                               _buildAccomplishmentOptions(),
-                              const SizedBox(height: 40),
                             ],
                           ),
                         ),
                       ),
 
                       // Bottom buttons row
+                      SizedBox(height: screenHeight * 0.02),
                       Row(
                         children: [
                           _buildBackButton(),
@@ -168,23 +172,6 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.rocket,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
-
   Widget _buildTitle() {
     return const Text(
       'What would you like to accomplish?',
@@ -193,30 +180,20 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
         fontWeight: FontWeight.w700,
         color: Colors.black,
         letterSpacing: -0.5,
+        height: 1.2,
       ),
-      textAlign: TextAlign.center,
     );
   }
 
   Widget _buildSubtitle() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            'This helps us create a personalized plan to achieve your specific goals.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.primary(true),
-              fontWeight: FontWeight.w400,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+    return Text(
+      'This helps us create a personalized plan to achieve your specific goals.',
+      style: TextStyle(
+        fontSize: 14,
+        color: Colors.grey[600],
+        fontWeight: FontWeight.w400,
+        height: 1.5,
+      ),
     );
   }
 
@@ -239,18 +216,18 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
   }
 
   Widget _buildAccomplishmentCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    String value,
-    bool isSelected,
-  ) {
+      String title,
+      String subtitle,
+      IconData icon,
+      String value,
+      bool isSelected,
+      ) {
     return GestureDetector(
       onTap: () => _selectAccomplishment(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -262,8 +239,8 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isSelected ? Colors.black : Colors.grey[100],
                 shape: BoxShape.circle,
@@ -271,10 +248,10 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
               child: Icon(
                 icon,
                 color: isSelected ? Colors.white : Colors.grey[600],
-                size: 24,
+                size: 20,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,18 +259,19 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
                   Text(
                     title,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: isSelected ? Colors.white : Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       color: isSelected ? Colors.white70 : Colors.black54,
                       fontWeight: FontWeight.w400,
+                      height: 1.3,
                     ),
                   ),
                 ],
@@ -310,9 +288,9 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
   Widget _buildNextButton() {
     return Container(
       width: double.infinity,
-      height: 64,
+      height: 56,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         color: selectedAccomplishment == null ? Colors.grey[300] : Colors.black,
       ),
       child: ElevatedButton(
@@ -322,7 +300,7 @@ class _AccomplishmentPageState extends State<AccomplishmentPage>
           shadowColor: Colors.transparent,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(28),
           ),
         ),
         child: Text(

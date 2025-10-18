@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 
 class GenderSelectionPage extends StatefulWidget {
@@ -78,7 +77,7 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
           child: SlideTransition(
             position: _slideAnimation,
             child: Container(
-              decoration: BoxDecoration(),
+              color: Colors.white,
               child: SafeArea(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
@@ -87,32 +86,28 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
                   ),
                   child: Column(
                     children: [
+                      // Header with back button and progress
+
+                      SizedBox(height: screenHeight * 0.04),
+
                       // Main content - scrollable
                       Expanded(
                         child: SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: screenHeight * 0.7,
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(height: screenHeight * 0.05),
-                                _buildIcon(),
-                                SizedBox(height: screenHeight * 0.05),
-                                _buildTitle(),
-                                SizedBox(height: screenHeight * 0.03),
-                                _buildSubtitle(),
-                                SizedBox(height: screenHeight * 0.06),
-                                _buildGenderOptions(),
-                                SizedBox(height: screenHeight * 0.05),
-                              ],
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTitle(),
+                              SizedBox(height: screenHeight * 0.01),
+                              _buildSubtitle(),
+                              SizedBox(height: screenHeight * 0.05),
+                              _buildGenderOptions(),
+                            ],
                           ),
                         ),
                       ),
 
                       // Bottom button
+                      SizedBox(height: screenHeight * 0.02),
                       _buildNextButton(),
                     ],
                   ),
@@ -125,66 +120,39 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.userGroup,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
 
   Widget _buildTitle() {
     return const Text(
-      'What is your gender?',
+      'Choose your\nGender',
       style: TextStyle(
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: FontWeight.w700,
         color: Colors.black,
+        height: 1.2,
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
     );
   }
 
   Widget _buildSubtitle() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            'This helps us tailor recommendations and calculate your metabolic rate more accurately.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.primary(true),
-              fontWeight: FontWeight.w400,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+    return Text(
+      'This will be used to calibrate your custom plan.',
+      style: TextStyle(
+        fontSize: 14,
+        color: Colors.grey[600],
+        fontWeight: FontWeight.w400,
+        height: 1.5,
+      ),
     );
   }
-
 
   Widget _buildGenderOptions() {
     return Column(
       children: [
         _buildGenderOption('Male'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _buildGenderOption('Female'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _buildGenderOption('Other'),
       ],
     );
@@ -198,30 +166,23 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 24),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? Colors.black : Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? Colors.black : Colors.grey[300]!,
-            width: 1,
+            color: isSelected ? Colors.black : Colors.transparent,
+            width: 2,
           ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                gender,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: Colors.white, size: 20),
-          ],
+        child: Text(
+          gender,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : Colors.black,
+          ),
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -230,9 +191,9 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
   Widget _buildNextButton() {
     return Container(
       width: double.infinity,
-      height: 64,
+      height: 56,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         color: selectedGender == null ? Colors.grey[300] : Colors.black,
       ),
       child: ElevatedButton(
@@ -242,7 +203,7 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
           shadowColor: Colors.transparent,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(28),
           ),
         ),
         child: Text(

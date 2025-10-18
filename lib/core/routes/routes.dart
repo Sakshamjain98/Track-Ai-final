@@ -65,15 +65,15 @@ class AppRoutes {
       case '/settings-screen':
         return _createRoute(const Settingsscreen());
       case '/body-analyzer':
-        return _createRoute(const Bodyanalyzer());
+        return _createRoute(const BodyCompositionAnalyzer());
       case '/smart-gymkit': // Added slash
         return _createRoute(const Smartgymkit());
       case '/calorie-calculator': // Added slash
-        return _createRoute(const Caloriecalculator());
+        return _createRoute(const CalorieBurnCalculator());
       case '/meal-planner': // Added slash
-        return _createRoute(Mealplanner());
+        return _createRoute(AIMealPlanner());
       case '/recipe-generator': // Added slash
-        return _createRoute(const Recipegenerator());
+        return _createRoute(const AIRecipeGenerator());
       case '/adjust-goals':
         return _createRoute(const AdjustGoalsPage());
       case '/admin-panel':

@@ -14,180 +14,200 @@ class AllDonePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: AppColors.background(isDark),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.06,
+            vertical: screenHeight * 0.02,
+          ),
           child: Column(
             children: [
               // Main content
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Success icon - matching GoalSelectionPage _buildIcon
+                      SizedBox(height: screenHeight * 0.08),
+
+                      // Success icon with confetti colors
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 70,
+                        height: 70,
                         decoration: BoxDecoration(
-                          color: AppColors.primary(true).withOpacity(0.1),
+                          color: Colors.orange.withOpacity(0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.primary(true),
-                            width: 0.5,
-                          ),
                         ),
                         child: Icon(
-                          Icons.check_circle_outline,
-                          color: AppColors.primary(true),
-                          size: 28,
+                          Icons.check_circle,
+                          color: Colors.orange,
+                          size: 35,
                         ),
                       ),
 
-                      const SizedBox(height: 40),
+                      SizedBox(height: screenHeight * 0.03),
 
-                      // Title
-                      Text(
-                        'All Done!',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary(isDark),
-                          letterSpacing: -0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Checkmark with text - matching GoalSelectionPage _buildSubtitle style for container
+                      // "All done!" badge
                       Container(
-                        padding: const EdgeInsets.all(16),
-
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Small check icon - matching non-selected goal card icon style
-                            Container(
-                              width: 56,
-                              height: 56,
-
-                              child: Icon(
-                                Icons.check,
-                                color: AppColors.primary(true),
-                                size: 24,
-                              ),
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.orange,
+                              size: 16,
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                "You're all set! Let's generate your personalized health plan.",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.primary(true),
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.4,
-                                ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'All done!',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange,
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      SizedBox(height: screenHeight * 0.04),
 
-                      // Thank you message
-                      Text(
+                      // Title
+                      const Text(
                         'Thank you for\ntrusting us',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: 32,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary(isDark),
+                          color: Colors.black,
                           height: 1.2,
                           letterSpacing: -0.5,
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      SizedBox(height: screenHeight * 0.03),
 
                       // Privacy message
-                      Text(
-                        'We promise to always keep your personal\ninformation private and secure.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary(isDark),
-                          height: 1.4,
-                          fontWeight: FontWeight.w400,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(
+                          'We promise to always keep your personal information private and secure.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                            height: 1.5,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
+
+                      SizedBox(height: screenHeight * 0.06),
+
+                      // Decorative confetti dots (optional)
+                      _buildConfettiDots(),
                     ],
                   ),
                 ),
               ),
 
-              // Buttons row - matching GoalSelectionPage
-              Row(
-                children: [
-                  // Back button - matching _buildBackButton
-                  GestureDetector(
-                    onTap: onBack,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.black87,
-                        size: 20,
-                      ),
+              // Create plan button (no back button)
+              SizedBox(height: screenHeight * 0.02),
+              Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  color: Colors.black,
+                ),
+                child: ElevatedButton(
+                  onPressed: onComplete,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // Create plan button - matching _buildNextButton (always enabled)
-                  Expanded(
-                    child: Container(
-                      height: 64,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
-                        color: Colors.black,
-                      ),
-                      child: ElevatedButton(
-                        onPressed: onComplete,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                        ),
-                        child: const Text(
-                          'Create my plan',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                  child: const Text(
+                    'Create my plan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Optional decorative confetti dots
+  Widget _buildConfettiDots() {
+    return SizedBox(
+      height: 100,
+      child: Stack(
+        children: [
+          Positioned(
+            top: 10,
+            left: 50,
+            child: _buildDot(Colors.yellow, 6),
+          ),
+          Positioned(
+            top: 30,
+            right: 80,
+            child: _buildDot(Colors.green, 5),
+          ),
+          Positioned(
+            top: 50,
+            left: 100,
+            child: _buildDot(Colors.orange, 4),
+          ),
+          Positioned(
+            top: 20,
+            right: 120,
+            child: _buildDot(Colors.blue, 5),
+          ),
+          Positioned(
+            top: 60,
+            right: 50,
+            child: _buildDot(Colors.pink, 6),
+          ),
+          Positioned(
+            top: 70,
+            left: 80,
+            child: _buildDot(Colors.purple, 4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDot(Color color, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
       ),
     );
   }

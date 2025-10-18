@@ -1,58 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
-import 'package:trackai/features/home/ai-options/service/filedownload.dart';
-import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 
-class Mealplanner extends StatefulWidget {
-  const Mealplanner({Key? key}) : super(key: key);
+class AIMealPlanner extends StatefulWidget {
+  const AIMealPlanner({Key? key}) : super(key: key);
 
   @override
-  _MealplannerState createState() => _MealplannerState();
+  State<AIMealPlanner> createState() => _AIMealPlannerState();
 }
 
-class _MealplannerState extends State<Mealplanner> {
-  bool isLoading = false;
-  bool isLoadingRecentPlans = false;
-  Map<String, dynamic>? mealPlan;
-  List<Map<String, dynamic>> recentPlans = [];
-  bool isRecentPlansExpanded = false;
+class _AIMealPlannerState extends State<AIMealPlanner> {
+  final PageController _pageController = PageController();
+  final _formKey = GlobalKey<FormState>();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Controllers
+  final _caloriesController = TextEditingController();
+  final _cuisineController = TextEditingController();
+  final _healthConditionsController = TextEditingController();
+  final _restrictionsController = TextEditingController();
+  final _preferencesController = TextEditingController();
 
-  final TextEditingController caloriesController = TextEditingController(
-    text: '2000',
-  );
-  final TextEditingController cuisineController = TextEditingController();
-  final TextEditingController healthConditionsController =
-      TextEditingController();
-  final TextEditingController restrictionsController = TextEditingController();
-  final TextEditingController preferencesController = TextEditingController();
+  // State variables
+  int _currentPage = 0;
+  String _selectedDays = '';
+  String _selectedDietType = '';
+  String _selectedMealPrep = '';
+  String _selectedBudget = '';
+  bool _isGenerating = false;
+  Map<String, dynamic>? _mealPlan;
 
-  String selectedDays = '7 Days';
-  String selectedDietType = 'Any / No Specific Diet';
-
-  final List<String> dayOptions = [
-    '3 Days',
-    '5 Days',
-    '7 Days',
-    '14 Days',
-    '30 Days',
-  ];
-  final List<String> dietOptions = [
+  // Options
+  final List<String> _dayOptions = ['3 Days', '5 Days', '7 Days', '14 Days', '30 Days'];
+  final List<String> _dietOptions = [
     'Any / No Specific Diet',
     'Keto',
     'Paleo',
@@ -62,1266 +43,1068 @@ class _MealplannerState extends State<Mealplanner> {
     'Low Carb',
     'Intermittent Fasting',
     'DASH Diet',
-    'Whole30',
+    'Whole30'
+  ];
+  final List<String> _mealPrepOptions = [
+    'Quick & Easy (15-30 min)',
+    'Medium Prep (30-45 min)',
+    'Detailed Cooking (45+ min)',
+    'Meal Prep Friendly'
+  ];
+  final List<String> _budgetOptions = [
+    'Budget-Friendly',
+    'Moderate Budget',
+    'Premium Ingredients',
+    'No Budget Constraints'
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _loadRecentPlans();
-    isRecentPlansExpanded = false;
+  void dispose() {
+    _caloriesController.dispose();
+    _cuisineController.dispose();
+    _healthConditionsController.dispose();
+    _restrictionsController.dispose();
+    _preferencesController.dispose();
+    _pageController.dispose();
+    super.dispose();
   }
 
-  String _generatePlanHash(Map<String, String> planParams) {
-    String paramString =
-        '${planParams['calories']}_${planParams['days']}_${planParams['dietType']}_${planParams['cuisine']}_${planParams['healthConditions']}_${planParams['restrictions']}_${planParams['preferences']}';
-    var bytes = utf8.encode(paramString);
-    var digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
-  Future<Map<String, dynamic>?> _generateMealPlanWithGemini() async {
-    try {
-      final apiKey = dotenv.env['GEMINI_API_KEY'];
-      if (apiKey == null || apiKey.isEmpty) {
-        throw Exception('Gemini API key not found in .env file');
-      }
-
-      final numDays = int.parse(selectedDays.split(' ')[0]);
-      final targetCalories = caloriesController.text.trim();
-      final dietType = selectedDietType;
-      final cuisine = cuisineController.text.trim();
-      final healthConditions = healthConditionsController.text.trim();
-      final restrictions = restrictionsController.text.trim();
-      final preferences = preferencesController.text.trim();
-
-      String prompt = '''
-Create a detailed ${numDays}-day meal plan with the following specifications:
-
-**Requirements:**
-- Daily calorie target: ${targetCalories} kcal
-- Diet type: ${dietType}
-${cuisine.isNotEmpty ? '- Cuisine preference: ${cuisine}' : ''}
-${healthConditions.isNotEmpty ? '- Health conditions: ${healthConditions}' : ''}
-${restrictions.isNotEmpty ? '- Dietary restrictions: ${restrictions}' : ''}
-${preferences.isNotEmpty ? '- Food preferences: ${preferences}' : ''}
-
-**Response Format (JSON only):**
-{
-  "Day 1": {
-    "breakfast": {
-      "name": "Meal name",
-      "calories": 350,
-      "recipe": "Detailed cooking instructions"
-    },
-    "lunch": {
-      "name": "Meal name",
-      "calories": 550,
-      "recipe": "Detailed cooking instructions"
-    },
-    "dinner": {
-      "name": "Meal name",
-      "calories": 700,
-      "recipe": "Detailed cooking instructions"
-    },
-    "snacks": {
-      "name": "Snack name",
-      "calories": 400,
-      "recipe": "Preparation instructions"
-    },
-    "totalCalories": 2000
-  },
-  ... (continue for all ${numDays} days),
-  "planSummary": {
-    "totalDays": ${numDays},
-    "avgDailyCalories": 2000,
-    "totalCalories": ${numDays * int.parse(targetCalories)},
-    "dietType": "${dietType}",
-    "generatedOn": "${DateTime.now().toString().split(' ')[0]}"
-  }
-}
-
-**Important Guidelines:**
-1. Each meal should have realistic calorie counts that add up to the daily target
-2. Provide detailed, actionable recipes with cooking instructions
-3. Ensure meals are varied and nutritionally balanced
-4. Consider the specified diet type and restrictions
-5. Make recipes practical for home cooking
-6. Include preparation time considerations
-7. Return ONLY valid JSON, no additional text or formatting
-''';
-
-      final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}',
-      );
-
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'contents': [
-            {
-              'parts': [
-                {'text': prompt}
-              ]
-            }
+  void _showValidationSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ],
-          'generationConfig': {
-            'temperature': 0.7,
-            'topK': 40,
-            'topP': 0.95,
-            'maxOutputTokens': 8192,
-          }
-        }),
-      );
+        ),
+        // Enforcing red background with white text for errors as requested
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
-      if (response.statusCode != 200) {
-        Map<String, dynamic>? errorData;
-        try {
-          errorData = json.decode(response.body);
-        } catch (e) {}
-        
-        if (errorData != null && errorData.containsKey('error')) {
-          final error = errorData['error'];
-          throw Exception('Gemini API Error: ${error['message'] ?? 'Unknown error'}');
-        } else {
-          throw Exception('Failed to generate meal plan: ${response.statusCode} - ${response.body}');
+  void _nextPage() {
+    if (_currentPage < 5) {
+      if (_validateCurrentPage()) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        String message = '';
+        switch (_currentPage) {
+          case 0:
+            message = 'Please enter your daily calorie goal and plan duration.';
+            break;
+          case 1:
+            message = 'Please select your preferred diet type.';
+            break;
+          case 2:
+            message = 'Please select your meal preparation time and budget.';
+            break;
+          default:
+            message = 'Please fill all required fields.';
         }
+        _showValidationSnackBar(message);
       }
-
-      final responseData = json.decode(response.body);
-      
-      if (responseData['candidates'] == null || 
-          responseData['candidates'].isEmpty) {
-        throw Exception('No meal plan generated by AI');
-      }
-
-      final generatedText = responseData['candidates'][0]['content']['parts'][0]['text'];
-      
-      String cleanedText = generatedText.trim();
-      
-      if (cleanedText.startsWith('```json')) {
-        cleanedText = cleanedText.substring(7);
-      }
-      if (cleanedText.startsWith('```')) {
-        cleanedText = cleanedText.substring(3);
-      }
-      if (cleanedText.endsWith('```')) {
-        cleanedText = cleanedText.substring(0, cleanedText.length - 3);
-      }
-      
-      cleanedText = cleanedText.trim();
-
-      final mealPlanData = json.decode(cleanedText) as Map<String, dynamic>;
-      
-      if (!mealPlanData.containsKey('planSummary')) {
-        throw Exception('Invalid meal plan structure: missing planSummary');
-      }
-
-      return mealPlanData;
-
-    } catch (e) {
-      print('Error generating meal plan with Gemini: $e');
-      rethrow;
     }
   }
 
-  Future<void> _loadRecentPlans() async {
-    if (_auth.currentUser == null) return;
-
-    setState(() {
-      isLoadingRecentPlans = true;
-    });
-
-    try {
-      final userId = _auth.currentUser!.uid;
-      final querySnapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('mealplans')
-          .orderBy('createdAt', descending: true)
-          .limit(10)
-          .get();
-
-      setState(() {
-        recentPlans = querySnapshot.docs.map((doc) {
-          final data = doc.data();
-          return {
-            'id': doc.id,
-            'title': data['title'] ?? '',
-            'date': data['date'] ?? '',
-            'calories': data['calories'] ?? '',
-            'dietType': data['dietType'] ?? '',
-            'days': data['days'] ?? '',
-            'plan': data['plan'] ?? {},
-            'createdAt': data['createdAt'],
-            'planHash': data['planHash'] ?? '',
-          };
-        }).toList();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading recent plans: $e'),
-          backgroundColor: AppColors.errorColor,
-        ),
+  void _previousPage() {
+    if (_currentPage > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
-    } finally {
-      setState(() {
-        isLoadingRecentPlans = false;
-      });
     }
   }
 
-  Future<bool> _saveMealPlanToFirebase(Map<String, dynamic> plan) async {
-    if (_auth.currentUser == null) return false;
-
-    try {
-      final userId = _auth.currentUser!.uid;
-      final planParams = {
-        'calories': caloriesController.text.trim(),
-        'days': selectedDays,
-        'dietType': selectedDietType,
-        'cuisine': cuisineController.text.trim(),
-        'healthConditions': healthConditionsController.text.trim(),
-        'restrictions': restrictionsController.text.trim(),
-        'preferences': preferencesController.text.trim(),
-      };
-
-      final planHash = _generatePlanHash(planParams);
-
-      final existingPlans = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('mealplans')
-          .where('planHash', isEqualTo: planHash)
-          .get();
-
-      if (existingPlans.docs.isNotEmpty) {
-        final existingDoc = existingPlans.docs.first;
-        await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('mealplans')
-            .doc(existingDoc.id)
-            .update({
-              'createdAt': FieldValue.serverTimestamp(),
-              'date': DateTime.now().toString().split(' ')[0],
-              'plan': plan,
-            });
+  bool _validateCurrentPage() {
+    switch (_currentPage) {
+      case 0:
+        return _caloriesController.text.isNotEmpty && _selectedDays.isNotEmpty;
+      case 1:
+        return _selectedDietType.isNotEmpty;
+      case 2:
+        return _selectedMealPrep.isNotEmpty && _selectedBudget.isNotEmpty;
+      case 3:
+        return true; // Optional fields
+      case 4:
+        return true; // Optional fields
+      default:
         return true;
-      }
-
-      final mealPlanData = {
-        'title': '$selectedDays ${selectedDietType} Plan',
-        'date': DateTime.now().toString().split(' ')[0],
-        'calories': caloriesController.text.trim(),
-        'dietType': selectedDietType,
-        'days': selectedDays,
-        'cuisine': cuisineController.text.trim(),
-        'healthConditions': healthConditionsController.text.trim(),
-        'restrictions': restrictionsController.text.trim(),
-        'preferences': preferencesController.text.trim(),
-        'plan': plan,
-        'planHash': planHash,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('mealplans')
-          .add(mealPlanData);
-
-      return true;
-    } catch (e) {
-      print('Error saving meal plan to Firebase: $e');
-      return false;
     }
   }
 
-  Future<void> _deleteMealPlan(String planId) async {
-    if (_auth.currentUser == null) return;
-
-    try {
-      final userId = _auth.currentUser!.uid;
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('mealplans')
-          .doc(planId)
-          .delete();
-
-      setState(() {
-        recentPlans.removeWhere((plan) => plan['id'] == planId);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Meal plan deleted successfully'),
-          backgroundColor: AppColors.successColor,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting meal plan: $e'),
-          backgroundColor: AppColors.errorColor,
-        ),
-      );
-    }
-  }
-
-  BoxDecoration getCardDecoration(bool isDarkTheme) {
-    return BoxDecoration(
-      color: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: isDarkTheme ? Colors.grey[700]! : Colors.grey[200]!,
-        width: 1,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(isDarkTheme ? 0.3 : 0.1),
-          blurRadius: 8,
-          spreadRadius: 1,
-          offset: Offset(0, 2),
-        ),
-      ],
-    );
-  }
-
-  BoxDecoration getMealCardDecoration(bool isDarkTheme) {
-    return BoxDecoration(
-      color: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: isDarkTheme ? Colors.grey[700]! : Colors.grey[200]!,
-        width: 1,
-      ),
-    );
-  }
-
-  Future<void> generateMealPlan() async {
-    if (_auth.currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please log in to generate meal plans'),
-          backgroundColor: AppColors.errorColor,
-        ),
-      );
+  Future<void> _generateMealPlan() async {
+    if (!_validateCurrentPage()) {
+      _showValidationSnackBar('Please fill all required fields before generating.');
       return;
     }
 
     setState(() {
-      isLoading = true;
+      _isGenerating = true;
     });
 
     try {
-      final newPlan = await _generateMealPlanWithGemini();
-      
-      if (newPlan == null) {
-        throw Exception('Failed to generate meal plan');
-      }
+      await Future.delayed(const Duration(seconds: 3));
 
-      final saved = await _saveMealPlanToFirebase(newPlan);
+      setState(() {
+        _mealPlan = _createMealPlan();
+        _isGenerating = false;
+      });
 
-      if (saved) {
-        setState(() {
-          mealPlan = newPlan;
-        });
+      _nextPage();
+    } catch (e) {
+      setState(() {
+        _isGenerating = false;
+      });
 
-        await _loadRecentPlans();
-
+      if (mounted) {
+        // Keeping error snakcbar for generation error, not validation.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('AI-powered meal plan generated and saved successfully!'),
-            backgroundColor: AppColors.successColor,
+            content: Text('Error generating meal plan: $e'),
+            backgroundColor: Colors.red,
           ),
         );
-      } else {
-        throw Exception('Failed to save meal plan');
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error generating meal plan: ${e.toString()}'),
-          backgroundColor: AppColors.errorColor,
-          duration: Duration(seconds: 4),
-        ),
-      );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 
-  Future<void> downloadMealPlan() async {
-    if (mealPlan == null) return;
+  Map<String, dynamic> _createMealPlan() {
+    final numDays = int.parse(_selectedDays.split(' ')[0]);
+    final targetCalories = int.parse(_caloriesController.text);
 
-    try {
-      String content = _generateMealPlanContent();
-      String planTitle = '${selectedDays}_${selectedDietType}_MealPlan';
+    Map<String, dynamic> plan = {};
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              ),
-              SizedBox(width: 12),
-              Text('Downloading meal plan...'),
-            ],
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
+    // Sample meal data based on diet type
+    Map<String, List<Map<String, dynamic>>> mealDatabase = {
+      'breakfast': [
+        {'name': 'Oatmeal with Berries', 'calories': 350, 'recipe': 'Cook 1/2 cup oats with 1 cup almond milk. Top with mixed berries and honey.'},
+        {'name': 'Greek Yogurt Parfait', 'calories': 320, 'recipe': 'Layer Greek yogurt with granola and fresh fruits.'},
+        {'name': 'Avocado Toast', 'calories': 380, 'recipe': 'Toast whole grain bread, mash avocado with lime and salt.'},
+        {'name': 'Smoothie Bowl', 'calories': 340, 'recipe': 'Blend banana, berries, spinach with almond milk. Top with nuts.'},
+      ],
+      'lunch': [
+        {'name': 'Grilled Chicken Salad', 'calories': 520, 'recipe': 'Mixed greens with grilled chicken, vegetables, and olive oil dressing.'},
+        {'name': 'Quinoa Buddha Bowl', 'calories': 480, 'recipe': 'Quinoa with roasted vegetables, chickpeas, and tahini dressing.'},
+        {'name': 'Turkey Wrap', 'calories': 450, 'recipe': 'Whole wheat tortilla with turkey, hummus, and vegetables.'},
+        {'name': 'Lentil Soup', 'calories': 420, 'recipe': 'Red lentils cooked with vegetables and spices. Serve with whole grain bread.'},
+      ],
+      'dinner': [
+        {'name': 'Baked Salmon with Vegetables', 'calories': 680, 'recipe': 'Baked salmon fillet with roasted broccoli and sweet potato.'},
+        {'name': 'Chicken Stir Fry', 'calories': 620, 'recipe': 'Stir-fried chicken with mixed vegetables and brown rice.'},
+        {'name': 'Vegetarian Pasta', 'calories': 580, 'recipe': 'Whole wheat pasta with marinara sauce and mixed vegetables.'},
+        {'name': 'Lean Beef with Quinoa', 'calories': 640, 'recipe': 'Grilled lean beef with quinoa and steamed vegetables.'},
+      ],
+      'snacks': [
+        {'name': 'Mixed Nuts', 'calories': 200, 'recipe': 'A handful of mixed almonds, walnuts, and cashews.'},
+        {'name': 'Apple with Peanut Butter', 'calories': 220, 'recipe': 'Sliced apple with 2 tbsp natural peanut butter.'},
+        {'name': 'Greek Yogurt', 'calories': 150, 'recipe': 'Plain Greek yogurt with a drizzle of honey.'},
+        {'name': 'Hummus with Vegetables', 'calories': 180, 'recipe': 'Hummus with carrot sticks, cucumber, and bell peppers.'},
+      ],
+    };
 
-      Map<String, dynamic> result = await FileDownloadService.downloadMealPlan(
-        content,
-        planTitle,
-      );
+    // Generate meals for each day
+    for (int i = 1; i <= numDays; i++) {
+      Map<String, dynamic> dayMeals = {};
+      int dailyCalories = 0;
 
-      await FileDownloadService.showDownloadResult(context, result);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error downloading meal plan: $e'),
-          backgroundColor: AppColors.errorColor,
-        ),
-      );
-    }
-  }
-
-  String _generateMealPlanContent() {
-    if (mealPlan == null) return '';
-
-    String content = 'AI-POWERED PERSONALIZED MEAL PLAN\n';
-    content += '=' * 50 + '\n\n';
-    content += 'Generated on: ${DateTime.now().toString().split(' ')[0]}\n';
-    content += 'Daily Calorie Goal: ${caloriesController.text} kcal\n';
-    content += 'Plan Duration: $selectedDays\n';
-    content += 'Diet Type: $selectedDietType\n';
-    
-    if (cuisineController.text.isNotEmpty) {
-      content += 'Cuisine Preference: ${cuisineController.text}\n';
-    }
-    if (healthConditionsController.text.isNotEmpty) {
-      content += 'Health Conditions: ${healthConditionsController.text}\n';
-    }
-    if (restrictionsController.text.isNotEmpty) {
-      content += 'Dietary Restrictions: ${restrictionsController.text}\n';
-    }
-    if (preferencesController.text.isNotEmpty) {
-      content += 'Food Preferences: ${preferencesController.text}\n';
-    }
-    
-    content += '\n';
-
-    final summary = mealPlan!['planSummary'] as Map<String, dynamic>;
-    content += 'PLAN SUMMARY\n';
-    content += '-' * 20 + '\n';
-    content += 'Average Daily Calories: ${summary['avgDailyCalories']} kcal\n';
-    content += 'Total Plan Calories: ${summary['totalCalories']} kcal\n\n';
-
-    mealPlan!.forEach((day, meals) {
-      if (day == 'planSummary') return;
-
-      content += '${day.toUpperCase()}\n';
-      content += '=' * (day.length + 10) + '\n';
-
-      final dayMeals = meals as Map<String, dynamic>;
-
+      // Select meals for each meal type
       ['breakfast', 'lunch', 'dinner', 'snacks'].forEach((mealType) {
-        if (dayMeals.containsKey(mealType)) {
-          final meal = dayMeals[mealType] as Map<String, dynamic>;
-
-          content += '\n${mealType.toUpperCase()}\n';
-          content += '${meal['name']} (${meal['calories']} kcal)\n';
-          content += 'Recipe: ${meal['recipe']}\n';
-        }
+        final meals = mealDatabase[mealType]!;
+        final selectedMeal = meals[i % meals.length];
+        dayMeals[mealType] = selectedMeal;
+        dailyCalories += selectedMeal['calories'] as int;
       });
 
-      if (dayMeals.containsKey('totalCalories')) {
-        content += '\nDaily Total: ${dayMeals['totalCalories']} kcal\n';
-      }
-      content += '\n' + '-' * 50 + '\n\n';
-    });
+      dayMeals['totalCalories'] = dailyCalories;
+      plan['Day $i'] = dayMeals;
+    }
 
-    return content;
+    // Add plan summary
+    plan['planSummary'] = {
+      'totalDays': numDays,
+      'avgDailyCalories': targetCalories,
+      'totalCalories': numDays * targetCalories,
+      'dietType': _selectedDietType,
+      'generatedOn': DateTime.now().toString().split(' ')[0],
+    };
+
+    return plan;
   }
 
-  Widget buildInputField({
-    required String label,
-    required TextEditingController controller,
-    String? placeholder,
-    required bool isDarkTheme,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    Widget? suffixIcon,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          ),
-        ),
-        SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          style: TextStyle(
-            color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          ),
-          decoration: InputDecoration(
-            hintText: placeholder,
-            suffixIcon: suffixIcon,
-            hintStyle: TextStyle(
-              color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-            ),
-            filled: true,
-            fillColor: isDarkTheme ? AppColors.inputFill(true) : AppColors.inputFill(false),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.borderColor(isDarkTheme),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.borderColor(isDarkTheme),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isDarkTheme ? Colors.white : Colors.black,
-                width: 2,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget buildDropdownField({
-    required String label,
-    required String value,
-    required List<String> options,
-    required bool isDarkTheme,
-    required Function(String?) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-          ),
-        ),
-        SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value,
-          onChanged: onChanged,
-          isExpanded: true,
-          style: TextStyle(
-            color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: isDarkTheme ? AppColors.inputFill(true) : AppColors.inputFill(false),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.borderColor(isDarkTheme),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.borderColor(isDarkTheme),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isDarkTheme ? Colors.white : Colors.black,
-                width: 2,
-              ),
-            ),
-          ),
-          dropdownColor: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-          items: options.map((String option) {
-            return DropdownMenuItem<String>(
-              value: option,
-              child: Text(
-                option,
-                style: TextStyle(
-                  color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget buildMealCard(String mealType, Map<String, dynamic> mealData, bool isDarkTheme) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: getMealCardDecoration(isDarkTheme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            mealType.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isDarkTheme ? Colors.white : Colors.black,
-              letterSpacing: 1,
-            ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            '${mealData['name']} (${mealData['calories']} kcal)',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Recipe: ${mealData['recipe']}',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildRecentPlansSection(bool isDarkTheme) {
-    return Container(
-      padding: EdgeInsets.all(8),
-      decoration: getCardDecoration(isDarkTheme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                isRecentPlansExpanded = !isRecentPlansExpanded;
-              });
-            },
-            child: Row(
-              children: [
-                Icon(
-                  lucide.LucideIcons.history,
-                  color: isDarkTheme ? Colors.white : Colors.black,
-                  size: 20,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Recent Meal Plans',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    isRecentPlansExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: isDarkTheme ? Colors.white : Colors.black,
-                    size: 20,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isRecentPlansExpanded = !isRecentPlansExpanded;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (isRecentPlansExpanded) ...[
-            SizedBox(height: 16),
-            if (isLoadingRecentPlans)
-              Center(
-                child: CircularProgressIndicator(
-                  color: isDarkTheme ? Colors.white : Colors.black,
-                ),
-              )
-            else if (recentPlans.isNotEmpty) ...[
-              ...recentPlans.take(5).map((plan) {
-                return Container(
-                  margin: EdgeInsets.only(bottom: 12),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isDarkTheme ? Colors.grey[700]! : Colors.grey[200]!,
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              plan['title'],
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                              ),
-                            ),
-                            Text(
-                              '${plan['date']} • ${plan['calories']} kcal/day',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          lucide.LucideIcons.eye,
-                          size: 20,
-                          color: isDarkTheme ? Colors.white : Colors.black,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            mealPlan = plan['plan'];
-                            isRecentPlansExpanded = false;
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          lucide.LucideIcons.trash2,
-                          size: 20,
-                          color: AppColors.errorColor,
-                        ),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              backgroundColor: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-                              title: Text(
-                                'Delete Meal Plan',
-                                style: TextStyle(
-                                  color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                ),
-                              ),
-                              content: Text(
-                                'Are you sure you want to delete this meal plan?',
-                                style: TextStyle(
-                                  color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: Text(
-                                    'Cancel',
-                                    style: TextStyle(
-                                      color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    _deleteMealPlan(plan['id']);
-                                  },
-                                  child: Text(
-                                    'Delete',
-                                    style: TextStyle(color: AppColors.errorColor),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ] else
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  'No recent meal plans found. Generate your first AI-powered plan above!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget buildMealPlanDisplay(bool isDarkTheme) {
-    if (mealPlan == null) return SizedBox.shrink();
-
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: getCardDecoration(isDarkTheme),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Icon(
-                      lucide.LucideIcons.utensilsCrossed,
-                      color: Color(0xFF26A69A),
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'AI-Generated Meal Plan',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: IconButton(
-                  icon: Icon(
-                    lucide.LucideIcons.download,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  onPressed: downloadMealPlan,
-                ),
-              ),
-            ],
-          ),
-
-          if (mealPlan!.containsKey('planSummary')) ...[
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDarkTheme ? Colors.grey[700]! : Colors.grey[200]!,
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'Meal Plan Summary',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Column(
-                        children: [
-                          Text(
-                            '${mealPlan!['planSummary']['totalDays']}',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkTheme ? Colors.white : Colors.black,
-                            ),
-                          ),
-                          Text(
-                            'Days',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: isDarkTheme ? Colors.grey[600]! : Colors.grey[400]!,
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            '${mealPlan!['planSummary']['avgDailyCalories']}',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkTheme ? Colors.white : Colors.black,
-                            ),
-                          ),
-                          Text(
-                            'Avg. Calories',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          SizedBox(height: 20),
-
-          ...mealPlan!.entries.where((entry) => entry.key != 'planSummary').map(
-            (entry) {
-              final day = entry.key;
-              final meals = entry.value as Map<String, dynamic>;
-
-              return Container(
-                margin: EdgeInsets.only(bottom: 20),
-                padding: EdgeInsets.all(20),
-                decoration: getCardDecoration(isDarkTheme),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          day,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
-                        if (meals.containsKey('totalCalories'))
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDarkTheme ? Colors.black : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${meals['totalCalories']} kcal',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: isDarkTheme ? Colors.white : Colors.black,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-
-                    ...['breakfast', 'lunch', 'dinner', 'snacks'].map((mealType) {
-                      if (meals.containsKey(mealType)) {
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: 16),
-                          child: buildMealCard(
-                            mealType,
-                            meals[mealType] as Map<String, dynamic>,
-                            isDarkTheme,
-                          ),
-                        );
-                      }
-                      return SizedBox.shrink();
-                    }).toList(),
-                  ],
-                ),
-              );
-            },
-          ).toList(),
-        ],
-      ),
-    );
-  }
+  // --- Black/White Theme Adjustments ---
+  // Assuming a simplified color map for monochrome:
+  // background is white, text/icons/accents are black, cards are light gray
+  Color get _appBackground => Colors.white;
+  Color get _primaryText => Colors.black;
+  Color get _secondaryText => Colors.grey[700]!;
+  Color get _cardBackground => Colors.grey[50]!;
+  Color get _borderColor => Colors.grey[300]!;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        final isDarkTheme = themeProvider.isDarkMode;
+        // Ignoring isDark for strict monochrome theme
+        const bool isDark = false;
 
         return Scaffold(
-          backgroundColor: isDarkTheme ? AppColors.darkBackground : Colors.white,
+          backgroundColor: _appBackground,
           appBar: AppBar(
-            backgroundColor: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
-            elevation: 1,
+            backgroundColor: _appBackground,
+            elevation: 0,
             leading: IconButton(
+              onPressed: () => Navigator.pop(context),
               icon: Icon(
                 Icons.arrow_back,
-                color: isDarkTheme ? Colors.white : Colors.black,
+                color: _primaryText,
               ),
-              onPressed: () => Navigator.of(context).pop(),
             ),
-            title: Row(
-              children: [
-                Icon(
-                  lucide.LucideIcons.utensilsCrossed,
-                  color: Color(0xFF26A69A),
-                  size: 24,
-                ),
-                SizedBox(width: 12),
-                Text(
-                  'AI Meal Planner',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  ),
-                ),
-              ],
+            title: Text(
+              'AI Meal Planner',
+              style: TextStyle(
+                color: _primaryText,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            centerTitle: true,
           ),
-          body: SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Form Section
-                Container(
-                  padding: EdgeInsets.all(20),
-                  decoration: getCardDecoration(isDarkTheme),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            lucide.LucideIcons.utensilsCrossed,
-                            color: Color(0xFF26A69A),
-                            size: 20,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'AI Meal Planner',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkTheme ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Generate personalized meal plans using advanced AI. Get detailed recipes and nutrition tailored to your needs.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkTheme ? AppColors.textSecondary(true) : AppColors.textSecondary(false),
-                        ),
-                      ),
-                      SizedBox(height: 24),
+          body: Column(
+            children: [
+              // Progress Indicator
+              _buildProgressIndicator(isDark),
 
-                      // Form Fields
-                      buildInputField(
-                        label: 'Daily Calorie Goal (kcal)',
-                        controller: caloriesController,
-                        isDarkTheme: isDarkTheme,
-                        placeholder: '2000',
-                        keyboardType: TextInputType.number,
-                      ),
-                      SizedBox(height: 16),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: buildDropdownField(
-                              isDarkTheme: isDarkTheme,
-                              label: 'Number of Days',
-                              value: selectedDays,
-                              options: dayOptions,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedDays = value!;
-                                });
-                              },
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: buildDropdownField(
-                              isDarkTheme: isDarkTheme,
-                              label: 'Diet Type (Optional)',
-                              value: selectedDietType,
-                              options: dietOptions,
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedDietType = value!;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-
-                      buildInputField(
-                        isDarkTheme: isDarkTheme,
-                        label: 'Cuisine Preference (Optional)',
-                        controller: cuisineController,
-                        placeholder: 'E.g., Indian, Italian, Mexican',
-                      ),
-                      SizedBox(height: 16),
-
-                      buildInputField(
-                        isDarkTheme: isDarkTheme,
-                        label: 'Health Conditions or Diseases (Optional)',
-                        controller: healthConditionsController,
-                        placeholder:
-                            'E.g., high blood pressure, diabetes, PCOS',
-                        maxLines: 3,
-                      ),
-                      SizedBox(height: 16),
-
-                      buildInputField(
-                        isDarkTheme: isDarkTheme,
-                        label: 'Other Dietary Restrictions (Optional)',
-                        controller: restrictionsController,
-                        placeholder: 'E.g., gluten-free, allergies to nuts',
-                        maxLines: 3,
-                      ),
-                      SizedBox(height: 16),
-
-                      buildInputField(
-                        isDarkTheme: isDarkTheme,
-                        label: 'Food Preferences/Dislikes (Optional)',
-                        controller: preferencesController,
-                        placeholder:
-                            'E.g., loves chicken, dislikes broccoli, prefers spicy food',
-                        maxLines: 3,
-                      ),
-
-                      SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: isLoading ? null : generateMealPlan,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: isLoading
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(
-                                          Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text('AI Generating Your Plan...'),
-                                  ],
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(lucide.LucideIcons.sparkles),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Generate AI Meal Plan',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
+              // Page Content
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  children: [
+                    _buildBasicInfoPage(isDark),
+                    _buildDietTypePage(isDark),
+                    _buildPreferencesPage(isDark),
+                    _buildHealthInfoPage(isDark),
+                    _buildAdditionalPrefsPage(isDark),
+                    _buildResultsPage(isDark),
+                  ],
                 ),
+              ),
 
-                // Recent Plans Section
-                SizedBox(height: 24),
-                buildRecentPlansSection(isDarkTheme),
-
-                // Meal Plan Display
-                if (mealPlan != null) ...[
-                  SizedBox(height: 24),
-                  buildMealPlanDisplay(isDarkTheme),
-                ],
-              ],
-            ),
+              // Navigation Buttons
+              if (_currentPage < 5) _buildNavigationButtons(isDark),
+            ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildProgressIndicator(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
+            children: List.generate(6, (index) {
+              return Expanded(
+                child: Container(
+                  height: 4,
+                  margin: EdgeInsets.only(right: index < 5 ? 8 : 0),
+                  decoration: BoxDecoration(
+                    color: index <= _currentPage
+                        ? _primaryText
+                        : _cardBackground,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Step ${_currentPage + 1} of 6',
+            style: TextStyle(
+              color: _secondaryText,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoPage(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.restaurant_menu,
+            size: 48,
+            color: _primaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Meal Plan Basics',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Let\'s start by setting your daily calorie goal and plan duration.',
+            style: TextStyle(
+              fontSize: 16,
+              color: _secondaryText,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          _buildTextField(
+            label: 'Daily Calorie Goal',
+            controller: _caloriesController,
+            hint: 'e.g., 2000',
+            keyboardType: TextInputType.number,
+            isDark: isDark,
+          ),
+
+          const SizedBox(height: 24),
+
+          _buildDropdownField(
+            label: 'Plan Duration',
+            value: _selectedDays.isEmpty ? null : _selectedDays,
+            items: _dayOptions,
+            onChanged: (value) {
+              setState(() {
+                _selectedDays = value ?? '';
+              });
+            },
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDietTypePage(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.eco,
+            size: 48,
+            color: _primaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Diet Type',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose your dietary preference or restriction.',
+            style: TextStyle(
+              fontSize: 16,
+              color: _secondaryText,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          _buildDropdownField(
+            label: 'Diet Type',
+            value: _selectedDietType.isEmpty ? null : _selectedDietType,
+            items: _dietOptions,
+            onChanged: (value) {
+              setState(() {
+                _selectedDietType = value ?? '';
+              });
+            },
+            isDark: isDark,
+            isExpanded: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferencesPage(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.schedule,
+            size: 48,
+            color: _primaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Cooking Preferences',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tell us about your cooking time and budget preferences.',
+            style: TextStyle(
+              fontSize: 16,
+              color: _secondaryText,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          _buildDropdownField(
+            label: 'Meal Preparation Time',
+            value: _selectedMealPrep.isEmpty ? null : _selectedMealPrep,
+            items: _mealPrepOptions,
+            onChanged: (value) {
+              setState(() {
+                _selectedMealPrep = value ?? '';
+              });
+            },
+            isDark: isDark,
+            isExpanded: true,
+          ),
+
+          const SizedBox(height: 24),
+
+          _buildDropdownField(
+            label: 'Budget Range',
+            value: _selectedBudget.isEmpty ? null : _selectedBudget,
+            items: _budgetOptions,
+            onChanged: (value) {
+              setState(() {
+                _selectedBudget = value ?? '';
+              });
+            },
+            isDark: isDark,
+            isExpanded: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthInfoPage(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.health_and_safety,
+            size: 48,
+            color: _primaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Health Information',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Share any health conditions or dietary restrictions (optional).',
+            style: TextStyle(
+              fontSize: 16,
+              color: _secondaryText,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          _buildTextField(
+            label: 'Health Conditions',
+            controller: _healthConditionsController,
+            hint: 'e.g., Diabetes, High blood pressure (optional)',
+            maxLines: 2,
+            isDark: isDark,
+          ),
+
+          const SizedBox(height: 24),
+
+          _buildTextField(
+            label: 'Dietary Restrictions',
+            controller: _restrictionsController,
+            hint: 'e.g., Nut allergy, Lactose intolerant (optional)',
+            maxLines: 2,
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdditionalPrefsPage(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.favorite,
+            size: 48,
+            color: _primaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Food Preferences',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tell us about your favorite cuisines and foods you prefer.',
+            style: TextStyle(
+              fontSize: 16,
+              color: _secondaryText,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          _buildTextField(
+            label: 'Cuisine Preferences',
+            controller: _cuisineController,
+            hint: 'e.g., Italian, Asian, Mediterranean (optional)',
+            maxLines: 2,
+            isDark: isDark,
+          ),
+
+          const SizedBox(height: 24),
+
+          _buildTextField(
+            label: 'Additional Preferences',
+            controller: _preferencesController,
+            hint: 'e.g., Love spicy food, prefer organic ingredients (optional)',
+            maxLines: 3,
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsPage(bool isDark) {
+    if (_mealPlan == null) {
+      return const Center(child: CircularProgressIndicator(color: Colors.black));
+    }
+
+    final summary = _mealPlan!['planSummary'] as Map<String, dynamic>;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.restaurant,
+            size: 48,
+            color: _primaryText,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Your Meal Plan',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your personalized ${summary['totalDays']}-day meal plan is ready!',
+            style: TextStyle(
+              fontSize: 16,
+              color: _secondaryText,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Plan Summary
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: _cardBackground,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _borderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Plan Summary',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _primaryText,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSummaryItem('Duration', '${summary['totalDays']} Days', isDark),
+                _buildSummaryItem('Daily Calories', '${summary['avgDailyCalories']} kcal', isDark),
+                _buildSummaryItem('Diet Type', summary['dietType'], isDark),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Daily Meal Plans
+          Text(
+            'Daily Meal Plans',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: _primaryText,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          ...(_mealPlan!.entries.where((entry) => entry.key.startsWith('Day')).map((entry) {
+            final dayName = entry.key;
+            final dayMeals = entry.value as Map<String, dynamic>;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _cardBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          dayName,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _primaryText,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _primaryText,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${dayMeals['totalCalories']} kcal',
+                          style: TextStyle(
+                            color: _appBackground,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  ...['breakfast', 'lunch', 'dinner', 'snacks'].map((mealType) {
+                    if (!dayMeals.containsKey(mealType)) return const SizedBox.shrink();
+
+                    final meal = dayMeals[mealType] as Map<String, dynamic>;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _appBackground, // Lighter card for nested item
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _getMealIcon(mealType),
+                                size: 16,
+                                color: _primaryText,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  mealType.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _secondaryText,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${meal['calories']} kcal',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: _secondaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            meal['name'],
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _primaryText,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            meal['recipe'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _secondaryText,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            );
+          }).toList()),
+
+          const SizedBox(height: 32),
+
+          // Create New Plan Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _currentPage = 0;
+                  _mealPlan = null;
+                  _caloriesController.clear();
+                  _cuisineController.clear();
+                  _healthConditionsController.clear();
+                  _restrictionsController.clear();
+                  _preferencesController.clear();
+                  _selectedDays = '';
+                  _selectedDietType = '';
+                  _selectedMealPrep = '';
+                  _selectedBudget = '';
+                });
+                _pageController.animateToPage(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryText,
+                foregroundColor: _appBackground,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.refresh, color: _appBackground),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create New Plan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: _appBackground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationButtons(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          if (_currentPage > 0)
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _previousPage,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: _primaryText),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  backgroundColor: _appBackground,
+                ),
+                child: Text(
+                  'Previous',
+                  style: TextStyle(
+                    color: _primaryText,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+
+          if (_currentPage > 0) const SizedBox(width: 16),
+
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _currentPage == 4
+                  ? (_isGenerating ? null : _generateMealPlan)
+                  : _nextPage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryText,
+                foregroundColor: _appBackground,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _isGenerating
+                  ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(_appBackground),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Generating Plan...', style: TextStyle(color: _appBackground)),
+                ],
+              )
+                  : Text(
+                _currentPage == 4 ? 'Generate Plan' : 'Next',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: _appBackground,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    required bool isDark,
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: _primaryText,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          style: TextStyle(color: _primaryText),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: _secondaryText),
+            filled: true,
+            fillColor: _cardBackground,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _primaryText, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+    required bool isDark,
+    bool isExpanded = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: _primaryText,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          items: items.map((item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                item,
+                style: TextStyle(color: _primaryText),
+                overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+          isExpanded: isExpanded,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: _cardBackground,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _primaryText, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          dropdownColor: _cardBackground,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: _secondaryText,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: _primaryText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getMealIcon(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return Icons.free_breakfast;
+      case 'lunch':
+        return Icons.lunch_dining;
+      case 'dinner':
+        return Icons.dinner_dining;
+      case 'snacks':
+        return Icons.cake;
+      default:
+        return Icons.restaurant;
+    }
   }
 }

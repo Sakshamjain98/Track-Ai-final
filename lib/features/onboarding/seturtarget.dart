@@ -42,9 +42,9 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
     setState(() {
       _isNextEnabled =
           _amountController.text.isNotEmpty &&
-          _timeframeController.text.isNotEmpty &&
-          double.tryParse(_amountController.text) != null &&
-          int.tryParse(_timeframeController.text) != null;
+              _timeframeController.text.isNotEmpty &&
+              double.tryParse(_amountController.text) != null &&
+              int.tryParse(_timeframeController.text) != null;
     });
   }
 
@@ -113,79 +113,51 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.06,
+            vertical: screenHeight * 0.02,
+          ),
           child: Column(
             children: [
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 40),
-
-                      // Icon
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(true).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary(true), width: 0.5),
-                        ),
-                        child: Icon(
-                          Icons.track_changes_outlined,
-                          size: 28,
-                          color: AppColors.primary(true),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-// Title
+                      // Title
                       const Text(
                         'Set Your Target',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black87,
+                          color: Colors.black,
                           letterSpacing: -0.5,
+                          height: 1.2,
                         ),
-                        textAlign: TextAlign.center,
                       ),
 
-                      const SizedBox(height: 24),
+                      SizedBox(height: screenHeight * 0.01),
 
-// Subtitle (UPDATED - Grey container removed)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: AppColors.primary(true),
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'Specifics help us create a precise plan and give you feedback on a healthy rate of change.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.primary(true),
-                                fontWeight: FontWeight.w400,
-                                height: 1.4,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
+                      // Subtitle
+                      Text(
+                        'Specifics help us create a precise plan and give you feedback on a healthy rate of change.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w400,
+                          height: 1.5,
+                        ),
                       ),
 
-
-                      const SizedBox(height: 40),
+                      SizedBox(height: screenHeight * 0.05),
 
                       // Amount to Gain/Lose
                       Column(
@@ -196,9 +168,9 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                                 ? 'Amount to Gain'
                                 : 'Amount to Lose',
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Colors.black,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -208,74 +180,77 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                                 flex: 2,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Colors.grey[100],
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: Colors.grey[300]!,
+                                      color: Colors.transparent,
                                       width: 1,
                                     ),
                                   ),
                                   child: TextField(
                                     controller: _amountController,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      fontSize: 18,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
+                                      color: Colors.black,
                                     ),
                                     decoration: const InputDecoration(
                                       border: InputBorder.none,
                                       contentPadding: EdgeInsets.symmetric(
-                                        vertical: 16,
+                                        vertical: 18,
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Expanded(
                                 flex: 1,
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: Colors.grey[100],
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: Colors.grey[300]!,
+                                      color: Colors.transparent,
                                       width: 1,
                                     ),
                                   ),
-                                  child: DropdownButtonFormField<String>(
-                                    value: selectedUnit,
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 16,
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: selectedUnit,
+                                      isExpanded: true,
+                                      icon: Icon(Icons.keyboard_arrow_down, color: Colors.black),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black,
                                       ),
-                                    ),
-                                    items: (widget.isMetric ? ['kg'] : ['lbs'])
-                                        .map((String value) {
-                                          return DropdownMenuItem<String>(
-                                            value: value,
-                                            child: Text(
-                                              value,
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.black87,
-                                              ),
+                                      dropdownColor: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      padding: EdgeInsets.symmetric(horizontal: 16),
+                                      items: ['kg', 'lbs'].map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(
+                                            value,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black,
                                             ),
-                                          );
-                                        })
-                                        .toList(),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        setState(() {
-                                          selectedUnit = newValue;
-                                        });
-                                      }
-                                    },
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            selectedUnit = newValue;
+                                          });
+                                        }
+                                      },
+                                    ),
                                   ),
                                 ),
                               ),
@@ -284,7 +259,7 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                         ],
                       ),
 
-                      const SizedBox(height: 32),
+                      SizedBox(height: screenHeight * 0.04),
 
                       // Timeframe
                       Column(
@@ -293,31 +268,34 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                           const Text(
                             'Timeframe (in weeks)',
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: Colors.black,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Colors.grey[100],
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[300]!, width: 1),
+                              border: Border.all(
+                                color: Colors.transparent,
+                                width: 1,
+                              ),
                             ),
                             child: TextField(
                               controller: _timeframeController,
                               keyboardType: TextInputType.number,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color: Colors.black,
                               ),
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
                                 contentPadding: EdgeInsets.symmetric(
-                                  vertical: 16,
+                                  vertical: 18,
                                 ),
                               ),
                             ),
@@ -330,6 +308,7 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
               ),
 
               // Navigation buttons
+              SizedBox(height: screenHeight * 0.02),
               Row(
                 children: [
                   GestureDetector(
@@ -344,7 +323,7 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                       ),
                       child: const Icon(
                         Icons.arrow_back_ios_new,
-                        color: Colors.black87,
+                        color: Colors.black,
                         size: 20,
                       ),
                     ),
@@ -353,9 +332,9 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                   Expanded(
                     child: Container(
                       width: double.infinity,
-                      height: 64,
+                      height: 56,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(28),
                         color: (_isNextEnabled && !_isLoading)
                             ? Colors.black
                             : Colors.grey[300],
@@ -369,30 +348,30 @@ class _SetYourTargetPageState extends State<SetYourTargetPage> {
                           shadowColor: Colors.transparent,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
+                            borderRadius: BorderRadius.circular(28),
                           ),
                         ),
                         child: _isLoading
                             ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
                             : Text(
-                                'Next',
-                                style: TextStyle(
-                                  color: (_isNextEnabled && !_isLoading)
-                                      ? Colors.white
-                                      : Colors.grey[600],
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                          'Next',
+                          style: TextStyle(
+                            color: (_isNextEnabled && !_isLoading)
+                                ? Colors.white
+                                : Colors.grey[600],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ),
