@@ -55,6 +55,7 @@ dependencies:
   google_generative_ai:
   device_info_plus:
   image_picker:
+  dotted_border:
   responsive_framework:
   lucide_icons_flutter:
   firebase_storage:

@@ -13,7 +13,7 @@ class OnboardingData {
   String goalPace;
   String dietPreference;
   DateTime? completedAt;
-  
+
   // New target fields
   double? targetAmount;
   String? targetUnit;
@@ -79,43 +79,52 @@ class OnboardingData {
       if (bmi <= 26.0) {
         healthScore = 7.0;
         category = 'Slightly Overweight';
-        message = 'You\'re slightly above the healthy range. Small changes can make a big difference!';
+        message =
+        'You\'re slightly above the healthy range. Small changes can make a big difference!';
       } else if (bmi <= 28.0) {
         healthScore = 6.0;
         category = 'Overweight';
-        message = 'You\'re above the healthy range. Let\'s work on getting you back to optimal health.';
+        message =
+        'You\'re above the healthy range. Let\'s work on getting you back to optimal health.';
       } else {
         healthScore = 5.0;
         category = 'Overweight';
-        message = 'You\'re significantly above the healthy range. We\'ll create a plan to help you reach your goals.';
+        message =
+        'You\'re significantly above the healthy range. We\'ll create a plan to help you reach your goals.';
       }
     } else if (bmi >= 30.0) {
       if (bmi <= 35.0) {
         healthScore = 4.0;
         category = 'Class I Obesity';
-        message = 'You\'re in the obese range. We\'ll work together to create a sustainable weight loss plan.';
+        message =
+        'You\'re in the obese range. We\'ll work together to create a sustainable weight loss plan.';
       } else if (bmi <= 40.0) {
         healthScore = 3.0;
         category = 'Class II Obesity';
-        message = 'You\'re in the severely obese range. We\'ll create a comprehensive plan with medical guidance.';
+        message =
+        'You\'re in the severely obese range. We\'ll create a comprehensive plan with medical guidance.';
       } else {
         healthScore = 2.0;
         category = 'Class III Obesity';
-        message = 'You\'re in the very severely obese range. We\'ll work with healthcare professionals for your safety.';
+        message =
+        'You\'re in the very severely obese range. We\'ll work with healthcare professionals for your safety.';
       }
     } else {
       if (bmi >= 17.0) {
         healthScore = 6.0;
         category = 'Mildly Underweight';
-        message = 'You\'re slightly below the healthy range. Focus on healthy weight gain and nutrition.';
+        message =
+        'You\'re slightly below the healthy range. Focus on healthy weight gain and nutrition.';
       } else if (bmi >= 16.0) {
         healthScore = 5.0;
         category = 'Underweight';
-        message = 'You\'re below the healthy range. We\'ll help you gain weight safely and healthily.';
+        message =
+        'You\'re below the healthy range. We\'ll help you gain weight safely and healthily.';
       } else {
         healthScore = 4.0;
         category = 'Severely Underweight';
-        message = 'You\'re significantly below the healthy range. We\'ll work with healthcare professionals.';
+        message =
+        'You\'re significantly below the healthy range. We\'ll work with healthcare professionals.';
       }
     }
 

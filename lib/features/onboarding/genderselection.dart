@@ -94,6 +94,7 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildTitle(),
@@ -123,7 +124,7 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
 
   Widget _buildTitle() {
     return const Text(
-      'Choose your\nGender',
+      'Choose your Gender',
       style: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.w700,
@@ -182,7 +183,7 @@ class _GenderSelectionPageState extends State<GenderSelectionPage>
             fontWeight: FontWeight.w600,
             color: isSelected ? Colors.white : Colors.black,
           ),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
       ),
     );

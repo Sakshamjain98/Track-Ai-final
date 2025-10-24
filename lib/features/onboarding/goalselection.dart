@@ -107,10 +107,10 @@ class _GoalSelectionPageState extends State<GoalSelectionPage>
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            // THIS IS THE CHANGE to align children left
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 10),
-                              _buildIcon(),
                               const SizedBox(height: 20),
                               _buildTitle(),
                               const SizedBox(height: 24),
@@ -162,24 +162,8 @@ class _GoalSelectionPageState extends State<GoalSelectionPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.bullseye,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
-
   Widget _buildTitle() {
+    // This widget was already correct with textAlign.start
     return const Text(
       'What\'s your goal?',
       style: TextStyle(
@@ -188,16 +172,14 @@ class _GoalSelectionPageState extends State<GoalSelectionPage>
         color: Colors.black,
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
 
   Widget _buildSubtitle() {
+    // I simplified this Row to ensure it fills the width
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
-        const SizedBox(width: 8),
         Flexible(
           child: Text(
             'Choose your primary fitness goal to get personalized recommendations.',
@@ -207,13 +189,12 @@ class _GoalSelectionPageState extends State<GoalSelectionPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
       ],
     );
   }
-
 
   Widget _buildGoalOptions() {
     return Column(
@@ -249,12 +230,12 @@ class _GoalSelectionPageState extends State<GoalSelectionPage>
   }
 
   Widget _buildGoalCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    String value,
-    bool isSelected,
-  ) {
+      String title,
+      String subtitle,
+      IconData icon,
+      String value,
+      bool isSelected,
+      ) {
     return GestureDetector(
       onTap: () => _selectGoal(value),
       child: AnimatedContainer(
@@ -286,6 +267,7 @@ class _GoalSelectionPageState extends State<GoalSelectionPage>
             const SizedBox(width: 16),
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(

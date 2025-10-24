@@ -1,5 +1,4 @@
 // Fixed analytics_provider.dart
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,6 +10,23 @@ class AnalyticsProvider extends ChangeNotifier {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   String? get _currentUserId => _auth.currentUser?.uid;
+  Color bmiStatusColor = Colors.grey;
+  String bmiStatusLabel = "";
+
+  // Removed the duplicate 'double? currentBMI;'
+
+  // Removed the duplicate 'final TextEditingController heightCmController = TextEditingController();'
+  // Removed the duplicate 'final TextEditingController weightController = TextEditingController();'
+
+  // Private fields for BMI
+  double? _currentBMI;
+  String _heightUnit = 'Centimeters (cm)';
+  String _weightUnit = 'Kilograms (kg)';
+  final TextEditingController _heightCmController = TextEditingController();
+  final TextEditingController _heightFeetController = TextEditingController();
+  final TextEditingController _heightInchesController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+
 
   List<String> _selectedTrackers = [];
   String _selectedTimeframe = 'This Week';
@@ -23,15 +39,6 @@ class AnalyticsProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _correlationResults = [];
   Map<String, dynamic> _progressData = {};
   Map<String, dynamic> _periodData = {};
-
-  // BMI Calculator
-  double? _currentBMI;
-  String _heightUnit = 'Centimeters (cm)';
-  String _weightUnit = 'Kilograms (kg)';
-  final TextEditingController _heightCmController = TextEditingController();
-  final TextEditingController _heightFeetController = TextEditingController();
-  final TextEditingController _heightInchesController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
 
   // Period tracking - FIXED STATE MANAGEMENT
   bool _isLoggingPeriod = false;
@@ -58,7 +65,7 @@ class AnalyticsProvider extends ChangeNotifier {
   DateTime? get selectedPeriodDate => _selectedPeriodDate;
   List<String> get selectedSymptoms => _selectedSymptoms;
 
-  // BMI Getters
+  // BMI Getters (Used the existing private fields and their getters)
   double? get currentBMI => _currentBMI;
   String get heightUnit => _heightUnit;
   String get weightUnit => _weightUnit;
@@ -83,7 +90,7 @@ class AnalyticsProvider extends ChangeNotifier {
 
   final List<String> analyticsTypes = [
     'Dashboard & Summary',
-    'Correlation Labs',
+
     'Progress Overview',
 
   ];
@@ -122,7 +129,7 @@ class AnalyticsProvider extends ChangeNotifier {
         }
         break;
       case 'Correlation Labs':
-        // Don't auto-load for correlation labs, let user select trackers
+      // Don't auto-load for correlation labs, let user select trackers
         break;
       case 'Progress Overview':
         if (_selectedTrackers.isNotEmpty) {
@@ -142,6 +149,48 @@ class AnalyticsProvider extends ChangeNotifier {
     notifyListeners();
     if (_selectedTrackers.isNotEmpty) {
       loadTrackerData();
+    }
+  }
+
+  // Consolidated BMI calculation logic, keeping the full implementation
+  // and removing the duplicate basic one from the original code.
+  Future<double?> calculateBMIForCmAndKg() async {
+    try {
+      double heightInMeters;
+      double weightInKg;
+
+      // Only supporting cm and kg units as in your image
+      final heightCm = double.tryParse(heightCmController.text);
+      final weight = double.tryParse(weightController.text);
+
+      if (heightCm == null || heightCm <= 0 || weight == null || weight <= 0) {
+        return null;
+      }
+      heightInMeters = heightCm / 100;
+      weightInKg = weight;
+
+      final bmi = weightInKg / (heightInMeters * heightInMeters);
+      _currentBMI = bmi; // Use the private field
+
+      // Update label and color according to BMI category
+      if (bmi < 18.5) {
+        bmiStatusLabel = "Underweight";
+        bmiStatusColor = Colors.blue;
+      } else if (bmi < 25) {
+        bmiStatusLabel = "Healthy";
+        bmiStatusColor = Colors.green;
+      } else if (bmi < 30) {
+        bmiStatusLabel = "Overweight";
+        bmiStatusColor = Colors.orange;
+      } else {
+        bmiStatusLabel = "Obese";
+        bmiStatusColor = Colors.red;
+      }
+      notifyListeners();
+      return bmi;
+    } catch (e) {
+      debugPrint("Error calculating BMI: $e");
+      return null;
     }
   }
 
@@ -212,9 +261,9 @@ class AnalyticsProvider extends ChangeNotifier {
           .collection('analytics_data')
           .doc('dashboard_config')
           .set({
-            'selectedTrackers': _selectedTrackers,
-            'lastUpdated': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+        'selectedTrackers': _selectedTrackers,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     } catch (e) {
       debugPrint('Error saving dashboard config: $e');
     }
@@ -314,9 +363,9 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> _getTrackerEntries(
-    String trackerId,
-    DateTime startDate,
-  ) async {
+      String trackerId,
+      DateTime startDate,
+      ) async {
     try {
       Query query = _firestore
           .collection('users')
@@ -325,9 +374,9 @@ class AnalyticsProvider extends ChangeNotifier {
           .doc(trackerId)
           .collection('entries')
           .where(
-            'timestamp',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
-          )
+        'timestamp',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+      )
           .orderBy('timestamp', descending: true)
           .limit(100);
 
@@ -441,12 +490,12 @@ class AnalyticsProvider extends ChangeNotifier {
   }
 
   Future<String> _generateCorrelationInsight(
-    String tracker1,
-    String tracker2,
-    double correlation,
-    List<Map<String, dynamic>> data1,
-    List<Map<String, dynamic>> data2,
-  ) async {
+      String tracker1,
+      String tracker2,
+      double correlation,
+      List<Map<String, dynamic>> data1,
+      List<Map<String, dynamic>> data2,
+      ) async {
     try {
       final geminiApiKey = dotenv.env['GEMINI_API_KEY'];
       if (geminiApiKey == null || geminiApiKey.isEmpty) {
@@ -464,7 +513,7 @@ class AnalyticsProvider extends ChangeNotifier {
       final stats2 = _calculateTrackerStats(data2);
 
       final prompt =
-          '''
+      '''
 I need you to analyze the correlation between two health/lifestyle trackers and provide detailed, actionable insights.
 
 TRACKER ANALYSIS:
@@ -511,9 +560,9 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
   }
 
   Map<String, dynamic> _findCommonDates(
-    List<Map<String, dynamic>> data1,
-    List<Map<String, dynamic>> data2,
-  ) {
+      List<Map<String, dynamic>> data1,
+      List<Map<String, dynamic>> data2,
+      ) {
     final Map<String, double> values1 = {};
     final Map<String, double> values2 = {};
 
@@ -573,19 +622,19 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
   }
 
   String _getDefaultCorrelationInsight(
-    String tracker1,
-    String tracker2,
-    double correlation,
-  ) {
+      String tracker1,
+      String tracker2,
+      double correlation,
+      ) {
     final strength = _getCorrelationStrength(correlation);
     final direction = correlation > 0 ? 'positive' : 'negative';
     return '$strength $direction correlation detected between $tracker1 and $tracker2. Consider how changes in one might affect the other.';
   }
 
   double _calculateCorrelation(
-    List<Map<String, dynamic>> data1,
-    List<Map<String, dynamic>> data2,
-  ) {
+      List<Map<String, dynamic>> data1,
+      List<Map<String, dynamic>> data2,
+      ) {
     try {
       final Map<String, double> values1 = {};
       final Map<String, double> values2 = {};
@@ -775,7 +824,7 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
 
           final lastPeriodEntry = periodStartEntries.first;
           final lastDate = DateTime.tryParse(lastPeriodEntry['timestamp'] ?? '');
-          
+
           if (lastDate != null) {
             cycleDay = _selectedPeriodDate!.difference(lastDate).inDays + 1;
             phase = _getCyclePhase(cycleDay);
@@ -808,9 +857,7 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
       debugPrint('Successfully added period entry with ID: ${docRef.id}');
 
       // CRITICAL: Clear form state BEFORE reloading data
-      final tempDate = _selectedPeriodDate;
-      final tempSymptoms = List.from(_selectedSymptoms);
-      
+      // Removed unused local variables tempDate and tempSymptoms
       _selectedPeriodDate = null;
       _selectedSymptoms.clear();
       _cachedInsights = null; // Force insights regeneration
@@ -853,7 +900,7 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
 
     try {
       debugPrint('Loading period data...');
-      
+
       final entries = await _getTrackerEntries(
         'menstrual',
         DateTime.now().subtract(Duration(days: 365)),
@@ -904,9 +951,9 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
 
   // OPTIMIZED INSIGHTS GENERATION WITH CACHING
   Future<String> _generatePeriodInsights(
-    List<Map<String, dynamic>> entries,
-    List<Map<String, dynamic>> cycles,
-  ) async {
+      List<Map<String, dynamic>> entries,
+      List<Map<String, dynamic>> cycles,
+      ) async {
     // Check if we have recent cached insights (within 1 hour)
     if (_cachedInsights != null && _lastInsightsUpdate != null) {
       final hoursSinceUpdate = DateTime.now().difference(_lastInsightsUpdate!).inHours;
@@ -934,7 +981,7 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
         for (var symptom in symptoms) {
           symptomCounts[symptom] = (symptomCounts[symptom] ?? 0) + 1;
         }
-        
+
         final date = DateTime.tryParse(entry['timestamp'] ?? '');
         if (date != null) recentDates.add(date);
       }
@@ -945,12 +992,12 @@ Keep the tone professional yet accessible, and focus on practical wellness appli
       }
 
       recentDates.sort((a, b) => b.compareTo(a));
-      final trackingDays = recentDates.isNotEmpty ? 
-          DateTime.now().difference(recentDates.last).inDays : 0;
+      final trackingDays = recentDates.isNotEmpty ?
+      DateTime.now().difference(recentDates.last).inDays : 0;
 
       final topSymptoms = symptomCounts.entries
           .toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+        ..sort((a, b) => b.value.compareTo(a.value));
 
       final prompt = '''
 As a women's health AI assistant, analyze this detailed menstrual cycle data and provide comprehensive, personalized insights:
@@ -994,11 +1041,11 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
 
       final response = await model.generateContent([Content.text(prompt)]);
       final insights = response.text ?? _generateDetailedOfflineInsights(entries, cycles);
-      
+
       // Cache the insights
       _cachedInsights = insights;
       _lastInsightsUpdate = DateTime.now();
-      
+
       return insights;
     } catch (e) {
       debugPrint('Error generating period insights: $e');
@@ -1007,9 +1054,9 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
   }
 
   String _generateDetailedOfflineInsights(
-    List<Map<String, dynamic>> entries,
-    List<Map<String, dynamic>> cycles,
-  ) {
+      List<Map<String, dynamic>> entries,
+      List<Map<String, dynamic>> cycles,
+      ) {
     final insights = StringBuffer();
     final averageLength = _calculateAverageCycleLength(cycles);
     final symptomCounts = <String, int>{};
@@ -1020,7 +1067,7 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
       for (var symptom in symptoms) {
         symptomCounts[symptom] = (symptomCounts[symptom] ?? 0) + 1;
       }
-      
+
       final date = DateTime.tryParse(entry['timestamp'] ?? '');
       if (date != null) dates.add(date);
     }
@@ -1050,7 +1097,7 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
     if (topSymptoms.isNotEmpty) {
       final mainSymptom = topSymptoms.first;
       insights.writeln('Your most common symptom is ${mainSymptom.key} (${mainSymptom.value} times logged). ');
-      
+
       // Symptom-specific advice
       switch (mainSymptom.key.toLowerCase()) {
         case 'cramps':
@@ -1071,7 +1118,7 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
         default:
           insights.writeln('Track when this symptom occurs in your cycle to identify patterns and develop targeted management strategies.');
       }
-      
+
       if (topSymptoms.length > 1) {
         insights.writeln(' You also frequently experience ${topSymptoms[1].key}, suggesting a pattern worth discussing with your healthcare provider.\n');
       } else {
@@ -1084,13 +1131,13 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
     // Personalized Recommendations
     insights.writeln('**PERSONALIZED RECOMMENDATIONS**');
     insights.writeln('• **Continue Consistent Tracking**: Log periods and symptoms for at least 3 cycles to establish reliable patterns and predictions.');
-    
+
     if (entries.length < 5) {
       insights.writeln('• **Expand Symptom Tracking**: Include mood, energy levels, sleep quality, and appetite changes to understand your body\'s full cycle story.');
     }
-    
+
     insights.writeln('• **Lifestyle Optimization**: Plan important events around your high-energy phases (follicular/ovulation) and schedule self-care during your luteal phase.');
-    
+
     if (symptomCounts.isNotEmpty) {
       insights.writeln('• **Symptom Management**: Create a personalized toolkit based on your tracked symptoms - keep remedies ready before symptoms typically appear.');
     }
@@ -1113,8 +1160,8 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
   }
 
   List<Map<String, dynamic>> _analyzeMenstrualCycles(
-    List<Map<String, dynamic>> entries,
-  ) {
+      List<Map<String, dynamic>> entries,
+      ) {
     final cycles = <Map<String, dynamic>>[];
 
     // Sort entries by date (oldest first) for proper cycle calculation
@@ -1210,6 +1257,9 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
     notifyListeners();
   }
 
+  // The comprehensive calculateBMI method, renamed to be distinct
+  // from the public getter and to support all units.
+  @override
   Future<double?> calculateBMI() async {
     try {
       double heightInMeters;
@@ -1238,6 +1288,21 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
       final bmi = weightInKg / (heightInMeters * heightInMeters);
       _currentBMI = bmi;
 
+      // Update label and color according to BMI category
+      if (bmi < 18.5) {
+        bmiStatusLabel = "Underweight";
+        bmiStatusColor = Colors.blue;
+      } else if (bmi < 25) {
+        bmiStatusLabel = "Healthy";
+        bmiStatusColor = Colors.green;
+      } else if (bmi < 30) {
+        bmiStatusLabel = "Overweight";
+        bmiStatusColor = Colors.orange;
+      } else {
+        bmiStatusLabel = "Obese";
+        bmiStatusColor = Colors.red;
+      }
+
       await _saveBMIToFirebase(bmi);
 
       notifyListeners();
@@ -1258,15 +1323,15 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
           .collection('analytics_data')
           .doc('bmi_data')
           .set({
-            'currentBMI': bmi,
-            'heightUnit': _heightUnit,
-            'weightUnit': _weightUnit,
-            'heightCm': _heightCmController.text,
-            'heightFeet': _heightFeetController.text,
-            'heightInches': _heightInchesController.text,
-            'weight': _weightController.text,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
+        'currentBMI': bmi,
+        'heightUnit': _heightUnit,
+        'weightUnit': _weightUnit,
+        'heightCm': _heightCmController.text,
+        'heightFeet': _heightFeetController.text,
+        'heightInches': _heightInchesController.text,
+        'weight': _weightController.text,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       debugPrint('Error saving BMI to Firebase: $e');
     }
@@ -1306,33 +1371,33 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
     try {
       final startDate = _getTimeframeStartDate(timeframe);
       final nutritionEntries = await _getTrackerEntries('nutrition', startDate);
-      
+
       double totalCalories = 0;
       double totalProtein = 0;
       double totalCarbs = 0;
       double totalFat = 0;
-      
+
       final dailyCalories = <String, double>{};
-      
+
       for (var entry in nutritionEntries) {
         final calories = double.tryParse(entry['calories']?.toString() ?? '0') ?? 0;
         final protein = double.tryParse(entry['protein']?.toString() ?? '0') ?? 0;
         final carbs = double.tryParse(entry['carbs']?.toString() ?? '0') ?? 0;
         final fat = double.tryParse(entry['fat']?.toString() ?? '0') ?? 0;
-        
+
         totalCalories += calories;
         totalProtein += protein;
         totalCarbs += carbs;
         totalFat += fat;
-        
+
         final date = DateTime.tryParse(entry['timestamp'] ?? '')?.toIso8601String().split('T')[0];
         if (date != null) {
           dailyCalories[date] = (dailyCalories[date] ?? 0) + calories;
         }
       }
-      
+
       final days = nutritionEntries.isNotEmpty ? nutritionEntries.length : 1;
-      
+
       return {
         'totalCalories': totalCalories,
         'dailyAverage': totalCalories / days,
@@ -1351,12 +1416,12 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
   Future<Map<String, dynamic>> getEnhancedProgressData(String tracker) async {
     final progressData = _progressData[tracker];
     if (progressData == null) return {};
-    
+
     try {
       final geminiApiKey = dotenv.env['GEMINI_API_KEY'];
       if (geminiApiKey != null && geminiApiKey.isNotEmpty) {
         final model = GenerativeModel(model: 'gemini-pro', apiKey: geminiApiKey);
-        
+
         final prompt = '''
 Analyze this progress data for $tracker and provide insights:
 
@@ -1371,7 +1436,7 @@ Provide a brief analysis (2-3 sentences) about the progress trends and a practic
 
         final response = await model.generateContent([Content.text(prompt)]);
         final insights = response.text ?? 'No insights available';
-        
+
         return {
           ...progressData,
           'insights': insights,
@@ -1381,14 +1446,14 @@ Provide a brief analysis (2-3 sentences) about the progress trends and a practic
     } catch (e) {
       debugPrint('Error generating progress insights: $e');
     }
-    
+
     return progressData;
   }
 
   String _calculateTrend(Map<String, dynamic> progressData) {
     final thisWeek = progressData['thisWeekAvg'] ?? 0;
     final lastWeek = progressData['lastWeekAvg'] ?? 0;
-    
+
     if (thisWeek > lastWeek * 1.1) return 'improving';
     if (thisWeek < lastWeek * 0.9) return 'declining';
     return 'stable';
@@ -1403,7 +1468,7 @@ Provide a brief analysis (2-3 sentences) about the progress trends and a practic
       await loadTrackerData();
     }
   }
-    void clearAllData() {
+  void clearAllData() {
     _selectedTrackers.clear();
     _trackerData.clear();
     _periodData.clear();

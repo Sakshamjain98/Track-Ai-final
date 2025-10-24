@@ -126,11 +126,11 @@ class _BmiResultsPageState extends State<BmiResultsPage>
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 40),
-                              _buildIcon(),
-                              const SizedBox(height: 40),
+
+                              const SizedBox(height: 20),
                               _buildTitle(),
                               const SizedBox(height: 24),
                               _buildSubtitle(),
@@ -183,22 +183,7 @@ class _BmiResultsPageState extends State<BmiResultsPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.chartLine,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
+
 
   Widget _buildTitle() {
     return const Text(
@@ -209,14 +194,13 @@ class _BmiResultsPageState extends State<BmiResultsPage>
         color: Colors.black,
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
   Widget _buildSubtitle() {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
@@ -227,7 +211,7 @@ class _BmiResultsPageState extends State<BmiResultsPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
       ],
@@ -333,7 +317,7 @@ class _BmiResultsPageState extends State<BmiResultsPage>
               fontWeight: FontWeight.w500,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
           const SizedBox(height: 12),
           const Text(
@@ -344,7 +328,7 @@ class _BmiResultsPageState extends State<BmiResultsPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ],
       ),

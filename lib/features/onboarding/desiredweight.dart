@@ -27,16 +27,13 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
 
   double desiredWeight = 110;
   double desiredWeightKg = 50;
-  bool _isMetric = false; // Local state for metric preference
+  bool _isMetric = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize local metric preference
     _isMetric = widget.isMetric;
 
-    // Initialize based on metric/imperial preference
     if (_isMetric) {
       desiredWeightKg = 50;
       desiredWeight = desiredWeightKg / 0.453592;
@@ -109,7 +106,7 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
                   ),
                   child: Column(
                     children: [
-                      // Main content - scrollable
+                      // Main content
                       Expanded(
                         child: SingleChildScrollView(
                           child: ConstrainedBox(
@@ -119,9 +116,6 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SizedBox(height: screenHeight * 0.05),
-                                _buildIcon(),
-                                SizedBox(height: screenHeight * 0.05),
                                 _buildTitle(),
                                 SizedBox(height: screenHeight * 0.03),
                                 _buildSubtitle(),
@@ -173,23 +167,6 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        Icons.monitor_weight,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
-
   Widget _buildTitle() {
     return Column(
       children: [
@@ -201,7 +178,7 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
             color: Colors.white,
             letterSpacing: -0.5,
           ),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
         const SizedBox(height: 20),
         _buildSystemToggle(),
@@ -220,8 +197,8 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildToggleOption('Imperial', 'lbs', !_isMetric), // ✅ changed
-          _buildToggleOption('Metric', 'kg', _isMetric), // ✅ changed
+          _buildToggleOption('Imperial', 'lbs', !_isMetric),
+          _buildToggleOption('Metric', 'kg', _isMetric),
         ],
       ),
     );
@@ -283,24 +260,15 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
   }
 
   Widget _buildSubtitle() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            'Set your desired weight to help us create a personalized plan.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.primary(true),
-              fontWeight: FontWeight.w400,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+    return Text(
+      'Set your desired weight to help us create a personalized plan.',
+      style: TextStyle(
+        fontSize: 14,
+        color: AppColors.primary(true),
+        fontWeight: FontWeight.w400,
+        height: 1.4,
+      ),
+      textAlign: TextAlign.start,
     );
   }
 
@@ -312,7 +280,6 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
     return Center(
       child: Column(
         children: [
-          // ✅ Black Circle with White Text
           Container(
             width: circleSize,
             height: circleSize,
@@ -347,10 +314,7 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
               ),
             ),
           ),
-
           SizedBox(height: screenHeight * 0.04),
-
-          // ✅ Slider Box
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -383,7 +347,7 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
                     thumbColor: Colors.white,
                     overlayColor: Colors.white24,
                     valueIndicatorShape:
-                        const PaddleSliderValueIndicatorShape(),
+                    const PaddleSliderValueIndicatorShape(),
                     valueIndicatorColor: Colors.black,
                     valueIndicatorTextStyle: const TextStyle(
                       color: Colors.white,
@@ -425,10 +389,7 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // ✅ Tip Box
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -461,9 +422,9 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
   Widget _buildNextButton() {
     return Container(
       width: double.infinity,
-      height: 64,
+      height: 56,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         color: Colors.black,
       ),
       child: ElevatedButton(
@@ -473,7 +434,7 @@ class _DesiredWeightPageState extends State<DesiredWeightPage>
           shadowColor: Colors.transparent,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(28),
           ),
         ),
         child: const Text(

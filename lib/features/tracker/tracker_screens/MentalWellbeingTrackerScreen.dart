@@ -17,8 +17,8 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
   final _triggersController = TextEditingController();
   final _copingController = TextEditingController();
 
-  int _wellbeingValue = 3;
-  int _stressLevel = 5;
+  double _wellbeingValue = 3.0;  // Changed to double for slider
+  double _stressLevel = 5.0;     // Changed to double for slider
 
   final List<Map<String, TextEditingController>> _customFields = [];
 
@@ -44,10 +44,6 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
   void _clearForm() {
     _triggersController.clear();
     _copingController.clear();
-    setState(() {
-      _wellbeingValue = 3;
-      _stressLevel = 5;
-    });
 
     for (var field in _customFields) {
       field['key']?.clear();
@@ -55,6 +51,8 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
     }
 
     setState(() {
+      _wellbeingValue = 3.0;
+      _stressLevel = 5.0;
       _customFields.clear();
     });
   }
@@ -77,8 +75,8 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
       }
 
       final entryData = {
-        'wellbeingValue': _wellbeingValue,
-        'stressLevel': _stressLevel,
+        'wellbeingValue': _wellbeingValue.round(),
+        'stressLevel': _stressLevel.round(),
         'triggers': _triggersController.text.trim(),
         'copingMechanisms': _copingController.text.trim(),
         'customData': customData,
@@ -127,6 +125,56 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
     super.dispose();
   }
 
+  String _getWellbeingLabel(int value) {
+    switch (value) {
+      case 1:
+        return 'Very Poor';
+      case 2:
+        return 'Poor';
+      case 3:
+        return 'Okay';
+      case 4:
+        return 'Good';
+      case 5:
+        return 'Excellent';
+      default:
+        return 'Okay';
+    }
+  }
+
+  Color _getWellbeingColor(int value) {
+    switch (value) {
+      case 1:
+        return Colors.red[700]!;
+      case 2:
+        return Colors.orange[700]!;
+      case 3:
+        return Colors.yellow[700]!;
+      case 4:
+        return Colors.lightGreen[700]!;
+      case 5:
+        return Colors.green[700]!;
+      default:
+        return Colors.yellow[700]!;
+    }
+  }
+
+  String _getStressLabel(int value) {
+    if (value <= 2) return 'Very Low';
+    if (value <= 4) return 'Low';
+    if (value <= 6) return 'Moderate';
+    if (value <= 8) return 'High';
+    return 'Very High';
+  }
+
+  Color _getStressColor(int value) {
+    if (value <= 2) return Colors.green[700]!;
+    if (value <= 4) return Colors.lightGreen[700]!;
+    if (value <= 6) return Colors.yellow[700]!;
+    if (value <= 8) return Colors.orange[700]!;
+    return Colors.red[700]!;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
@@ -134,119 +182,155 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
         final isDark = themeProvider.isDarkMode;
 
         return Scaffold(
-          backgroundColor: AppColors.background(isDark),
+          backgroundColor: Colors.white,
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: AppColors.cardBackground(isDark),
+            backgroundColor: Colors.white,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: Icon(
-                Icons.arrow_back,
-                color: AppColors.textPrimary(isDark),
-              ),
+              icon: Icon(Icons.arrow_back, color: Colors.black),
             ),
             title: Text(
-              'Log Mental Well-being Tracker',
+              'Mental Well-being Tracker',
               style: TextStyle(
-                color: AppColors.textPrimary(isDark),
+                color: Colors.black,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           body: Container(
-            color: AppColors.background(isDark),
+            color: Colors.white,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Enter the details for your mental well-being tracker entry.',
+                      'Track your mental well-being and stress levels.',
                       style: TextStyle(
-                        color: AppColors.textSecondary(isDark),
+                        color: Colors.black54,
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
-                    // Well-being Value (1-5 scale)
-                    _buildDropdownField(
-                      label: 'Value (1-5 scale)',
+                    // Well-being Slider (1-5)
+                    _buildSliderSection(
+                      icon: Icons.favorite,
+                      label: 'Well-being Level',
                       value: _wellbeingValue,
-                      items: List.generate(5, (index) => index + 1),
-                      onChanged: (value) => setState(() => _wellbeingValue = value!),
-                      isDark: isDark,
-                      hint: 'Select well-being (1-5)',
+                      displayValue: '${_wellbeingValue.round()}/5',
+                      statusLabel: _getWellbeingLabel(_wellbeingValue.round()),
+                      statusColor: _getWellbeingColor(_wellbeingValue.round()),
+                      min: 1,
+                      max: 5,
+                      divisions: 4,
+                      onChanged: (value) {
+                        setState(() {
+                          _wellbeingValue = value;
+                        });
+                      },
+                      showIndicators: true,
+                      indicators: [
+                        _IndicatorData('Very Poor', Colors.red[700]!),
+                        _IndicatorData('Poor', Colors.orange[700]!),
+                        _IndicatorData('Okay', Colors.yellow[700]!),
+                        _IndicatorData('Good', Colors.lightGreen[700]!),
+                        _IndicatorData('Excellent', Colors.green[700]!),
+                      ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
-                    // Stress Level (1-10)
-                    _buildDropdownField(
-                      label: 'Stress (1-10)',
+                    // Stress Level Slider (1-10)
+                    _buildSliderSection(
+                      icon: Icons.psychology,
+                      label: 'Stress Level',
                       value: _stressLevel,
-                      items: List.generate(10, (index) => index + 1),
-                      onChanged: (value) => setState(() => _stressLevel = value!),
-                      isDark: isDark,
-                      hint: 'Rate your stress level',
+                      displayValue: '${_stressLevel.round()}/10',
+                      statusLabel: _getStressLabel(_stressLevel.round()),
+                      statusColor: _getStressColor(_stressLevel.round()),
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      onChanged: (value) {
+                        setState(() {
+                          _stressLevel = value;
+                        });
+                      },
+                      showIndicators: true,
+                      indicators: [
+                        _IndicatorData('Very Low', Colors.green[700]!),
+                        _IndicatorData('Low', Colors.lightGreen[700]!),
+                        _IndicatorData('Moderate', Colors.yellow[700]!),
+                        _IndicatorData('High', Colors.orange[700]!),
+                        _IndicatorData('Very High', Colors.red[700]!),
+                      ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
                     // Triggers
                     _buildTextField(
                       controller: _triggersController,
                       label: 'Triggers',
-                      hint: 'Any specific triggers?',
+                      hint: 'Any specific triggers today?',
+                      icon: Icons.warning_amber,
                       maxLines: 3,
                       isDark: isDark,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Coping Mechanisms
                     _buildTextField(
                       controller: _copingController,
                       label: 'Coping Mechanisms',
-                      hint: 'What helped you cope?',
+                      hint: 'What helped you cope today?',
+                      icon: Icons.self_improvement,
                       maxLines: 3,
                       isDark: isDark,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     // Custom Data Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Custom Data',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(isDark),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.add_circle_outline, size: 20, color: Colors.black),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Custom Data',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         TextButton.icon(
                           onPressed: _addCustomField,
-                          icon: Icon(
-                            Icons.add,
-                            color: AppColors.black,
-                            size: 16,
-                          ),
+                          icon: Icon(Icons.add, color: Colors.black, size: 18),
                           label: Text(
-                            'Add Custom Field',
+                            'Add Field',
                             style: TextStyle(
-                              color: AppColors.black,
+                              color: Colors.black,
                               fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 12),
 
                     // Custom Fields
                     ..._customFields.asMap().entries.map((entry) {
@@ -257,11 +341,9 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.cardBackground(isDark),
+                          color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.borderColor(isDark),
-                          ),
+                          border: Border.all(color: Colors.grey[300]!, width: 1),
                         ),
                         child: Column(
                           children: [
@@ -277,14 +359,11 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
                                 ),
                                 IconButton(
                                   onPressed: () => _removeCustomField(index),
-                                  icon: Icon(
-                                    Icons.delete,
-                                    color: AppColors.errorColor,
-                                  ),
+                                  icon: Icon(Icons.delete, color: Colors.red[700]),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             _buildTextField(
                               controller: field['value']!,
                               label: 'Field Value',
@@ -296,7 +375,7 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
                       );
                     }),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 40),
 
                     // Action Buttons
                     Row(
@@ -306,17 +385,18 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppColors.black),
+                              side: BorderSide(color: Colors.grey[400]!, width: 2),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              backgroundColor: AppColors.white,
+                              backgroundColor: Colors.white,
                             ),
                             child: Text(
                               'Cancel',
                               style: TextStyle(
-                                color: AppColors.black,
+                                color: Colors.black,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
@@ -327,31 +407,34 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
                             onPressed: _clearForm,
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppColors.black),
+                              side: BorderSide(color: Colors.grey[400]!, width: 2),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              backgroundColor: AppColors.white,
+                              backgroundColor: Colors.white,
                             ),
                             child: Text(
-                              'Clear Form',
+                              'Clear',
                               style: TextStyle(
-                                color: AppColors.black,
+                                color: Colors.black,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
+                          flex: 2,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _saveEntry,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.black,
+                              backgroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 0,
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -359,22 +442,30 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.white,
-                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                                : const Text(
-                              'Save Entry',
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                                : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Save Entry',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -385,11 +476,156 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
     );
   }
 
+  Widget _buildSliderSection({
+    required IconData icon,
+    required String label,
+    required double value,
+    required String displayValue,
+    required String statusLabel,
+    required Color statusColor,
+    required double min,
+    required double max,
+    required int divisions,
+    required void Function(double) onChanged,
+    bool showIndicators = false,
+    List<_IndicatorData>? indicators,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  displayValue,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Status Badge
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: statusColor, width: 2),
+              ),
+              child: Text(
+                statusLabel,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: Colors.black,
+              inactiveTrackColor: Colors.grey[300],
+              thumbColor: Colors.black,
+              overlayColor: Colors.black.withOpacity(0.1),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12),
+              overlayShape: RoundSliderOverlayShape(overlayRadius: 24),
+              trackHeight: 6,
+              valueIndicatorColor: Colors.black,
+              valueIndicatorTextStyle: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              label: displayValue,
+              onChanged: onChanged,
+            ),
+          ),
+
+          if (showIndicators && indicators != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: indicators.map((indicator) {
+                  return _buildIndicatorLabel(indicator.label, indicator.color);
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndicatorLabel(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required bool isDark,
+    IconData? icon,
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
@@ -397,101 +633,62 @@ class _MentalWellbeingTrackerScreenState extends State<MentalWellbeingTrackerScr
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: Colors.black),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
           validator: validator,
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          style: TextStyle(color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+            hintStyle: TextStyle(color: Colors.black38),
             filled: true,
-            fillColor: AppColors.cardBackground(isDark),
+            fillColor: Colors.grey[100],
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.black, width: 2),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.black, width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.errorColor),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.red[700]!, width: 2),
             ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildDropdownField({
-    required String label,
-    required int value,
-    required List<int> items,
-    required void Function(int?) onChanged,
-    required bool isDark,
-    required String hint,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
-          value: value,
-          items: items.map((item) {
-            return DropdownMenuItem<int>(
-              value: item,
-              child: Text(
-                item.toString(),
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-            filled: true,
-            fillColor: AppColors.cardBackground(isDark),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.black, width: 2),
-            ),
-          ),
-          dropdownColor: AppColors.cardBackground(isDark),
-        ),
-      ],
-    );
-  }
+// Helper class for indicator data
+class _IndicatorData {
+  final String label;
+  final Color color;
+
+  _IndicatorData(this.label, this.color);
 }

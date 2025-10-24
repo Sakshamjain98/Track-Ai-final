@@ -5,6 +5,7 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/analytics/analytics_provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
+import 'dart:math' as math; // For BMI indicator positioning
 
 class DashboardSummaryPage extends StatefulWidget {
   const DashboardSummaryPage({Key? key}) : super(key: key);
@@ -18,6 +19,11 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+
+  // --- NEW STATE FOR RECOMMENDATIONS ---
+  String? _recommendation;
+  String? _healthyWeightRange;
+  // --- END NEW STATE ---
 
   @override
   void initState() {
@@ -107,16 +113,35 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
     required List<String> options,
     required bool isDarkTheme,
     required Function(String?) onChanged,
+    bool isLightForced = false, // --- NEW: To force light theme
   }) {
+    final Color primaryText = isLightForced
+        ? Colors.black
+        : AppColors.textPrimary(isDarkTheme);
+    final Color secondaryText = isLightForced
+        ? Colors.grey[600]!
+        : AppColors.textSecondary(isDarkTheme);
+    final Color inputFill = isLightForced
+        ? Colors.white
+        : AppColors.inputFill(isDarkTheme);
+    final Color borderColor = isLightForced
+        ? Colors.grey[300]!
+        : AppColors.borderColor(isDarkTheme);
+    final Color focusedBorderColor = isLightForced ? Colors.black : (isDarkTheme ? Colors.white : Colors.black);
+    final Color dropdownBg = isLightForced
+        ? Colors.grey[50]!
+        : (isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50]!);
+
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 12, // Reduced from 14
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary(isDarkTheme),
+            fontSize: 12, // MODIFIED: Reduced font size
+            fontWeight: FontWeight.w500,
+            color: primaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -124,33 +149,34 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
           value: value,
           onChanged: onChanged,
           style: TextStyle(
-            color: AppColors.textPrimary(isDarkTheme),
-            fontSize: 12, // Reduced from 14
+            color: primaryText,
+            fontSize: 12, // MODIFIED: Reduced font size
           ),
-          dropdownColor: isDarkTheme ? AppColors.darkCardBackground : Colors.grey[50],
+          dropdownColor: dropdownBg,
           decoration: InputDecoration(
             filled: true,
-            fillColor: isDarkTheme ? AppColors.inputFill(true) : AppColors.inputFill(false),
+            fillColor: inputFill,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: AppColors.borderColor(isDarkTheme),
+                color: borderColor,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: AppColors.borderColor(isDarkTheme),
+                color: borderColor,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: isDarkTheme ? Colors.white : Colors.black,
-                width: 2,
+                color: focusedBorderColor,
+                width: 1.5,
               ),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Reduced padding
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 12), // MODIFIED: Reduced padding
           ),
           items: options.map<DropdownMenuItem<String>>((String value) {
             return DropdownMenuItem<String>(
@@ -158,10 +184,10 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
               child: Text(
                 value,
                 style: TextStyle(
-                  color: AppColors.textPrimary(isDarkTheme),
-                  fontSize: 12, // Reduced from 14
+                  color: primaryText,
+                  fontSize: 12, // MODIFIED: Reduced font size
                 ),
-                overflow: TextOverflow.ellipsis, // Added to prevent overflow
+                overflow: TextOverflow.ellipsis,
               ),
             );
           }).toList(),
@@ -169,6 +195,67 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
       ],
     );
   }
+
+  // --- Helper for TextFormFields in light theme ---
+  Widget _buildTextFormField({
+    required String label,
+    required TextEditingController controller,
+    required String hintText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12, // MODIFIED: Reduced font size
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12, // MODIFIED: Reduced font size
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: Colors.grey[300]!,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: Colors.grey[300]!,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(
+                color: Colors.black,
+                width: 1.5,
+              ),
+            ),
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 12), // MODIFIED: Reduced padding
+          ),
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 12, // MODIFIED: Reduced font size
+          ),
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildDetailChip(String text, IconData icon, bool isDark) {
     return Container(
@@ -183,14 +270,17 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
           Icon(
             icon,
             size: 14,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            color:
+            isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
           ),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.lightTextPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -215,31 +305,8 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                 gradient: AppColors.cardLinearGradient(isDark),
               ),
             ),
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-              ),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Row(
-              children: [
-                Icon(
-                  lucide.LucideIcons.activity,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Dashboard Summary',
-                  style: TextStyle(
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+            automaticallyImplyLeading: false,
+            toolbarHeight: 0,
           ),
           body: Container(
             decoration: BoxDecoration(
@@ -259,11 +326,14 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                           _buildConfigureButton(context, provider, isDark),
                           const SizedBox(height: 20),
                           if (provider.selectedTrackers.isNotEmpty) ...[
-                            _buildCustomDashboardSection(context, provider, isDark),
+                            _buildCustomDashboardSection(
+                                context, provider, isDark),
                             const SizedBox(height: 24),
                             _buildOverallSummaryCard(context, provider, isDark),
                             const SizedBox(height: 24),
-                            _buildBMICalculator(context, provider, isDark),
+                            // --- REPLACED WIDGET ---
+                            _buildNewBmiCalculator(context, provider),
+                            // --- END REPLACEMENT ---
                           ] else ...[
                             _buildEmptyState(context, isDark),
                           ],
@@ -282,10 +352,10 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   }
 
   Widget _buildConfigureButton(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+      BuildContext context,
+      AnalyticsProvider provider,
+      bool isDark,
+      ) {
     return Container(
       width: double.infinity,
       decoration: _getCardDecoration(isDark),
@@ -298,7 +368,9 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
             children: [
               Icon(
                 lucide.LucideIcons.slidersHorizontal,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.lightTextPrimary,
                 size: 24,
               ),
               const SizedBox(width: 12),
@@ -359,10 +431,10 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   }
 
   Widget _buildCustomDashboardSection(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+      BuildContext context,
+      AnalyticsProvider provider,
+      bool isDark,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -370,7 +442,8 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
           children: [
             Icon(
               lucide.LucideIcons.layoutDashboard,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              color:
+              isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
               size: 20,
             ),
             const SizedBox(width: 8),
@@ -421,24 +494,68 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   }
 
   Widget _buildTrackerChart(
-    BuildContext context,
-    String trackerName,
-    List<Map<String, dynamic>> data,
-    bool isDark,
-  ) {
+      BuildContext context,
+      String trackerName,
+      List<Map<String, dynamic>> data,
+      bool isDark,
+      ) {
+    // ✅ Safely build FlSpot list
+    final List<FlSpot> spots = [];
+    for (int i = 0; i < data.length; i++) {
+      final yVal = data[i]['value'];
+      if (yVal != null && yVal is num) {
+        spots.add(FlSpot(i.toDouble(), yVal.toDouble()));
+      }
+    }
+
+    if (spots.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: _getCardDecoration(isDark),
+        height: 120,
+        alignment: Alignment.center,
+        child: Text(
+          'No data logged for this tracker yet.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary(isDark),
+          ),
+        ),
+      );
+    }
+
+    // ✅ Calculate dynamic Y range
+    double minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
+    double maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+
+    // If all values are same → avoid flat grey area
+    if (minY == maxY) {
+      minY -= 1;
+      maxY += 1;
+    }
+
+    // Add small margin for better visuals
+    final double yRange = maxY - minY;
+    minY = (minY - yRange * 0.1).clamp(0, double.infinity);
+    maxY += yRange * 0.1;
+
+    // <--- FIX: Changed line color to black/white
+    final Color lineColor = isDark ? Colors.white : Colors.black;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: _getCardDecoration(isDark),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Row(
             children: [
               Container(
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  color: lineColor,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -462,85 +579,105 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
             ),
           ),
           const SizedBox(height: 16),
-          if (data.isNotEmpty)
-            SizedBox(
-              height: 120,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: 1,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(
-                        color: AppColors.textSecondary(isDark).withOpacity(0.2),
-                        strokeWidth: 1,
-                      );
-                    },
+
+          // ✅ Chart
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                minY: minY,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: true,
+                  horizontalInterval: yRange / 5,
+                  verticalInterval: 1,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.withOpacity(0.2),
+                    strokeWidth: 1,
                   ),
-                  titlesData: FlTitlesData(show: false),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: _generateChartData(data),
-                      isCurved: true,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      barWidth: 3,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) {
-                          return FlDotCirclePainter(
-                            radius: 4,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                            strokeWidth: 2,
-                            strokeColor: AppColors.cardBackground(isDark),
-                          );
-                        },
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
-                                .withOpacity(0.3),
-                            (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
-                                .withOpacity(0.0),
-                          ],
+                  getDrawingVerticalLine: (value) => FlLine(
+                    color: Colors.grey.withOpacity(0.2),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 36,
+                      getTitlesWidget: (value, meta) => Text(
+                        value.toStringAsFixed(0),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark ? Colors.white70 : Colors.black54,
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize:
+                      24, // <--- FIX: Added reserved space for X-axis labels
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index >= 0 && index < data.length) {
+                          final record = data[index];
+
+                          // ✨✨✨ START OF FIX ✨✨✨
+                          // Fallback to show the index number if the label is null or empty
+                          final String text = record['label']?.toString() ?? '';
+                          final String fallbackText = value.toInt().toString();
+                          final String displayText =
+                          text.isNotEmpty ? text : fallbackText;
+                          // ✨✨✨ END OF FIX ✨✨✨
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              displayText, // <-- Use the new display text
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                 ),
-              ),
-            )
-          else
-            Container(
-              height: 120,
-              alignment: Alignment.center,
-              child: Text(
-                'No data logged for this tracker yet.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary(isDark),
+                borderData: FlBorderData(
+                  show: true,
+                  border:
+                  Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
                 ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: lineColor,
+                    barWidth: 2,
+                    dotData: FlDotData(show: true),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: lineColor.withOpacity(0.15),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );
-  }
-
-  List<FlSpot> _generateChartData(List<Map<String, dynamic>> data) {
-    if (data.isEmpty) return [];
-
-    final spots = <FlSpot>[];
-    for (int i = 0; i < data.length && i < 7; i++) {
-      final value = double.tryParse(data[i]['value']?.toString() ?? '0') ?? 0.0;
-      spots.add(FlSpot(i.toDouble(), value));
-    }
-    return spots;
   }
 
   String _getTrackerUnit(String trackerName) {
@@ -561,10 +698,10 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   }
 
   Widget _buildOverallSummaryCard(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+      BuildContext context,
+      AnalyticsProvider provider,
+      bool isDark,
+      ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -576,7 +713,9 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
             children: [
               Icon(
                 lucide.LucideIcons.fileText,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.lightTextPrimary,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -658,11 +797,11 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
   }
 
   Widget _buildSummaryInsight(
-    String title,
-    String description,
-    Color color,
-    bool isDark,
-  ) {
+      String title,
+      String description,
+      Color color,
+      bool isDark,
+      ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -704,182 +843,165 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
     );
   }
 
-  Widget _buildBMICalculator(
-      BuildContext context,
-      AnalyticsProvider provider,
-      bool isDark,
-      ) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(MediaQuery.of(context).size.width > 600 ? 24 : 16),
-      decoration: _getCardDecoration(isDark),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                lucide.LucideIcons.activity,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'BMI Categories & Calculator',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(isDark),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                lucide.LucideIcons.info,
-                color: AppColors.textSecondary(isDark),
-                size: 16,
-              ),
+  // ---
+  // --- START: NEW BMI CALCULATOR WIDGETS ---
+  // --- (Replaces old _buildBMICalculator and its helpers)
+  // ---
+
+  Widget _buildNewBmiCalculator(BuildContext context, AnalyticsProvider provider) {
+    // Force a light theme for this card
+    return Card(
+      color: Colors.white,
+      elevation: 2,
+      shadowColor: Colors.grey.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildNewBmiScale(provider),
+            const SizedBox(height: 24),
+            _buildNewBmiInputForm(context, provider),
+            const SizedBox(height: 24),
+            if (provider.currentBMI != null) ...[
+              _buildNewBmiResult(provider),
+              const SizedBox(height: 24),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Body Mass Index (BMI) is a general indicator of body fatness.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary(isDark),
+            if (_recommendation != null && _healthyWeightRange != null) ...[
+              _buildNewBmiRecommendation(provider),
+            ],
+            const SizedBox(height: 8),
+            const Center(
+              child: Text(
+                "Note: BMI is a general guideline. Consult a healthcare professional.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _buildBMIScale(provider.currentBMI, isDark),
-          const SizedBox(height: 20),
-          _buildBMICalculatorForm(provider, isDark),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  Widget _buildNewBmiScale(AnalyticsProvider provider) {
+    const double bmiScaleMin = 15.0;
+    const double bmiScaleMax = 40.0;
 
-  Widget _buildBMIScale(double? currentBMI, bool isDark) {
+    double indicatorPosition = 0.0;
+    if (provider.currentBMI != null) {
+      double range = bmiScaleMax - bmiScaleMin;
+      double position = ((provider.currentBMI! - bmiScaleMin) / range);
+      indicatorPosition = math.max(0, math.min(1.0, position)); // Clamp 0.0 to 1.0
+    }
+
     return Column(
       children: [
-        Container(
-          height: 20,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            gradient: const LinearGradient(
-              colors: [Colors.blue, Colors.green, Colors.orange, Colors.red],
-            ),
-          ),
-          child: currentBMI != null ? _buildBMIIndicator(currentBMI) : null,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // 1. Gradient Bar
+        Stack(
+          clipBehavior: Clip.none,
           children: [
-            Flexible(child: _buildBMICategory('Underweight', isDark)),
-            Flexible(child: _buildBMICategory('Healthy', isDark)),
-            Flexible(child: _buildBMICategory('Overweight', isDark)),
-            Flexible(child: _buildBMICategory('Obese', isDark)),
+            Container(
+              height: 24, // Taller bar
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF007BFF), // Blue
+                    Color(0xFF28A745), // Green
+                    Color(0xFFFFC107), // Yellow
+                    Color(0xFFFD7E14), // Orange
+                    Color(0xFFDC3545), // Red
+                  ],
+                ),
+              ),
+            ),
+            // 2. BMI Indicator
+            if (provider.currentBMI != null)
+              Positioned(
+                left: (MediaQuery.of(context).size.width - 64) * indicatorPosition, // (Full width - padding) * position
+                top: -4,
+                child: Container(
+                  width: 3,
+                  height: 32, // Taller
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(2),
+                    border: Border.all(color: Colors.white, width: 0.5),
+                  ),
+                ),
+              ),
           ],
         ),
-        if (currentBMI != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Your BMI: ${currentBMI.toStringAsFixed(1)}',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+        const SizedBox(height: 8),
+        // 3. Category Labels
+        Row( // MODIFIED: Removed 'const' to use the method helper
+          children: [
+            // These flex values match the React code's flex basis
+            Expanded(
+              flex: 15, // Underweight
+              child: _BmiCategoryLabel(name: "Underweight", range: "< 18.5"),
             ),
-          ),
-        ],
+            Expanded(
+              flex: 15, // Healthy
+              child: _BmiCategoryLabel(name: "Healthy", range: "18.5 - 24.9"),
+            ),
+            Expanded(
+              flex: 20, // Overweight
+              child: _BmiCategoryLabel(name: "Overweight", range: "25 - 29.9"),
+            ),
+            Expanded(
+              flex: 10, // Obese
+              child: _BmiCategoryLabel(name: "Obese", range: "≥ 30"),
+            ),
+          ],
+        )
       ],
     );
   }
 
-  Widget _buildBMIIndicator(double bmi) {
-    double position = 0.0;
-    Color indicatorColor = Colors.blue;
-
-    if (bmi < 18.5) {
-      position = (bmi / 18.5) * 0.25;
-      indicatorColor = Colors.blue;
-    } else if (bmi < 25) {
-      position = 0.25 + ((bmi - 18.5) / 6.5) * 0.25;
-      indicatorColor = Colors.green;
-    } else if (bmi < 30) {
-      position = 0.5 + ((bmi - 25) / 5) * 0.25;
-      indicatorColor = Colors.orange;
-    } else {
-      position = 0.75 + ((bmi - 30) / 10) * 0.25;
-      indicatorColor = Colors.red;
-    }
-
-    return Align(
-      alignment: Alignment(position * 2 - 1, 0),
-      child: Container(
-        width: 4,
-        height: 20,
-        decoration: BoxDecoration(
-          color: indicatorColor,
-          borderRadius: BorderRadius.circular(2),
-          boxShadow: [
-            BoxShadow(
-              color: indicatorColor.withOpacity(0.5),
-              blurRadius: 4,
-              offset: const Offset(0, 0),
-            ),
-          ],
-        ),
+  Widget _buildNewBmiInputForm(BuildContext context, AnalyticsProvider provider) {
+    return Card(
+      color: Colors.grey[100],
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[200]!),
       ),
-    );
-  }
-
-  Widget _buildBMICategory(String category, bool isDark) {
-    return Text(
-      category,
-      style: TextStyle(
-        fontSize: 9,
-        fontWeight: FontWeight.w500,
-        color: AppColors.textSecondary(isDark),
-      ),
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  Widget _buildBMICalculatorForm(AnalyticsProvider provider, bool isDark) {
-    return Consumer<AnalyticsProvider>(
-      builder: (context, provider, child) {
-        return Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                Icon(
-                  lucide.LucideIcons.calculator,
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
+                Icon(lucide.LucideIcons.calculator, color: Colors.black, size: 20),
+                SizedBox(width: 8),
                 Text(
-                  'Calculate Your BMI',
+                  "Calculate Your BMI",
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary(isDark),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12), // MODIFIED: Reduced gap
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
+                Expanded(
                   child: _buildDropdownField(
                     label: 'Height Unit',
                     value: provider.heightUnit,
                     options: ['Centimeters (cm)', 'Feet & Inches (ft/in)'],
-                    isDarkTheme: isDark,
+                    isDarkTheme: false, // Force light
+                    isLightForced: true,
                     onChanged: (String? newValue) {
                       if (newValue != null) {
                         provider.setHeightUnit(newValue);
@@ -887,239 +1009,29 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                     },
                   ),
                 ),
-                const SizedBox(width: 12),
-                Flexible(
+                const SizedBox(width: 5), // MODIFIED: Reduced gap
+                Expanded(
                   child: provider.heightUnit == 'Centimeters (cm)'
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Your Height (cm)',
-                              style: TextStyle(
-                                fontSize: 12, // Reduced from 14
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary(isDark),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: provider.heightCmController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                hintText: 'E.g., 170',
-                                hintStyle: TextStyle(
-                                  color: AppColors.textSecondary(isDark),
-                                  fontSize: 12, // Reduced from 14
-                                ),
-                                filled: true,
-                                fillColor: AppColors.inputFill(isDark),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: AppColors.borderColor(isDark),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: AppColors.borderColor(isDark),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                    color: isDark ? Colors.white : Colors.black,
-                                    width: 2,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Reduced padding
-                              ),
-                              style: TextStyle(
-                                color: AppColors.textPrimary(isDark),
-                                fontSize: 12, // Reduced from 14
-                              ),
-                            ),
-                          ],
-                        )
+                      ? _buildTextFormField(
+                    label: "Your Height (cm)",
+                    controller: provider.heightCmController,
+                    hintText: "E.g., 170",
+                  )
                       : Row(
-                          children: [
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Feet',
-                                    style: TextStyle(
-                                      fontSize: 12, // Reduced from 14
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary(isDark),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: provider.heightFeetController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      hintText: '5',
-                                      hintStyle: TextStyle(
-                                        color: AppColors.textSecondary(isDark),
-                                        fontSize: 12, // Reduced from 14
-                                      ),
-                                      filled: true,
-                                      fillColor: AppColors.inputFill(isDark),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: AppColors.borderColor(isDark),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: AppColors.borderColor(isDark),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: isDark ? Colors.white : Colors.black,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Reduced padding
-                                    ),
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary(isDark),
-                                      fontSize: 12, // Reduced from 14
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Inches',
-                                    style: TextStyle(
-                                      fontSize: 12, // Reduced from 14
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary(isDark),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: provider.heightInchesController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      hintText: '6',
-                                      hintStyle: TextStyle(
-                                        color: AppColors.textSecondary(isDark),
-                                        fontSize: 12, // Reduced from 14
-                                      ),
-                                      filled: true,
-                                      fillColor: AppColors.inputFill(isDark),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: AppColors.borderColor(isDark),
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: AppColors.borderColor(isDark),
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(
-                                          color: isDark ? Colors.white : Colors.black,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Reduced padding
-                                    ),
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary(isDark),
-                                      fontSize: 12, // Reduced from 14
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Flexible(
-                  child: _buildDropdownField(
-                    label: 'Weight Unit',
-                    value: provider.weightUnit,
-                    options: ['Kilograms (kg)', 'Pounds (lbs)'],
-                    isDarkTheme: isDark,
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        provider.setWeightUnit(newValue);
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Your Weight (${provider.weightUnit == 'Kilograms (kg)' ? 'kg' : 'lbs'})',
-                        style: TextStyle(
-                          fontSize: 12, // Reduced from 14
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary(isDark),
+                      Expanded(
+                        child: _buildTextFormField(
+                          label: "Feet",
+                          controller: provider.heightFeetController,
+                          hintText: "5",
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: provider.weightController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: provider.weightUnit == 'Kilograms (kg)' ? 'E.g., 65' : 'E.g., 143',
-                          hintStyle: TextStyle(
-                            color: AppColors.textSecondary(isDark),
-                            fontSize: 12, // Reduced from 14
-                          ),
-                          filled: true,
-                          fillColor: AppColors.inputFill(isDark),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: AppColors.borderColor(isDark),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: AppColors.borderColor(isDark),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: isDark ? Colors.white : Colors.black,
-                              width: 2,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // Reduced padding
-                        ),
-                        style: TextStyle(
-                          color: AppColors.textPrimary(isDark),
-                          fontSize: 12, // Reduced from 14
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTextFormField(
+                          label: "Inches",
+                          controller: provider.heightInchesController,
+                          hintText: "9",
                         ),
                       ),
                     ],
@@ -1127,69 +1039,368 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12), // MODIFIED: Reduced gap
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildDropdownField(
+                    label: 'Weight Unit',
+                    value: provider.weightUnit,
+                    options: ['Kilograms (kg)', 'Pounds (lbs)'],
+                    isDarkTheme: false, // Force light
+                    isLightForced: true,
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        provider.setWeightUnit(newValue);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10), // MODIFIED: Reduced gap
+                Expanded(
+                  child: _buildTextFormField(
+                    label: "Your Weight (${provider.weightUnit == 'Kilograms (kg)' ? 'kg' : 'lbs'})",
+                    controller: provider.weightController,
+                    hintText: provider.weightUnit == 'Kilograms (kg)' ? "E.g., 72" : "E.g., 158",
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16), // MODIFIED: Reduced gap
             SizedBox(
               width: double.infinity,
-              height: 52,
               child: ElevatedButton(
-                onPressed: () async {
-                  final result = await provider.calculateBMI();
-                  if (result != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'BMI calculated: ${result.toStringAsFixed(1)}',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        backgroundColor: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text(
-                          'Please enter valid height and weight values',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        backgroundColor: AppColors.errorColor,
-                      ),
-                    );
-                  }
-                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.black,
+                  backgroundColor: AppColors.black, // Use app's primary color
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 3,
-                  shadowColor: AppColors.black.withOpacity(0.4),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      lucide.LucideIcons.calculator,
-                      size: 20,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Calculate My BMI', style: TextStyle(fontSize: 16)),
-                  ],
+                onPressed: () async {
+                  final result = await provider.calculateBMI();
+                  if (result != null) {
+                    // --- NEW: Calculate recommendation locally ---
+                    _generateRecommendation(provider);
+                    // --- END NEW ---
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('BMI Calculated: ${result.toStringAsFixed(1)}'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    // Clear old results if calc fails
+                    setState(() {
+                      _recommendation = null;
+                      _healthyWeightRange = null;
+                    });
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Please enter valid height and weight'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text(
+                  'Calculate My BMI',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
+  Widget _buildNewBmiResult(AnalyticsProvider provider) {
+    final double bmi = provider.currentBMI!;
+    final double progress = (bmi - 15) / (40 - 15); // Normalize from 15-40 range
+    final Color bmiColor = provider.bmiStatusColor;
+
+    return Column(
+      children: [
+        // 1. Circular Meter
+        SizedBox(
+          width: 120,
+          height: 120,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CircularProgressIndicator(
+                value: 1.0,
+                strokeWidth: 10,
+                backgroundColor: Colors.grey[200],
+                color: Colors.grey[200],
+              ),
+              CircularProgressIndicator(
+                value: progress,
+                strokeWidth: 10,
+                color: bmiColor,
+                strokeCap: StrokeCap.round,
+              ),
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      bmi.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: bmiColor,
+                      ),
+                    ),
+                    Text(
+                      "BMI",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // 2. Text Result
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Your BMI:",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              bmi.toStringAsFixed(1),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: bmiColor,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Chip(
+              label: Text(
+                provider.bmiStatusLabel,
+                style: TextStyle(
+                  color: bmiColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              backgroundColor: bmiColor.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: bmiColor.withOpacity(0.2)),
+              ),
+            )
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNewBmiRecommendation(AnalyticsProvider provider) {
+    return Card(
+      color: Colors.grey[100],
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(lucide.LucideIcons.trendingUp, color: Colors.black, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  "Recommendation",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Healthy Weight Range:",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  _healthyWeightRange ?? "N/A",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Text(
+              // The user wants this from Gemini, but for now, we use the
+              // generated one.
+              _recommendation ?? "...",
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper class for the labels under the bar
+  Widget _BmiCategoryLabel({required String name, required String range}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          overflow: TextOverflow.ellipsis, // Added to prevent label overflow
+        ),
+        Text(
+          range,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.grey,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- NEW: Logic moved from React code into the state ---
+  void _generateRecommendation(AnalyticsProvider provider) {
+    if (provider.currentBMI == null) return;
+
+    final double bmiVal = provider.currentBMI!;
+    final String weightUnit = provider.weightUnit == 'Kilograms (kg)' ? 'kg' : 'lbs';
+    final bool isKg = weightUnit == 'kg';
+
+    // 1. Get Height in Meters
+    double hCm = 0;
+    try {
+      if (provider.heightUnit == 'Centimeters (cm)') {
+        hCm = double.parse(provider.heightCmController.text);
+      } else {
+        final double ft = double.parse(provider.heightFeetController.text);
+        final double inches = double.parse(provider.heightInchesController.text);
+        hCm = (ft * 30.48) + (inches * 2.54);
+      }
+    } catch (e) {
+      return; // Invalid height
+    }
+    final double heightM = hCm / 100;
+    if (heightM <= 0) return;
+
+    // 2. Get Weight in KG
+    double wKg = 0;
+    try {
+      wKg = double.parse(provider.weightController.text);
+      if (wKg <= 0) return;
+      if (!isKg) {
+        wKg = wKg * 0.453592; // Convert lbs to kg
+      }
+    } catch (e) {
+      return; // Invalid weight
+    }
+
+    // 3. Calculate Healthy Range
+    final double lowerHealthyWeightKg = 18.5 * (heightM * heightM);
+    final double upperHealthyWeightKg = 24.9 * (heightM * heightM);
+
+    final String lowerDisplay = isKg
+        ? lowerHealthyWeightKg.toStringAsFixed(1)
+        : (lowerHealthyWeightKg * 2.20462).toStringAsFixed(1);
+    final String upperDisplay = isKg
+        ? upperHealthyWeightKg.toStringAsFixed(1)
+        : (upperHealthyWeightKg * 2.20462).toStringAsFixed(1);
+
+    final String healthyRange = "$lowerDisplay - $upperDisplay $weightUnit";
+
+    // 4. Generate Recommendation Message
+    String recMsg = "";
+    if (bmiVal < 18.5) {
+      final double weightToGainKg = lowerHealthyWeightKg - wKg;
+      final String weightToGainDisplay = isKg
+          ? weightToGainKg.toStringAsFixed(1)
+          : (weightToGainKg * 2.20462).toStringAsFixed(1);
+      recMsg = "Based on your metrics, a weight gain of approximately $weightToGainDisplay $weightUnit is suggested to enter the healthy BMI range.";
+    } else if (bmiVal >= 25) {
+      final double weightToLoseKg = wKg - upperHealthyWeightKg;
+      final String weightToLoseDisplay = isKg
+          ? weightToLoseKg.toStringAsFixed(1)
+          : (weightToLoseKg * 2.20462).toStringAsFixed(1);
+      recMsg = "Based on your metrics, a weight loss of approximately $weightToLoseDisplay $weightUnit is suggested to enter the healthy BMI range.";
+    } else {
+      recMsg = "Your BMI is within the healthy range. Focus on maintaining your current lifestyle habits.";
+    }
+
+    // 5. Update state
+    setState(() {
+      _healthyWeightRange = healthyRange;
+      _recommendation = recMsg;
+    });
+
+    // TODO: Here you would call the Gemini API for a richer recommendation
+    // if you want, and then update the state again with that response.
+    // For example:
+    // _getGeminiRecommendation(bmiVal, hCm, wKg).then((geminiRec) {
+    //   if (geminiRec != null) {
+    //     setState(() {
+    //       _recommendation = geminiRec;
+    //     });
+    //   }
+    // });
+  }
+
+  //
+  // --- END: NEW BMI CALCULATOR WIDGETS ---
+  //
+
   void _showConfigureDashboard(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+      BuildContext context,
+      AnalyticsProvider provider,
+      bool isDark,
+      ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1242,7 +1453,9 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                       child: Text(
                         'Done',
                         style: TextStyle(
-                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.lightTextPrimary,
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -1257,7 +1470,8 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                   itemCount: provider.availableTrackers.length,
                   itemBuilder: (context, index) {
                     final tracker = provider.availableTrackers[index];
-                    final isSelected = provider.selectedTrackers.contains(tracker);
+                    final isSelected =
+                    provider.selectedTrackers.contains(tracker);
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
@@ -1277,7 +1491,9 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                           tracker,
                           style: TextStyle(
                             color: AppColors.textPrimary(isDark),
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                             fontSize: 14,
                           ),
                         ),

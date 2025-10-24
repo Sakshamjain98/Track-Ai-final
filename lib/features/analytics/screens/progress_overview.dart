@@ -16,6 +16,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
   String _selectedNutritionTimeframe = 'This Week';
   Map<String, dynamic> _nutritionData = {};
   bool _isLoadingNutrition = false;
+  List<String> selectedTrackers = [];
 
   @override
   void initState() {
@@ -33,7 +34,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       final data = await provider.getNutritionData(_selectedNutritionTimeframe);
       if (mounted) {
         setState(() {
-          _nutritionData = data;
+          _nutritionData = data ?? {};
           _isLoadingNutrition = false;
         });
       }
@@ -110,24 +111,56 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
         final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // SECTION 1: Progress Overview
+              _buildSectionHeader('Progress Overview', isDark, lucide.LucideIcons.trendingUp),
+              const SizedBox(height: 12),
+
               _buildNutritionCard(provider, isDark),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
               _buildTimeframeSelector(provider, isDark),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
               if (provider.selectedTrackers.isNotEmpty) ...[
                 ...provider.selectedTrackers.map((tracker) {
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: _buildTrackerProgressCard(tracker, provider, isDark),
                   );
                 }).toList(),
-              ] else ...[
-                _buildEmptyState(isDark),
               ],
+
+              const SizedBox(height: 32),
+
+              // SECTION 2: Correlation Insights
+              _buildSectionHeader('Correlation Insights', isDark, lucide.LucideIcons.activity),
+              const SizedBox(height: 12),
+
+              _buildTrackerSelectionCard(provider, isDark),
+              const SizedBox(height: 16),
+
+              if (selectedTrackers.length >= 2) ...[
+                _buildAnalyzeButton(provider, isDark),
+                const SizedBox(height: 16),
+              ],
+
+              if (provider.isLoadingCorrelations) ...[
+                _buildLoadingCard(isDark),
+                const SizedBox(height: 16),
+              ],
+
+              if (provider.correlationResults.isNotEmpty && !provider.isLoadingCorrelations) ...[
+                _buildCorrelationResults(provider, isDark),
+              ],
+
+              if (selectedTrackers.length < 2 && provider.correlationResults.isEmpty) ...[
+                _buildInstructionCard(isDark),
+              ],
+
               const SizedBox(height: 100),
             ],
           ),
@@ -136,6 +169,28 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
+  Widget _buildSectionHeader(String title, bool isDark, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: const Color(0xFF26A69A),
+          size: 24,
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(isDark),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Nutrition Card from Progress Overview
   Widget _buildNutritionCard(AnalyticsProvider provider, bool isDark) {
     final totalCalories = _nutritionData['totalCalories']?.toDouble() ?? 0;
     final dailyAverage = _nutritionData['dailyAverage']?.toDouble() ?? 0;
@@ -189,7 +244,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
                 'This Week',
                 _selectedNutritionTimeframe == 'This Week',
                 isDark,
-                () {
+                    () {
                   setState(() => _selectedNutritionTimeframe = 'This Week');
                   _loadNutritionData();
                 },
@@ -199,7 +254,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
                 'Last Week',
                 _selectedNutritionTimeframe == 'Last Week',
                 isDark,
-                () {
+                    () {
                   setState(() => _selectedNutritionTimeframe = 'Last Week');
                   _loadNutritionData();
                 },
@@ -210,75 +265,75 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           _isLoadingNutrition
               ? _buildNutritionLoading(isDark)
               : Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                totalCalories.toInt().toString(),
-                                style: TextStyle(
-                                  fontSize: 24, // Reduced from 32
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary(isDark),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                'Total calories',
-                                style: TextStyle(
-                                  fontSize: 10, // Reduced from 12
-                                  color: AppColors.textSecondary(isDark),
-                                ),
-                              ),
-                            ],
+                        Text(
+                          totalCalories.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary(isDark),
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        Flexible(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                dailyAverage.toInt().toString(),
-                                style: TextStyle(
-                                  fontSize: 24, // Reduced from 32
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary(isDark),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                'Daily avg.',
-                                style: TextStyle(
-                                  fontSize: 10, // Reduced from 12
-                                  color: AppColors.textSecondary(isDark),
-                                ),
-                              ),
-                            ],
+                        Text(
+                          'Total calories',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textSecondary(isDark),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    _buildWeeklyChart(dailyCalories, isDark),
-                    const SizedBox(height: 20),
-                    if (entries == 0) _buildNoNutritionData(isDark),
-                  ],
-                ),
+                  ),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dailyAverage.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary(isDark),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Daily avg.',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textSecondary(isDark),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildWeeklyChart(dailyCalories, isDark),
+              const SizedBox(height: 20),
+              if (entries == 0) _buildNoNutritionData(isDark),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Widget _buildTimeFrameChip(
-    String label,
-    bool isSelected,
-    bool isDark,
-    VoidCallback onTap,
-  ) {
+      String label,
+      bool isSelected,
+      bool isDark,
+      VoidCallback onTap,
+      ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -360,7 +415,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Container(
-          width: 16, // Reduced from 20
+          width: 16,
           height: height,
           decoration: BoxDecoration(
             color: value > 0
@@ -439,7 +494,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           ),
           style: TextStyle(
             color: AppColors.textPrimary(isDark),
-            fontSize: 12, // Reduced from 14
+            fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
           dropdownColor: AppColors.cardBackground(isDark),
@@ -448,8 +503,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
               value: timeframe,
               child: Text(
                 timeframe,
-                style: TextStyle(
-                  fontSize: 12, // Reduced from 14
+                style: const TextStyle(
+                  fontSize: 12,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -466,10 +521,10 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
   }
 
   Widget _buildTrackerProgressCard(
-    String tracker,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+      String tracker,
+      AnalyticsProvider provider,
+      bool isDark,
+      ) {
     return FutureBuilder<Map<String, dynamic>>(
       future: provider.getEnhancedProgressData(tracker),
       builder: (context, snapshot) {
@@ -628,18 +683,18 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
   }
 
   Widget _buildProgressStat(
-    String label,
-    String value,
-    String unit,
-    bool isDark,
-  ) {
+      String label,
+      String value,
+      String unit,
+      bool isDark,
+      ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 10, // Reduced from 12
+            fontSize: 10,
             color: AppColors.textSecondary(isDark),
           ),
         ),
@@ -648,7 +703,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           text: TextSpan(
             text: value,
             style: TextStyle(
-              fontSize: 20, // Reduced from 24
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary(isDark),
             ),
@@ -656,7 +711,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
               TextSpan(
                 text: ' $unit',
                 style: TextStyle(
-                  fontSize: 10, // Reduced from 12
+                  fontSize: 10,
                   fontWeight: FontWeight.normal,
                   color: AppColors.textSecondary(isDark),
                 ),
@@ -670,10 +725,10 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
   }
 
   Widget _buildProgressChart(
-    List<dynamic> thisWeekData,
-    List<dynamic> lastWeekData,
-    bool isDark,
-  ) {
+      List<dynamic> thisWeekData,
+      List<dynamic> lastWeekData,
+      bool isDark,
+      ) {
     final maxY = [thisWeekData.length, lastWeekData.length, 10].reduce((a, b) => a > b ? a : b).toDouble();
 
     return Container(
@@ -746,30 +801,465 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
-  Widget _buildEmptyState(bool isDark) {
+  // CORRELATION SECTION WIDGETS
+  Widget _buildTrackerSelectionCard(AnalyticsProvider provider, bool isDark) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
       decoration: _getCardDecoration(isDark),
+      padding: const EdgeInsets.all(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Select Trackers to Compare',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(isDark),
+                ),
+              ),
+              const Spacer(),
+              _buildDetailChip(
+                '${selectedTrackers.length} selected',
+                selectedTrackers.length >= 2 ? Icons.check_circle : Icons.warning,
+                isDark,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Minimum 2 trackers required for correlation analysis',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...provider.availableTrackers.map((tracker) {
+            final isSelected = selectedTrackers.contains(tracker);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.black.withOpacity(0.1)
+                    : AppColors.inputFill(isDark),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.black
+                      : AppColors.borderColor(isDark),
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: CheckboxListTile(
+                title: Text(
+                  tracker,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontSize: 14,
+                  ),
+                ),
+                value: isSelected,
+                onChanged: (bool? value) {
+                  setState(() {
+                    if (value == true) {
+                      selectedTrackers.add(tracker);
+                    } else {
+                      selectedTrackers.remove(tracker);
+                    }
+                  });
+                },
+                activeColor: AppColors.black,
+                checkColor: Colors.white,
+                controlAffinity: ListTileControlAffinity.trailing,
+                dense: true,
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailChip(String text, IconData icon, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.black.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            lucide.LucideIcons.trendingUp,
+            icon,
+            size: 14,
             color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-            size: 64,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyzeButton(AnalyticsProvider provider, bool isDark) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: provider.isLoadingCorrelations
+            ? null
+            : () async {
+          for (String tracker in List.from(provider.selectedTrackers)) {
+            provider.toggleTrackerSelection(tracker);
+          }
+          for (String tracker in selectedTrackers) {
+            provider.toggleTrackerSelection(tracker);
+          }
+          await provider.analyzeCorrelations();
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.black,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 3,
+          shadowColor: AppColors.black.withOpacity(0.4),
+        ),
+        child: provider.isLoadingCorrelations
+            ? Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Analyzing Correlations...', style: TextStyle(fontSize: 16)),
+          ],
+        )
+            : Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.analytics,
+              size: 20,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            const Text('Analyze Correlations', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingCard(bool isDark) {
+    return Container(
+      decoration: _getCardDecoration(isDark),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.black),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
-            'No Progress Data',
+            'Analyzing Your Data',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+              color: AppColors.textSecondary(isDark),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Configure your dashboard with trackers to see progress overview.',
+            'Our AI is discovering patterns and correlations in your tracked data...',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCorrelationResults(AnalyticsProvider provider, bool isDark) {
+    return Container(
+      decoration: _getCardDecoration(isDark),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                lucide.LucideIcons.activity,
+                color: const Color(0xFF26A69A),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Correlation Analysis Results',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(isDark),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Based on your ${provider.selectedTimeframe.toLowerCase()} data',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (provider.correlationResults.isNotEmpty) ...[
+            ...provider.correlationResults.map((correlation) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _buildCorrelationItem(correlation, isDark),
+              );
+            }).toList(),
+          ] else ...[
+            _buildNoCorrelationsFound(isDark),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCorrelationItem(Map<String, dynamic> correlation, bool isDark) {
+    final double correlationValue = correlation['correlation'] ?? 0.0;
+    final String strength = correlation['strength'] ?? 'Very Weak';
+    final String insight = correlation['insight'] ?? 'No specific insight available.';
+    final int dataPoints = correlation['dataPoints'] ?? 0;
+
+    Color strengthColor;
+    IconData strengthIcon;
+
+    switch (strength) {
+      case 'Strong':
+        strengthColor = AppColors.successColor;
+        strengthIcon = Icons.trending_up;
+        break;
+      case 'Moderate':
+        strengthColor = AppColors.warningColor;
+        strengthIcon = Icons.trending_flat;
+        break;
+      case 'Weak':
+        strengthColor = AppColors.black;
+        strengthIcon = Icons.trending_down;
+        break;
+      default:
+        strengthColor = AppColors.textSecondary(isDark);
+        strengthIcon = Icons.remove;
+    }
+
+    final bool isPositive = correlationValue > 0;
+    final String directionText = isPositive ? 'Positive' : 'Negative';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.black.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: strengthColor.withOpacity(0.3), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start, // Aligns chip to top
+            children: [
+              Expanded(
+                child: Text(
+                  '${correlation['tracker1']} ↔ ${correlation['tracker2']}',
+                  softWrap: true, // <-- FIX: Allows text to wrap
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(isDark),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8), // Adds spacing
+              _buildDetailChip(
+                strength,
+                strengthIcon,
+                isDark,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                'Correlation: ${correlationValue.toStringAsFixed(3)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary(isDark),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 12),
+              _buildDetailChip(
+                directionText,
+                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                isDark,
+              ),
+              const Spacer(),
+              Text(
+                '$dataPoints data points',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary(isDark),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.black.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.black.withOpacity(0.1),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      lucide.LucideIcons.activity,
+                      color: const Color(0xFF26A69A),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        insight,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary(isDark),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (correlation['trend'] != null)
+                  Text(
+                    'Trend: ${correlation['trend']}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.textSecondary(isDark),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildNoCorrelationsFound(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            lucide.LucideIcons.searchX,
+            size: 64,
+            color: isDark
+                ? AppColors.darkTextSecondary.withOpacity(0.5)
+                : AppColors.lightTextSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Significant Correlations Found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This could mean:\n• Your data points are independent\n• You need more data for meaningful analysis\n• Try selecting different trackers or a longer timeframe',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(isDark),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionCard(bool isDark) {
+    return Container(
+      decoration: _getCardDecoration(isDark),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Icon(
+            lucide.LucideIcons.info,
+            size: 64,
+            color: isDark
+                ? AppColors.darkTextSecondary.withOpacity(0.5)
+                : AppColors.lightTextSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Select at least 2 trackers',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose multiple trackers above to discover meaningful correlations and patterns in your data.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,

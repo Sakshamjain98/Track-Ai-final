@@ -129,10 +129,10 @@ class _DateOfBirthPageState extends State<DateOfBirthPage>
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 40),
-                              _buildIcon(),
+
                               const SizedBox(height: 40),
                               _buildTitle(),
                               const SizedBox(height: 24),
@@ -193,27 +193,11 @@ class _DateOfBirthPageState extends State<DateOfBirthPage>
         color: Colors.black, // ✅ black text
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
 
-  // Icon
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        Icons.calendar_month,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
+
 
   Widget _buildSubtitle() {
     return Row(
@@ -230,7 +214,7 @@ class _DateOfBirthPageState extends State<DateOfBirthPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
       ],

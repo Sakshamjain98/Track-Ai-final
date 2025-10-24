@@ -12,6 +12,7 @@ import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/services/auth_services.dart';
 import 'package:trackai/core/services/streak_service.dart';
 import 'package:trackai/features/home/ai-options/service/filedownload.dart';
+import 'package:trackai/features/onboarding/plan.dart';
 import 'firebase_options.dart';
 import 'package:trackai/core/wrappers/authwrapper.dart';
 
@@ -24,6 +25,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  final geminiApiKey = dotenv.env['GEMINI_API_KEY'];
+  final firebaseApiKeyWeb = dotenv.env['FIREBASE_API_KEY_WEB'];
 
   // Now other Firebase-dependent services
   await FirebaseService.initializeFirebase();
@@ -71,7 +74,8 @@ class MyApp extends StatelessWidget {
           theme: _buildLightTheme(),
           darkTheme: _buildDarkTheme(),
           themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          home: const AuthWrapper(),
+          home:
+           const AuthWrapper(),
           onGenerateRoute: AppRoutes.onGenerateRoute,
           builder: (context, child) => Container(
             decoration: BoxDecoration(

@@ -25,11 +25,24 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
   final _servingsController = TextEditingController();
 
   String _selectedDifficulty = 'Easy';
+  // 1. New State Variable for Category
+  String _selectedCategory = 'Main Course';
   XFile? _selectedImage;
   bool _isUploading = false;
   double _uploadProgress = 0.0;
 
   final List<String> _difficulties = ['Easy', 'Medium', 'Hard'];
+  // 2. List of Categories
+  final List<String> _categories = [
+    'Appetizers',
+    'Main Course',
+    'Desserts',
+    'Breakfast',
+    'Salads',
+    'Soups',
+    'Beverages',
+    'Snacks',
+  ];
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -65,6 +78,10 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
 
   Future<void> _uploadRecipe() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategory.isEmpty) {
+      SnackBarHelper.showError(context, 'Please select a food category.');
+      return;
+    }
 
     setState(() {
       _isUploading = true;
@@ -86,7 +103,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
 
       setState(() => _uploadProgress = 0.4);
 
-      // Create recipe (no auth check)
+      // Create recipe
       final recipeId = await RecipeService.createRecipe(
         title: _titleController.text,
         description: _descriptionController.text,
@@ -97,6 +114,8 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
         cookTime: int.tryParse(_cookTimeController.text) ?? 0,
         servings: int.tryParse(_servingsController.text) ?? 1,
         imageFile: _selectedImage,
+        // 4. Pass the selected category to the service
+        category: _selectedCategory,
       );
 
       setState(() => _uploadProgress = 1.0);
@@ -124,6 +143,8 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
     setState(() {
       _selectedImage = null;
       _selectedDifficulty = 'Easy';
+      // 5. Reset the selected category
+      _selectedCategory = 'Main Course';
     });
   }
 
@@ -133,7 +154,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
       builder: (context, themeProvider, child) {
         final isDarkTheme = themeProvider.isDarkMode;
         final screenWidth = MediaQuery.of(context).size.width;
-        final screenHeight = MediaQuery.of(context).size.height;
+        // final screenHeight = MediaQuery.of(context).size.height; // Not strictly needed
 
         return Scaffold(
           backgroundColor: AppColors.background(isDarkTheme),
@@ -165,7 +186,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                     gradient: LinearGradient(colors: [Colors.orange, Colors.orange.shade600]),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.upload, color: Colors.white, size: 18),
+                  child: const Icon(Icons.upload, color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -242,6 +263,11 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                     _buildBasicInfo(isDarkTheme, screenWidth),
                     const SizedBox(height: 16),
 
+                    // *** 3. NEW CATEGORY SELECTION SECTION ***
+                    _buildCategorySelection(isDarkTheme, screenWidth),
+                    const SizedBox(height: 16),
+                    // ***************************************
+
                     // Recipe Details (streamlined)
                     _buildRecipeDetails(isDarkTheme, screenWidth),
                     const SizedBox(height: 16),
@@ -261,6 +287,69 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
       },
     );
   }
+
+  // *** NEW WIDGET FOR CATEGORY SELECTION ***
+  Widget _buildCategorySelection(bool isDarkTheme, double screenWidth) {
+    return Container(
+      padding: EdgeInsets.all(screenWidth < 400 ? 12 : 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.cardBackground(isDarkTheme),
+            AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Food Category',
+            style: TextStyle(
+              color: AppColors.textPrimary(isDarkTheme),
+              fontSize: screenWidth < 400 ? 14 : 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Use a Wrap for a responsive layout of chips
+          Wrap(
+            spacing: 8.0, // horizontal spacing between chips
+            runSpacing: 8.0, // vertical spacing between lines of chips
+            children: _categories.map((category) {
+              final isSelected = _selectedCategory == category;
+              return ChoiceChip(
+                label: Text(category),
+                selected: isSelected,
+                onSelected: (bool selected) {
+                  if (selected) {
+                    setState(() {
+                      _selectedCategory = category;
+                    });
+                  }
+                },
+                selectedColor: Colors.blue.withOpacity(0.8),
+                backgroundColor: AppColors.textSecondary(isDarkTheme).withOpacity(0.1),
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : AppColors.textPrimary(isDarkTheme),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: screenWidth < 400 ? 12 : 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: isSelected ? Colors.blue.shade700 : AppColors.borderColor(isDarkTheme),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+  // *********************************************
 
   Widget _buildHeaderCard(bool isDarkTheme, double screenWidth) {
     return Container(
@@ -284,7 +373,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
               gradient: LinearGradient(colors: [Colors.green, Colors.green.shade600]),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.public, color: Colors.white, size: 20),
+            child: const Icon(Icons.public, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -359,7 +448,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                 child: CircularProgressIndicator(
                   value: _uploadProgress,
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation(Colors.orange),
+                  valueColor: const AlwaysStoppedAnimation(Colors.orange),
                 ),
               ),
               const SizedBox(width: 12),
@@ -391,7 +480,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
           LinearProgressIndicator(
             value: _uploadProgress,
             backgroundColor: Colors.orange.withOpacity(0.2),
-            valueColor: AlwaysStoppedAnimation(Colors.orange),
+            valueColor: const AlwaysStoppedAnimation(Colors.orange),
             minHeight: 4,
           ),
         ],
@@ -488,7 +577,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                             ),
                           ],
                         ),
-                        child: Icon(Icons.close, color: Colors.white, size: 16),
+                        child: const Icon(Icons.close, color: Colors.white, size: 16),
                       ),
                     ),
                   ),
@@ -768,7 +857,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
       width: double.infinity,
       height: 50, // Normal button height
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [Colors.orange, Colors.deepOrange],
         ),
         borderRadius: BorderRadius.circular(12),
@@ -790,7 +879,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                 ? Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
@@ -812,7 +901,7 @@ class _AdminRecipeUploadScreenState extends State<AdminRecipeUploadScreen> {
                 : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.publish, color: Colors.white, size: 20),
+                const Icon(Icons.publish, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Share Recipe',

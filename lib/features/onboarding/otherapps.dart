@@ -81,15 +81,15 @@ class _OtherAppsPageState extends State<OtherAppsPage>
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Main content - scrollable
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 40),
-                              _buildIcon(),
                               const SizedBox(height: 40),
                               _buildTitle(),
                               const SizedBox(height: 24),
@@ -141,23 +141,6 @@ class _OtherAppsPageState extends State<OtherAppsPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.mobileScreen,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
-
   Widget _buildTitle() {
     return const Text(
       'Have you tried other apps?',
@@ -167,16 +150,15 @@ class _OtherAppsPageState extends State<OtherAppsPage>
         color: Colors.black87,
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
 
   Widget _buildSubtitle() {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      // mainAxisSize: MainAxisSize.min, // <-- REMOVED this line
       children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
-        const SizedBox(width: 8),
+        // const SizedBox(width: 8), // <-- REMOVED this line
         Flexible(
           child: Text(
             'This helps us understand your experience level and provide better guidance.',
@@ -186,7 +168,7 @@ class _OtherAppsPageState extends State<OtherAppsPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
       ],
@@ -251,7 +233,7 @@ class _OtherAppsPageState extends State<OtherAppsPage>
           borderRadius: BorderRadius.circular(32),
           color: selectedOption == null
               ? Colors
-                    .white // ✅ white background when disabled
+              .white // ✅ white background when disabled
               : Colors.black, // ✅ black background when enabled
           border: Border.all(
             color: selectedOption == null ? Colors.grey[300]! : Colors.black,
@@ -259,14 +241,14 @@ class _OtherAppsPageState extends State<OtherAppsPage>
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center, // <-- CHANGED to center
           children: [
             Text(
               'Next',
               style: TextStyle(
                 color: selectedOption != null
                     ? Colors
-                          .white // ✅ white text when enabled
+                    .white // ✅ white text when enabled
                     : Colors.black, // ✅ black text when disabled
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -277,7 +259,7 @@ class _OtherAppsPageState extends State<OtherAppsPage>
               Icons.arrow_forward,
               color: selectedOption != null
                   ? Colors
-                        .white // ✅ white arrow when enabled
+                  .white // ✅ white arrow when enabled
                   : Colors.black, // ✅ black arrow when disabled
               size: 20,
             ),

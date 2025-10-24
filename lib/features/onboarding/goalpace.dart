@@ -29,7 +29,7 @@ class _GoalPacePageState extends State<GoalPacePage>
     {
       'title': 'Slow & Steady',
       'subtitle': 'Take your time, build lasting habits',
-      'icon': FontAwesomeIcons.soap, // Using soap as sloth alternative
+      'icon': FontAwesomeIcons.soap,
       'value': 'slow',
       'duration': '6-12 months',
       'color': const Color(0xFF95A5A6),
@@ -118,10 +118,21 @@ class _GoalPacePageState extends State<GoalPacePage>
                               const SizedBox(height: 40),
                               _buildIcon(),
                               const SizedBox(height: 40),
-                              _buildTitle(),
+
+                              // ✅ ALIGNMENT FIX 1: Wrap Title in SizedBox
+                              SizedBox(
+                                width: double.infinity,
+                                child: _buildTitle(),
+                              ),
                               const SizedBox(height: 24),
-                              _buildSubtitle(),
+
+                              // ✅ ALIGNMENT FIX 2: Wrap Subtitle in SizedBox
+                              SizedBox(
+                                width: double.infinity,
+                                child: _buildSubtitle(),
+                              ),
                               const SizedBox(height: 48),
+
                               _buildPaceOptions(),
                               const SizedBox(height: 40),
                             ],
@@ -191,35 +202,26 @@ class _GoalPacePageState extends State<GoalPacePage>
       style: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w700,
-        color: Colors.white, // ✅ changed to white
+        color: Colors.white,
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
 
+  // ✅ UPDATED: Removed the info icon
   Widget _buildSubtitle() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.info_outline, color: AppColors.darkPrimary, size: 16),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            'Choose your preferred pace to achieve your fitness goals.',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary(true),
-              fontWeight: FontWeight.w400,
-              height: 1.4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
+    return Text(
+      'Choose your preferred pace to achieve your fitness goals.',
+      style: TextStyle(
+        fontSize: 14,
+        color: AppColors.textSecondary(true),
+        fontWeight: FontWeight.w400,
+        height: 1.4,
+      ),
+      textAlign: TextAlign.start,
     );
   }
-
 
   Widget _buildPaceOptions() {
     return Column(
@@ -257,23 +259,21 @@ class _GoalPacePageState extends State<GoalPacePage>
   }
 
   Widget _buildPaceCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    String value,
-    String duration,
-    Color iconColor,
-    bool isSelected,
-  ) {
+      String title,
+      String subtitle,
+      IconData icon,
+      String value,
+      String duration,
+      Color iconColor,
+      bool isSelected,
+      ) {
     return GestureDetector(
       onTap: () => _selectPace(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground(
-            true,
-          ).withOpacity(0.9), // ✅ dark background
+          color: AppColors.cardBackground(true).withOpacity(0.9),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.darkPrimary : AppColors.darkGrey,
@@ -281,12 +281,12 @@ class _GoalPacePageState extends State<GoalPacePage>
           ),
           boxShadow: isSelected
               ? [
-                  BoxShadow(
-                    color: AppColors.darkPrimary.withOpacity(0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
+            BoxShadow(
+              color: AppColors.darkPrimary.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ]
               : null,
         ),
         child: Column(
@@ -315,6 +315,7 @@ class _GoalPacePageState extends State<GoalPacePage>
                 const SizedBox(width: 20),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(

@@ -76,7 +76,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   }
 
   void _nextPage() {
-    if (_currentPage < 4) {
+    if (_currentPage < 7) {
       if (_validateCurrentPage()) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
@@ -97,27 +97,26 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
   bool _validateCurrentPage() {
     switch (_currentPage) {
-      case 0:
+      case 0: // Ingredients
         return _ingredientsController.text.isNotEmpty;
-      case 1:
-        return _selectedCuisine.isNotEmpty && _selectedMealType.isNotEmpty;
-      case 2:
+      case 1: // Cuisine
+        return _selectedCuisine.isNotEmpty;
+      case 2: // Meal Type
+        return _selectedMealType.isNotEmpty;
+      case 3: // Difficulty
         return _selectedDifficulty.isNotEmpty;
-      case 3:
+      case 4: // Servings
         return _servingsController.text.isNotEmpty;
+      case 5: // Cooking Time
+        return true; // Optional
+      case 6: // Restrictions
+        return true; // Optional
       default:
         return true;
     }
   }
 
   Future<void> _generateRecipe() async {
-    if (!_validateCurrentPage()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
-      return;
-    }
-
     setState(() {
       _isGenerating = true;
     });
@@ -140,7 +139,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error generating recipe: $e'),
-            backgroundColor: AppColors.errorColor,
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -152,7 +151,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     final servings = int.tryParse(_servingsController.text) ?? 4;
     final cookingTime = _timeController.text.isNotEmpty ? _timeController.text : '30';
 
-    // Sample recipe generation based on inputs
     String recipeName = _generateRecipeName(ingredients, _selectedCuisine, _selectedMealType);
     List<String> recipeIngredients = _generateRecipeIngredients(ingredients, servings);
     List<String> instructions = _generateInstructions(ingredients, _selectedCuisine, _selectedMealType);
@@ -201,20 +199,17 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
     for (String ingredient in baseIngredients) {
       if (ingredient.trim().isNotEmpty) {
-        // Add estimated quantities based on servings
         String quantity = _getIngredientQuantity(ingredient, servings);
         recipeIngredients.add('$quantity ${ingredient.trim()}');
       }
     }
 
-    // Add common ingredients based on meal type
     recipeIngredients.addAll(_getCommonIngredients(_selectedMealType, servings));
 
     return recipeIngredients;
   }
 
   String _getIngredientQuantity(String ingredient, int servings) {
-    // Simple quantity estimation
     Map<String, String> quantities = {
       'chicken': '${servings * 4} oz',
       'beef': '${servings * 4} oz',
@@ -258,7 +253,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   List<String> _generateInstructions(List<String> ingredients, String cuisine, String mealType) {
     List<String> instructions = [];
 
-    // Basic cooking steps based on meal type and cuisine
     instructions.add('Prepare all ingredients by washing, chopping, and measuring as needed.');
 
     if (cuisine == 'Italian') {
@@ -285,13 +279,11 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   }
 
   Map<String, String> _generateNutritionalInfo(List<String> ingredients, int servings) {
-    // Simplified nutritional estimation
     int baseCalories = 200;
     int baseProtein = 15;
     int baseCarbs = 20;
     int baseFat = 8;
 
-    // Adjust based on ingredients
     for (String ingredient in ingredients) {
       if (ingredient.toLowerCase().contains('chicken') ||
           ingredient.toLowerCase().contains('beef') ||
@@ -349,33 +341,31 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         final isDark = themeProvider.isDarkMode;
 
         return Scaffold(
-          backgroundColor: AppColors.background(isDark),
+          backgroundColor: isDark ? Colors.black : Colors.white,
           appBar: AppBar(
-            backgroundColor: AppColors.background(isDark),
+            backgroundColor: isDark ? Colors.black : Colors.white,
             elevation: 0,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
               icon: Icon(
-                Icons.arrow_back,
-                color: AppColors.textPrimary(isDark),
+                Icons.arrow_back_ios_new,
+                color: isDark ? Colors.white : Colors.black,
+                size: 20,
               ),
             ),
             title: Text(
               'AI Recipe Generator',
               style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
             ),
             centerTitle: true,
           ),
           body: Column(
             children: [
-              // Progress Indicator
               _buildProgressIndicator(isDark),
-
-              // Page Content
               Expanded(
                 child: PageView(
                   controller: _pageController,
@@ -387,16 +377,17 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                   },
                   children: [
                     _buildIngredientsPage(isDark),
-                    _buildPreferencesPage(isDark),
+                    _buildCuisinePage(isDark),
+                    _buildMealTypePage(isDark),
                     _buildDifficultyPage(isDark),
-                    _buildDetailsPage(isDark),
+                    _buildServingsPage(isDark),
+                    _buildTimePage(isDark),
+                    _buildRestrictionsPage(isDark),
                     _buildResultsPage(isDark),
                   ],
                 ),
               ),
-
-              // Navigation Buttons
-              if (_currentPage < 4) _buildNavigationButtons(isDark),
+              if (_currentPage < 7) _buildNavigationButtons(isDark),
             ],
           ),
         );
@@ -405,32 +396,33 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   }
 
   Widget _buildProgressIndicator(bool isDark) {
+    int totalSteps = 7;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
         children: [
           Row(
-            children: List.generate(5, (index) {
+            children: List.generate(totalSteps, (index) {
               return Expanded(
                 child: Container(
-                  height: 4,
-                  margin: EdgeInsets.only(right: index < 4 ? 8 : 0),
+                  height: 3,
+                  margin: EdgeInsets.only(right: index < totalSteps - 1 ? 6 : 0),
                   decoration: BoxDecoration(
                     color: index <= _currentPage
-                        ? AppColors.black
-                        : AppColors.cardBackground(isDark),
+                        ? (isDark ? Colors.white : Colors.black)
+                        : (isDark ? Colors.grey[800] : Colors.grey[300]),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               );
             }),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
-            'Step ${_currentPage + 1} of 5',
+            'Step ${_currentPage + 1} of $totalSteps',
             style: TextStyle(
-              color: AppColors.textSecondary(isDark),
-              fontSize: 14,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -439,224 +431,253 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     );
   }
 
+  // Page 1: Ingredients
   Widget _buildIngredientsPage(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.kitchen,
-            size: 48,
-            color: AppColors.black,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Available Ingredients',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Enter the ingredients you have available. Separate multiple ingredients with commas.',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary(isDark),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          _buildTextField(
-            label: 'Ingredients',
-            controller: _ingredientsController,
-            hint: 'e.g., chicken, rice, onions, tomatoes, garlic',
-            maxLines: 4,
-            isDark: isDark,
-          ),
-
-          const SizedBox(height: 24),
-
-          _buildTextField(
-            label: 'Dietary Restrictions (Optional)',
-            controller: _restrictionsController,
-            hint: 'e.g., vegetarian, gluten-free, dairy-free, nut allergy',
-            maxLines: 2,
-            isDark: isDark,
-          ),
-        ],
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.kitchen,
+      title: 'What ingredients do you have?',
+      subtitle: 'List the main ingredients you want to use, separated by commas',
+      child: _buildTextField(
+        controller: _ingredientsController,
+        hint: 'e.g., chicken, rice, onions, tomatoes',
+        maxLines: 4,
+        isDark: isDark,
       ),
     );
   }
 
-  Widget _buildPreferencesPage(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.restaurant,
-            size: 48,
-            color: AppColors.black,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Recipe Preferences',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Choose your preferred cuisine type and meal category.',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary(isDark),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          _buildDropdownField(
-            label: 'Cuisine Type',
-            value: _selectedCuisine.isEmpty ? null : _selectedCuisine,
-            items: _cuisineOptions,
-            onChanged: (value) {
-              setState(() {
-                _selectedCuisine = value ?? '';
-              });
-            },
-            isDark: isDark,
-            isExpanded: true,
-          ),
-
-          const SizedBox(height: 24),
-
-          _buildDropdownField(
-            label: 'Meal Type',
-            value: _selectedMealType.isEmpty ? null : _selectedMealType,
-            items: _mealTypeOptions,
-            onChanged: (value) {
-              setState(() {
-                _selectedMealType = value ?? '';
-              });
-            },
-            isDark: isDark,
-          ),
-        ],
+  // Page 2: Cuisine
+  Widget _buildCuisinePage(bool isDark) {
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.public,
+      title: 'Choose cuisine type',
+      subtitle: 'Select your preferred cuisine style',
+      child: SingleChildScrollView(
+        child: Column(
+          children: _cuisineOptions.map((cuisine) {
+            return _buildSelectionCard(
+              title: cuisine,
+              isSelected: _selectedCuisine == cuisine,
+              onTap: () {
+                setState(() {
+                  _selectedCuisine = cuisine;
+                });
+              },
+              isDark: isDark,
+              icon: Icons.restaurant_menu,
+            );
+          }).toList(),
+        ),
       ),
     );
   }
 
+  // Page 3: Meal Type
+  Widget _buildMealTypePage(bool isDark) {
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.restaurant,
+      title: 'What meal type?',
+      subtitle: 'Choose the type of dish you want to make',
+      child: Column(
+        children: _mealTypeOptions.map((mealType) {
+          return _buildSelectionCard(
+            title: mealType,
+            isSelected: _selectedMealType == mealType,
+            onTap: () {
+              setState(() {
+                _selectedMealType = mealType;
+              });
+            },
+            isDark: isDark,
+            icon: Icons.dining,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // Page 4: Difficulty
   Widget _buildDifficultyPage(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.bar_chart,
+      title: 'Cooking difficulty?',
+      subtitle: 'Select the complexity level that suits your skill',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _difficultyOptions.map((difficulty) {
+          return _buildSelectionCard(
+            title: difficulty,
+            isSelected: _selectedDifficulty == difficulty,
+            onTap: () {
+              setState(() {
+                _selectedDifficulty = difficulty;
+              });
+            },
+            isDark: isDark,
+            icon: Icons.timeline,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // Page 5: Servings
+  Widget _buildServingsPage(bool isDark) {
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.people_outline,
+      title: 'How many servings?',
+      subtitle: 'Enter the number of people you want to serve',
+      child: _buildTextField(
+        controller: _servingsController,
+        hint: 'e.g., 4',
+        keyboardType: TextInputType.number,
+        isDark: isDark,
+      ),
+    );
+  }
+
+  // Page 6: Cooking Time (Optional)
+  Widget _buildTimePage(bool isDark) {
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.timer_outlined,
+      title: 'Cooking time?',
+      subtitle: 'How many minutes can you spend cooking? (optional)',
+      child: _buildTextField(
+        controller: _timeController,
+        hint: 'e.g., 30',
+        keyboardType: TextInputType.number,
+        isDark: isDark,
+      ),
+    );
+  }
+
+  // Page 7: Restrictions (Optional)
+  Widget _buildRestrictionsPage(bool isDark) {
+    return _buildQuestionPage(
+      isDark: isDark,
+      icon: Icons.block,
+      title: 'Any restrictions?',
+      subtitle: 'Share any dietary restrictions or allergies (optional)',
+      child: _buildTextField(
+        controller: _restrictionsController,
+        hint: 'e.g., vegetarian, gluten-free, nut allergy',
+        maxLines: 3,
+        isDark: isDark,
+      ),
+    );
+  }
+
+  Widget _buildQuestionPage({
+    required bool isDark,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            Icons.bar_chart,
-            size: 48,
-            color: AppColors.black,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Cooking Difficulty',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              icon,
+              size: 40,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
           Text(
-            'Select the difficulty level that matches your cooking skills and available time.',
+            title,
             style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary(isDark),
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 15,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
               height: 1.5,
             ),
           ),
           const SizedBox(height: 32),
-
-          _buildDropdownField(
-            label: 'Difficulty Level',
-            value: _selectedDifficulty.isEmpty ? null : _selectedDifficulty,
-            items: _difficultyOptions,
-            onChanged: (value) {
-              setState(() {
-                _selectedDifficulty = value ?? '';
-              });
-            },
-            isDark: isDark,
-            isExpanded: true,
-          ),
+          child,
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildDetailsPage(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.settings,
-            size: 48,
-            color: AppColors.black,
+  Widget _buildSelectionCard({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    required IconData icon,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? Colors.white : Colors.black)
+              : (isDark ? Colors.grey[900] : Colors.grey[50]),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? (isDark ? Colors.white : Colors.black)
+                : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
+            width: isSelected ? 2 : 1,
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Recipe Details',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? (isDark ? Colors.black : Colors.white)
+                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
+              size: 22,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Specify serving size and cooking time preferences.',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary(isDark),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  label: 'Number of Servings',
-                  controller: _servingsController,
-                  hint: 'e.g., 4',
-                  keyboardType: TextInputType.number,
-                  isDark: isDark,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected
+                      ? (isDark ? Colors.black : Colors.white)
+                      : (isDark ? Colors.white : Colors.black),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildTextField(
-                  label: 'Cooking Time (minutes)',
-                  controller: _timeController,
-                  hint: 'e.g., 30',
-                  keyboardType: TextInputType.number,
-                  isDark: isDark,
-                ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: isDark ? Colors.black : Colors.white,
+                size: 22,
               ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -669,28 +690,36 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center
+        ,
         children: [
-          Icon(
-            Icons.auto_awesome,
-            size: 48,
-            color: AppColors.black,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              Icons.auto_awesome,
+              size: 40,
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
             _generatedRecipe!['name'],
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             _generatedRecipe!['description'],
             style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textSecondary(isDark),
+              fontSize: 15,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
               height: 1.5,
             ),
           ),
@@ -701,33 +730,63 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground(isDark),
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderColor(isDark)),
+              border: Border.all(
+                color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+              ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
                   'Recipe Overview',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(isDark),
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(child: _buildDetailItem('Prep Time', _generatedRecipe!['prepTime'], Icons.schedule, isDark)),
-                    Expanded(child: _buildDetailItem('Cook Time', _generatedRecipe!['cookTime'], Icons.timer, isDark)),
+                    Expanded(
+                      child: _buildDetailItem(
+                        'Prep Time',
+                        _generatedRecipe!['prepTime'],
+                        Icons.schedule,
+                        isDark,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildDetailItem(
+                        'Cook Time',
+                        _generatedRecipe!['cookTime'],
+                        Icons.timer,
+                        isDark,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _buildDetailItem('Servings', '${_generatedRecipe!['servings']}', Icons.people, isDark)),
-                    Expanded(child: _buildDetailItem('Difficulty', _generatedRecipe!['difficulty'].split(' ')[0], Icons.bar_chart, isDark)),
+                    Expanded(
+                      child: _buildDetailItem(
+                        'Servings',
+                        '${_generatedRecipe!['servings']}',
+                        Icons.people,
+                        isDark,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildDetailItem(
+                        'Difficulty',
+                        _generatedRecipe!['difficulty'].split(' ')[0],
+                        Icons.bar_chart,
+                        isDark,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -740,9 +799,9 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           Text(
             'Ingredients',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
           const SizedBox(height: 16),
@@ -751,25 +810,27 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground(isDark),
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderColor(isDark)),
+              border: Border.all(
+                color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+              ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 ...(_generatedRecipe!['ingredients'] as List<String>).map((ingredient) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           width: 6,
                           height: 6,
                           margin: const EdgeInsets.only(top: 6),
                           decoration: BoxDecoration(
-                            color: AppColors.black,
+                            color: isDark ? Colors.white : Colors.black,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -778,7 +839,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                           child: Text(
                             ingredient,
                             style: TextStyle(
-                              color: AppColors.textPrimary(isDark),
+                              color: isDark ? Colors.white : Colors.black,
                               fontSize: 14,
                               height: 1.4,
                             ),
@@ -798,9 +859,9 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           Text(
             'Instructions',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
           const SizedBox(height: 16),
@@ -809,31 +870,33 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground(isDark),
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderColor(isDark)),
+              border: Border.all(
+                color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+              ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 ...(_generatedRecipe!['instructions'] as List<String>).asMap().entries.map((entry) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           width: 24,
                           height: 24,
                           decoration: BoxDecoration(
-                            color: AppColors.black,
+                            color: isDark ? Colors.white : Colors.black,
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: Text(
                               '${entry.key + 1}',
-                              style: const TextStyle(
-                                color: AppColors.white,
+                              style: TextStyle(
+                                color: isDark ? Colors.black : Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -845,7 +908,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                           child: Text(
                             entry.value,
                             style: TextStyle(
-                              color: AppColors.textPrimary(isDark),
+                              color: isDark ? Colors.white : Colors.black,
                               fontSize: 14,
                               height: 1.5,
                             ),
@@ -863,11 +926,11 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
           // Nutritional Information
           Text(
-            'Nutritional Information',
+            'Nutrition Info',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
           const SizedBox(height: 16),
@@ -876,18 +939,36 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground(isDark),
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderColor(isDark)),
+              border: Border.all(
+                color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+              ),
             ),
             child: Wrap(
-              spacing: 16,
+              spacing: 12,
               runSpacing: 12,
               children: [
-                _buildNutritionChip('Calories: ${_generatedRecipe!['nutritionalInfo']['calories']}', Icons.local_fire_department, isDark),
-                _buildNutritionChip('Protein: ${_generatedRecipe!['nutritionalInfo']['protein']}', Icons.fitness_center, isDark),
-                _buildNutritionChip('Carbs: ${_generatedRecipe!['nutritionalInfo']['carbs']}', Icons.grain, isDark),
-                _buildNutritionChip('Fat: ${_generatedRecipe!['nutritionalInfo']['fat']}', Icons.water_drop, isDark),
+                _buildNutritionChip(
+                  'Calories: ${_generatedRecipe!['nutritionalInfo']['calories']}',
+                  Icons.local_fire_department,
+                  isDark,
+                ),
+                _buildNutritionChip(
+                  'Protein: ${_generatedRecipe!['nutritionalInfo']['protein']}',
+                  Icons.fitness_center,
+                  isDark,
+                ),
+                _buildNutritionChip(
+                  'Carbs: ${_generatedRecipe!['nutritionalInfo']['carbs']}',
+                  Icons.grain,
+                  isDark,
+                ),
+                _buildNutritionChip(
+                  'Fat: ${_generatedRecipe!['nutritionalInfo']['fat']}',
+                  Icons.water_drop,
+                  isDark,
+                ),
               ],
             ),
           ),
@@ -898,9 +979,9 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           Text(
             'Cooking Tips',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
           const SizedBox(height: 16),
@@ -909,30 +990,32 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.cardBackground(isDark),
+              color: isDark ? Colors.grey[900] : Colors.grey[50],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderColor(isDark)),
+              border: Border.all(
+                color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+              ),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 ...(_generatedRecipe!['tips'] as List<String>).map((tip) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.lightbulb_outline,
                           size: 16,
-                          color: AppColors.black,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             tip,
                             style: TextStyle(
-                              color: AppColors.textPrimary(isDark),
+                              color: isDark ? Colors.white : Colors.black,
                               fontSize: 14,
                               height: 1.4,
                             ),
@@ -955,19 +1038,21 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                 child: OutlinedButton.icon(
                   onPressed: () => _shareRecipe(_generatedRecipe!),
                   icon: const Icon(Icons.share),
-                  label: const Text('Share Recipe'),
+                  label: const Text('Share'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: AppColors.black),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
                     ),
-                    backgroundColor: AppColors.white,
-                    foregroundColor: AppColors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: isDark ? Colors.white : Colors.black,
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
@@ -991,12 +1076,13 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                   icon: const Icon(Icons.refresh),
                   label: const Text('New Recipe'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.black,
-                    foregroundColor: AppColors.white,
+                    backgroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
+                    elevation: 0,
                   ),
                 ),
               ),
@@ -1010,6 +1096,14 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   Widget _buildNavigationButtons(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.black : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.grey[900]! : Colors.grey[200]!,
+          ),
+        ),
+      ),
       child: Row(
         children: [
           if (_currentPage > 0)
@@ -1017,17 +1111,19 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
               child: OutlinedButton(
                 onPressed: _previousPage,
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: AppColors.black),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  side: BorderSide(
+                    color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
                   ),
-                  backgroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  backgroundColor: Colors.transparent,
                 ),
                 child: Text(
-                  'Previous',
+                  'Back',
                   style: TextStyle(
-                    color: AppColors.black,
+                    color: isDark ? Colors.white : Colors.black,
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
                   ),
@@ -1035,39 +1131,42 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
               ),
             ),
 
-          if (_currentPage > 0) const SizedBox(width: 16),
+          if (_currentPage > 0) const SizedBox(width: 12),
 
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentPage == 3
+              onPressed: _currentPage == 6
                   ? (_isGenerating ? null : _generateRecipe)
                   : _nextPage,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.black,
-                foregroundColor: AppColors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: isDark ? Colors.white : Colors.black,
+                foregroundColor: isDark ? Colors.black : Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 0,
               ),
               child: _isGenerating
                   ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
+                  SizedBox(
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDark ? Colors.black : Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text('Generating Recipe...'),
+                  const Text('Generating...'),
                 ],
               )
                   : Text(
-                _currentPage == 3 ? 'Generate Recipe' : 'Next',
+                _currentPage == 6 ? 'Generate Recipe' : 'Continue',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
@@ -1081,120 +1180,62 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   }
 
   Widget _buildTextField({
-    required String label,
     required TextEditingController controller,
     required String hint,
     required bool isDark,
     TextInputType? keyboardType,
     int maxLines = 1,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black,
+        fontSize: 16,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: isDark ? Colors.grey[600] : Colors.grey[400],
+        ),
+        filled: true,
+        fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
           ),
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-            filled: true,
-            fillColor: AppColors.cardBackground(isDark),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.black, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white : Colors.black,
+            width: 2,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildDropdownField({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-    required bool isDark,
-    bool isExpanded = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value,
-          items: items.map((item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(
-                item,
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-                overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          isExpanded: isExpanded,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.cardBackground(isDark),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.black, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          ),
-          dropdownColor: AppColors.cardBackground(isDark),
-        ),
-      ],
+        contentPadding: const EdgeInsets.all(20),
+      ),
     );
   }
 
   Widget _buildDetailItem(String label, String value, IconData icon, bool isDark) {
     return Column(
       children: [
-        Icon(icon, color: AppColors.black, size: 20),
+        Icon(
+          icon,
+          color: isDark ? Colors.white : Colors.black,
+          size: 20,
+        ),
         const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-            color: AppColors.textPrimary(isDark),
+            color: isDark ? Colors.white : Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -1202,7 +1243,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         Text(
           label,
           style: TextStyle(
-            color: AppColors.textSecondary(isDark),
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
             fontSize: 12,
           ),
         ),
@@ -1210,24 +1251,27 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     );
   }
 
-
   Widget _buildNutritionChip(String text, IconData icon, bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.black.withOpacity(0.1),
+        color: isDark ? Colors.grey[800] : Colors.grey[200],
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.black),
+          Icon(
+            icon,
+            size: 16,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textPrimary(isDark),
+              color: isDark ? Colors.white : Colors.black,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1271,4 +1315,3 @@ Generated by TrackAI Recipe Generator 🤖
     );
   }
 }
-

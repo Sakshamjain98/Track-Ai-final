@@ -43,6 +43,8 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
       _errorOccurred = false;
     });
 
+
+
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
       print('Loaded API Key: $apiKey'); // Debug
@@ -107,20 +109,6 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                       const SizedBox(height: 40),
 
                       // Icon
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary(true).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary(true), width: 0.5),
-                        ),
-                        child: Icon(
-                          Icons.analytics_outlined,
-                          size: 28,
-                          color: AppColors.primary(true),
-                        ),
-                      ),
 
                       const SizedBox(height: 32),
 
@@ -133,7 +121,7 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                           color: Colors.black87,
                           letterSpacing: -0.5,
                         ),
-                        textAlign: TextAlign.center,
+                        textAlign: TextAlign.start,
                       ),
 
                       const SizedBox(height: 40),
@@ -164,7 +152,7 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                                       color: Colors.grey[600],
                                       fontWeight: FontWeight.w400,
                                     ),
-                                    textAlign: TextAlign.center,
+                                    textAlign: TextAlign.start,
                                   ),
                                 ],
                               )
@@ -177,7 +165,7 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                                       fontWeight: FontWeight.w600,
                                       color: Colors.black87,
                                     ),
-                                    textAlign: TextAlign.center,
+                                    textAlign: TextAlign.start,
                                   ),
 
                                   const SizedBox(height: 20),
@@ -190,7 +178,7 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                                       height: 1.5,
                                       fontWeight: FontWeight.w400,
                                     ),
-                                    textAlign: TextAlign.center,
+                                    textAlign: TextAlign.start,
                                   ),
 
                                   if (_errorOccurred)

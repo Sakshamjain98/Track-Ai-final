@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-
 import '../../../library/services/cloudinary_service.dart';
 
 class RecipeService {
@@ -9,7 +8,7 @@ class RecipeService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static const String _collection = 'recipes';
 
-  /// Create recipe: Upload image to Cloudinary, save data to Firestore
+  /// Create recipe
   static Future<String> createRecipe({
     required String title,
     required String description,
@@ -19,15 +18,14 @@ class RecipeService {
     required int prepTime,
     required int cookTime,
     required int servings,
+    required String category, // <-- ADDED CATEGORY PARAMETER
     XFile? imageFile,
   }) async {
     try {
       print('👨‍🍳 Creating recipe: $title');
-
       String? imageUrl;
       String? imagePublicId;
 
-      // Upload image to Cloudinary
       if (imageFile != null) {
         try {
           print('📤 Uploading to Cloudinary...');
@@ -37,20 +35,17 @@ class RecipeService {
             tags: {
               'type': 'recipe',
               'difficulty': difficulty.toLowerCase(),
-              'timestamp': DateTime.now().millisecondsSinceEpoch.toString(),
+              'category': category.toLowerCase(), // <-- ADDED CATEGORY TAG FOR CLOUDINARY
             },
           );
-
           imageUrl = uploadResult.secureUrl;
           imagePublicId = uploadResult.publicId;
           print('✅ Image uploaded: $imageUrl');
         } catch (e) {
           print('❌ Cloudinary upload error: $e');
-          // Continue without image
         }
       }
 
-      // Validate data
       if (title.trim().isEmpty) {
         throw RecipeException('Recipe title is required.');
       }
@@ -60,8 +55,8 @@ class RecipeService {
       if (instructions.isEmpty) {
         throw RecipeException('Cooking instructions are required.');
       }
+      // Assuming category validation is handled in the UI or guaranteed to be non-empty
 
-      // Save to Firestore
       final recipeData = {
         'title': title.trim(),
         'description': description.trim(),
@@ -71,27 +66,20 @@ class RecipeService {
         'prepTime': prepTime,
         'cookTime': cookTime,
         'servings': servings,
-
-        // Cloudinary image data
+        'category': category, // <-- ADDED CATEGORY TO FIRESTORE DATA
         'imageUrl': imageUrl,
         'imagePublicId': imagePublicId,
-
-        // Metadata with sorting timestamp
         'createdAt': FieldValue.serverTimestamp(),
-        'sortTimestamp': DateTime.now().millisecondsSinceEpoch, // For manual sorting
         'createdBy': _auth.currentUser?.uid ?? 'anonymous',
         'createdByEmail': _auth.currentUser?.email ?? 'anonymous',
         'isActive': true,
         'views': 0,
         'likes': 0,
         'rating': 0.0,
-        'platform': 'cloudinary',
-        'uploadedFrom': 'mobile_app',
       };
 
       final docRef = await _firestore.collection(_collection).add(recipeData);
       print('✅ Recipe saved: ${docRef.id}');
-
       return docRef.id;
     } on RecipeException {
       rethrow;
@@ -101,113 +89,88 @@ class RecipeService {
     }
   }
 
-  /// SMART Get all recipes - Automatically handles index issues
+  /// Get recipes stream - OPTIMIZED & WORKS WITH EXISTING DATA
   static Stream<List<Map<String, dynamic>>> getRecipesStream() {
-    print('🔍 Starting smart recipes stream...');
-
-    // Try optimized query first, fallback to simple query if index missing
-    return _tryOptimizedQuery().handleError((error) {
-      print('⚠️ Optimized query failed, using fallback: $error');
-      return _getFallbackQuery();
-    });
-  }
-
-  /// Try the optimized query with compound index
-  static Stream<List<Map<String, dynamic>>> _tryOptimizedQuery() {
-    print('🚀 Trying optimized query with index...');
+    print('🔍 Starting recipes stream...');
 
     return _firestore
         .collection(_collection)
         .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => _processRecipeSnapshots(snapshot))
-        .handleError((error) {
-      print('❌ Optimized query failed: $error');
-      throw error; // This will trigger the fallback
-    });
-  }
-
-  /// Fallback query without compound index requirement
-  static Stream<List<Map<String, dynamic>>> _getFallbackQuery() {
-    print('🔄 Using fallback query (no index required)...');
-
-    return _firestore
-        .collection(_collection)
-        .where('isActive', isEqualTo: true)
+        .limit(50)
         .snapshots()
         .map((snapshot) {
-      print('📊 Fallback found ${snapshot.docs.length} recipes');
+      print('📊 Loaded ${snapshot.docs.length} recipes');
 
-      // Sort manually by sortTimestamp (faster than createdAt comparison)
-      final sortedDocs = snapshot.docs.toList();
-      sortedDocs.sort((a, b) {
-        final aTime = a.data()['sortTimestamp'] as int? ?? 0;
-        final bTime = b.data()['sortTimestamp'] as int? ?? 0;
-        return bTime.compareTo(aTime); // Descending order (newest first)
-      });
+      final recipes = snapshot.docs.map((doc) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
 
-      return _processRecipeList(sortedDocs);
-    });
-  }
+          // Generate optimized URLs if imagePublicId exists
+          if (data['imagePublicId'] != null && data['imagePublicId'].toString().isNotEmpty) {
+            final publicId = data['imagePublicId'] as String;
 
-  /// Process Firestore snapshots into recipe list
-  static List<Map<String, dynamic>> _processRecipeSnapshots(QuerySnapshot snapshot) {
-    print('📊 Processing ${snapshot.docs.length} recipes from optimized query');
-    return _processRecipeList(snapshot.docs);
-  }
-
-  /// Process list of documents into recipe data
-  static List<Map<String, dynamic>> _processRecipeList(List<QueryDocumentSnapshot> docs) {
-    return docs.map((doc) {
-      try {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-
-        print('📄 Processing recipe: ${data['title']}');
-
-        // Generate Cloudinary URLs for cards
-        if (data['imagePublicId'] != null) {
-          try {
             data['cardImageUrl'] = CloudinaryService.getOptimizedUrl(
-              data['imagePublicId'],
+              publicId,
               width: 400,
               height: 300,
-              quality: '80',
+              quality: 'auto:low',
             );
+
             data['thumbnailUrl'] = CloudinaryService.getOptimizedUrl(
-              data['imagePublicId'],
+              publicId,
               width: 200,
               height: 150,
               quality: '60',
             );
-            print('✅ Generated image URLs for: ${data['title']}');
-          } catch (e) {
-            print('❌ Error generating image URLs for ${data['title']}: $e');
-            data['cardImageUrl'] = data['imageUrl']; // Fallback
+          } else if (data['imageUrl'] != null) {
+            // Fallback to original URL if no publicId
+            data['cardImageUrl'] = data['imageUrl'];
             data['thumbnailUrl'] = data['imageUrl'];
           }
-        } else {
-          print('ℹ️ No image for recipe: ${data['title']}');
-        }
 
-        return data;
-      } catch (e) {
-        print('❌ Error processing recipe doc: $e');
-        return <String, dynamic>{
-          'id': doc.id,
-          'title': 'Error loading recipe',
-          'error': true,
-        };
-      }
-    }).toList();
+          return data;
+        } catch (e) {
+          print('❌ Error processing recipe ${doc.id}: $e');
+          return {
+            'id': doc.id,
+            'title': 'Error loading recipe',
+            'description': 'Unable to load recipe data',
+            'error': true,
+          };
+        }
+      }).toList();
+
+      // Sort by createdAt in memory (descending - newest first)
+      recipes.sort((a, b) {
+        try {
+          final aTime = a['createdAt'];
+          final bTime = b['createdAt'];
+
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+
+          final aDate = aTime is Timestamp ? aTime.toDate() : DateTime.now();
+          final bDate = bTime is Timestamp ? bTime.toDate() : DateTime.now();
+
+          return bDate.compareTo(aDate);
+        } catch (e) {
+          return 0;
+        }
+      });
+
+      return recipes;
+    })
+        .handleError((error) {
+      print('❌ Stream error: $error');
+      return <Map<String, dynamic>>[];
+    });
   }
 
   /// Get single recipe by ID
   static Future<Map<String, dynamic>?> getRecipeById(String id) async {
     try {
       print('🔍 Fetching recipe: $id');
-
       if (id.trim().isEmpty) {
         throw RecipeException('Invalid recipe ID.');
       }
@@ -215,36 +178,29 @@ class RecipeService {
       final doc = await _firestore.collection(_collection).doc(id).get();
 
       if (!doc.exists) {
-        throw RecipeException('Recipe not found. It may have been deleted.');
+        throw RecipeException('Recipe not found.');
       }
 
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data()!;
       data['id'] = doc.id;
 
-      print('✅ Found recipe: ${data['title']}');
-
-      // Generate high-quality image URL for details
-      if (data['imagePublicId'] != null) {
-        try {
-          data['highResImageUrl'] = CloudinaryService.getOptimizedUrl(
-            data['imagePublicId'],
-            width: 800,
-            height: 600,
-            quality: 'auto',
-          );
-        } catch (e) {
-          print('❌ Error generating high-res image URL: $e');
-          data['highResImageUrl'] = data['imageUrl'];
-        }
+      // Generate high-res URL if imagePublicId exists
+      if (data['imagePublicId'] != null && data['imagePublicId'].toString().isNotEmpty) {
+        data['highResImageUrl'] = CloudinaryService.getOptimizedUrl(
+          data['imagePublicId'],
+          width: 800,
+          height: 600,
+          quality: 'auto',
+        );
+      } else if (data['imageUrl'] != null) {
+        data['highResImageUrl'] = data['imageUrl'];
       }
 
       return data;
     } catch (e) {
       print('❌ Error fetching recipe: $e');
-      if (e is RecipeException) {
-        rethrow;
-      }
-      throw RecipeException('Failed to load recipe details: ${e.toString()}');
+      if (e is RecipeException) rethrow;
+      throw RecipeException('Failed to load recipe: ${e.toString()}');
     }
   }
 
@@ -252,12 +208,10 @@ class RecipeService {
   static Future<void> incrementViews(String id) async {
     try {
       if (id.trim().isEmpty) return;
-
       await _firestore.collection(_collection).doc(id).update({
         'views': FieldValue.increment(1),
         'lastViewed': FieldValue.serverTimestamp(),
       });
-      print('✅ Incremented views for: $id');
     } catch (e) {
       print('❌ Failed to increment views: $e');
     }
@@ -278,29 +232,39 @@ class RecipeService {
     }
   }
 
-  /// Test connection
-  static Future<bool> testConnection() async {
+  /// Delete recipe
+  static Future<void> deleteRecipe(String id) async {
     try {
-      print('🔥 Testing Recipe Service connections...');
+      if (id.trim().isEmpty) {
+        throw RecipeException('Invalid recipe ID');
+      }
 
-      // Test Firestore
-      await _firestore.collection('test').limit(1).get();
-      print('✅ Firestore: Connected');
+      // Get recipe to check imagePublicId
+      final doc = await _firestore.collection(_collection).doc(id).get();
+      if (doc.exists) {
+        final data = doc.data();
 
-      // Test if recipes collection exists
-      final recipesSnapshot = await _firestore.collection(_collection).limit(1).get();
-      print('✅ Recipes collection: ${recipesSnapshot.docs.length} docs found');
+        // Delete image from Cloudinary if exists
+        if (data?['imagePublicId'] != null) {
+          try {
+            await CloudinaryService.deleteImage(data!['imagePublicId']);
+            print('✅ Cloudinary image deleted');
+          } catch (e) {
+            print('⚠️ Failed to delete Cloudinary image: $e');
+          }
+        }
+      }
 
-      print('🎉 All services working!');
-      return true;
+      // Delete Firestore document
+      await _firestore.collection(_collection).doc(id).delete();
+      print('✅ Recipe deleted: $id');
     } catch (e) {
-      print('❌ Connection test failed: $e');
-      return false;
+      print('❌ Error deleting recipe: $e');
+      throw RecipeException('Failed to delete recipe: ${e.toString()}');
     }
   }
 }
 
-/// Custom Recipe Exception
 class RecipeException implements Exception {
   final String message;
   RecipeException(this.message);

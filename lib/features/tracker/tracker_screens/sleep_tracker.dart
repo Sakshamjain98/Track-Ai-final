@@ -14,10 +14,12 @@ class SleepTrackerScreen extends StatefulWidget {
 
 class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _valueController = TextEditingController();
-  final _qualityController = TextEditingController();
   final _dreamNotesController = TextEditingController();
   final _interruptionsController = TextEditingController();
+
+  // Changed to state variables for sliders
+  double _sleepHours = 7.0;  // Default 7 hours
+  double _sleepQuality = 5.0;  // Default quality of 5/10
 
   final List<Map<String, TextEditingController>> _customFields = [];
 
@@ -41,8 +43,6 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
   }
 
   void _clearForm() {
-    _valueController.clear();
-    _qualityController.clear();
     _dreamNotesController.clear();
     _interruptionsController.clear();
 
@@ -52,6 +52,8 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
     }
 
     setState(() {
+      _sleepHours = 7.0;
+      _sleepQuality = 5.0;
       _customFields.clear();
     });
   }
@@ -74,8 +76,8 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
       }
 
       final entryData = {
-        'value': double.parse(_valueController.text),
-        'quality': int.parse(_qualityController.text),
+        'value': _sleepHours,
+        'quality': _sleepQuality.round(),
         'dreamNotes': _dreamNotesController.text.trim(),
         'interruptions': _interruptionsController.text.trim(),
         'customData': customData,
@@ -113,8 +115,6 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
 
   @override
   void dispose() {
-    _valueController.dispose();
-    _qualityController.dispose();
     _dreamNotesController.dispose();
     _interruptionsController.dispose();
 
@@ -136,133 +136,136 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
           backgroundColor: AppColors.background(isDark),
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: AppColors.cardBackground(isDark), // Set AppBar to light grey like boxes
+            backgroundColor: Colors.white,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
               icon: Icon(
                 Icons.arrow_back,
-                color: AppColors.textPrimary(isDark),
+                color: Colors.black,
               ),
             ),
             title: Text(
               'Log Sleep Tracker',
               style: TextStyle(
-                color: AppColors.textPrimary(isDark),
+                color: Colors.black,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           body: Container(
-            color: AppColors.background(isDark), // Removed gradient for cleaner black/white theme
+            color: Colors.white,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Enter the details for your sleep tracker entry.',
+                      'Track your sleep duration and quality.',
                       style: TextStyle(
-                        color: AppColors.textSecondary(isDark),
+                        color: Colors.black54,
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
-                    // Value (hours)
-                    _buildTextField(
-                      controller: _valueController,
-                      label: 'Value (hours)',
-                      hint: 'Enter sleep duration',
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter sleep duration';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
+                    // Sleep Duration Slider
+                    _buildSliderSection(
+                      icon: Icons.bedtime,
+                      label: 'Sleep Duration',
+                      value: _sleepHours,
+                      displayValue: '${_sleepHours.toStringAsFixed(1)} hours',
+                      min: 0,
+                      max: 12,
+                      divisions: 48, // 0.25 hour increments
+                      onChanged: (value) {
+                        setState(() {
+                          _sleepHours = value;
+                        });
                       },
-                      isDark: isDark,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
-                    // Quality (1-10)
-                    _buildTextField(
-                      controller: _qualityController,
-                      label: 'Quality (1-10)',
-                      hint: 'Rate your sleep quality',
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please rate your sleep quality';
-                        }
-                        final quality = int.tryParse(value);
-                        if (quality == null || quality < 1 || quality > 10) {
-                          return 'Please enter a number between 1-10';
-                        }
-                        return null;
+                    // Sleep Quality Slider
+                    _buildSliderSection(
+                      icon: Icons.star,
+                      label: 'Sleep Quality',
+                      value: _sleepQuality,
+                      displayValue: '${_sleepQuality.round()}/10',
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      onChanged: (value) {
+                        setState(() {
+                          _sleepQuality = value;
+                        });
                       },
-                      isDark: isDark,
+                      showQualityIndicators: true,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
                     // Dream Notes
                     _buildTextField(
                       controller: _dreamNotesController,
                       label: 'Dream Notes',
                       hint: 'Optional: Describe your dreams',
+                      icon: Icons.bubble_chart,
                       maxLines: 3,
                       isDark: isDark,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Interruptions
                     _buildTextField(
                       controller: _interruptionsController,
                       label: 'Interruptions',
                       hint: 'Optional: Note any sleep interruptions',
+                      icon: Icons.notification_important,
                       maxLines: 2,
                       isDark: isDark,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     // Custom Data Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Custom Data',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(isDark),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.add_circle_outline, size: 20, color: Colors.black),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Custom Data',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         TextButton.icon(
                           onPressed: _addCustomField,
-                          icon: Icon(
-                            Icons.add,
-                            color: AppColors.black, // Black icon for button
-                            size: 16,
-                          ),
+                          icon: Icon(Icons.add, color: Colors.black, size: 18),
                           label: Text(
-                            'Add Custom Field',
+                            'Add Field',
                             style: TextStyle(
-                              color: AppColors.black, // Black text for button
+                              color: Colors.black,
                               fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 12),
 
                     // Custom Fields
                     ..._customFields.asMap().entries.map((entry) {
@@ -273,11 +276,9 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.cardBackground(isDark), // Light grey card background
+                          color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.borderColor(isDark),
-                          ),
+                          border: Border.all(color: Colors.grey[300]!, width: 1),
                         ),
                         child: Column(
                           children: [
@@ -293,14 +294,11 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                                 ),
                                 IconButton(
                                   onPressed: () => _removeCustomField(index),
-                                  icon: Icon(
-                                    Icons.delete,
-                                    color: AppColors.errorColor,
-                                  ),
+                                  icon: Icon(Icons.delete, color: Colors.red[700]),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             _buildTextField(
                               controller: field['value']!,
                               label: 'Field Value',
@@ -312,7 +310,7 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                       );
                     }),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 40),
 
                     // Action Buttons
                     Row(
@@ -322,19 +320,18 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(
-                                color: AppColors.black, // Black border
-                              ),
+                              side: BorderSide(color: Colors.grey[400]!, width: 2),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              backgroundColor: AppColors.white, // White background for contrast
+                              backgroundColor: Colors.white,
                             ),
                             child: Text(
                               'Cancel',
                               style: TextStyle(
-                                color: AppColors.black, // Black text
+                                color: Colors.black,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
@@ -345,33 +342,34 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                             onPressed: _clearForm,
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(
-                                color: AppColors.black, // Black border
-                              ),
+                              side: BorderSide(color: Colors.grey[400]!, width: 2),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              backgroundColor: AppColors.white, // White background for contrast
+                              backgroundColor: Colors.white,
                             ),
                             child: Text(
-                              'Clear Form',
+                              'Clear',
                               style: TextStyle(
-                                color: AppColors.black, // Black text
+                                color: Colors.black,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
+                          flex: 2,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _saveEntry,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.black, // Black button
+                              backgroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 0,
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -379,22 +377,30 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.white, // White spinner for contrast
-                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                                : const Text(
-                              'Save Entry',
-                              style: TextStyle(
-                                color: AppColors.white, // White text
-                                fontWeight: FontWeight.w600,
-                              ),
+                                : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Save Entry',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -405,11 +411,145 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
     );
   }
 
+  Widget _buildSliderSection({
+    required IconData icon,
+    required String label,
+    required double value,
+    required String displayValue,
+    required double min,
+    required double max,
+    required int divisions,
+    required void Function(double) onChanged,
+    bool showQualityIndicators = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  displayValue,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: Colors.black,
+              inactiveTrackColor: Colors.grey[300],
+              thumbColor: Colors.black,
+              overlayColor: Colors.black.withOpacity(0.1),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12),
+              overlayShape: RoundSliderOverlayShape(overlayRadius: 24),
+              trackHeight: 6,
+              valueIndicatorColor: Colors.black,
+              valueIndicatorTextStyle: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              label: displayValue,
+              onChanged: onChanged,
+            ),
+          ),
+
+          if (showQualityIndicators)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildQualityLabel('Poor', Colors.red[700]!),
+                  _buildQualityLabel('Fair', Colors.orange[700]!),
+                  _buildQualityLabel('Good', Colors.yellow[700]!),
+                  _buildQualityLabel('Great', Colors.green[700]!),
+                  _buildQualityLabel('Perfect', Colors.blue[700]!),
+                ],
+              ),
+            ),
+
+          if (!showQualityIndicators)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('${min.toInt()}h', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                  Text('${max.toInt()}h', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQualityLabel(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required bool isDark,
+    IconData? icon,
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
@@ -417,49 +557,51 @@ class _SleepTrackerScreenState extends State<SleepTrackerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: Colors.black),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
           validator: validator,
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          style: TextStyle(color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+            hintStyle: TextStyle(color: Colors.black38),
             filled: true,
-            fillColor: AppColors.cardBackground(isDark), // Light grey input background
+            fillColor: Colors.grey[100],
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.borderColor(isDark),
-              ),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.borderColor(isDark),
-              ),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.black, // Black border when focused
-                width: 2,
-              ),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.black, width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.errorColor),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.red[700]!, width: 2),
             ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],

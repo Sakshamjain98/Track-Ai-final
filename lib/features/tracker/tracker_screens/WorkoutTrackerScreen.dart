@@ -15,10 +15,10 @@ class WorkoutTrackerScreen extends StatefulWidget {
 class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
   final _formKey = GlobalKey<FormState>();
   final _detailsController = TextEditingController();
-  final _durationController = TextEditingController();
   final _locationController = TextEditingController();
 
-  int _exertionLevel = 5;
+  double _duration = 30.0;  // Changed to double for slider (in minutes)
+  double _exertionLevel = 5.0;  // Changed to double for slider
 
   final List<Map<String, TextEditingController>> _customFields = [];
 
@@ -43,11 +43,7 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
 
   void _clearForm() {
     _detailsController.clear();
-    _durationController.clear();
     _locationController.clear();
-    setState(() {
-      _exertionLevel = 5;
-    });
 
     for (var field in _customFields) {
       field['key']?.clear();
@@ -55,6 +51,8 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
     }
 
     setState(() {
+      _duration = 30.0;
+      _exertionLevel = 5.0;
       _customFields.clear();
     });
   }
@@ -78,8 +76,8 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
 
       final entryData = {
         'details': _detailsController.text.trim(),
-        'duration': int.parse(_durationController.text),
-        'exertionLevel': _exertionLevel,
+        'duration': _duration.round(),
+        'exertionLevel': _exertionLevel.round(),
         'location': _locationController.text.trim(),
         'customData': customData,
         'trackerType': 'workout',
@@ -117,7 +115,6 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
   @override
   void dispose() {
     _detailsController.dispose();
-    _durationController.dispose();
     _locationController.dispose();
 
     for (var field in _customFields) {
@@ -128,6 +125,35 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
     super.dispose();
   }
 
+  String _getExertionLabel(int value) {
+    if (value <= 2) return 'Very Light';
+    if (value <= 4) return 'Light';
+    if (value <= 6) return 'Moderate';
+    if (value <= 8) return 'Hard';
+    return 'Maximum';
+  }
+
+  Color _getExertionColor(int value) {
+    if (value <= 2) return Colors.green[700]!;
+    if (value <= 4) return Colors.lightGreen[700]!;
+    if (value <= 6) return Colors.yellow[700]!;
+    if (value <= 8) return Colors.orange[700]!;
+    return Colors.red[700]!;
+  }
+
+  String _formatDuration(double minutes) {
+    if (minutes < 60) {
+      return '${minutes.round()} min';
+    } else {
+      final hours = minutes ~/ 60;
+      final mins = minutes % 60;
+      if (mins == 0) {
+        return '${hours}h';
+      }
+      return '${hours}h ${mins.round()}m';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
@@ -135,49 +161,47 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
         final isDark = themeProvider.isDarkMode;
 
         return Scaffold(
-          backgroundColor: AppColors.background(isDark),
+          backgroundColor: Colors.white,
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: AppColors.cardBackground(isDark),
+            backgroundColor: Colors.white,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: Icon(
-                Icons.arrow_back,
-                color: AppColors.textPrimary(isDark),
-              ),
+              icon: Icon(Icons.arrow_back, color: Colors.black),
             ),
             title: Text(
-              'Log Workout Tracker',
+              'Workout Tracker',
               style: TextStyle(
-                color: AppColors.textPrimary(isDark),
+                color: Colors.black,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
           body: Container(
-            color: AppColors.background(isDark),
+            color: Colors.white,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Enter the details for your workout tracker entry.',
+                      'Log your workout session details.',
                       style: TextStyle(
-                        color: AppColors.textSecondary(isDark),
+                        color: Colors.black54,
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
-                    // Details
+                    // Workout Details
                     _buildTextField(
                       controller: _detailsController,
-                      label: 'Details',
-                      hint: 'Describe your workout (e.g., exercises, sets, reps)',
+                      label: 'Workout Details',
+                      hint: 'Describe exercises, sets, reps...',
+                      icon: Icons.fitness_center,
                       maxLines: 4,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -188,79 +212,102 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                       isDark: isDark,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
-                    // Duration (mins)
-                    _buildTextField(
-                      controller: _durationController,
-                      label: 'Duration (mins)',
-                      hint: 'e.g., 60',
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter workout duration';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
+                    // Duration Slider
+                    _buildSliderSection(
+                      icon: Icons.timer,
+                      label: 'Workout Duration',
+                      value: _duration,
+                      displayValue: _formatDuration(_duration),
+                      min: 5,
+                      max: 180,
+                      divisions: 35, // 5-minute increments
+                      onChanged: (value) {
+                        setState(() {
+                          _duration = value;
+                        });
                       },
-                      isDark: isDark,
+                      showRangeLabels: true,
+                      minLabel: '5 min',
+                      maxLabel: '3 hours',
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
-                    // Exertion Level (1-10)
-                    _buildDropdownField(
-                      label: 'Exertion (1-10)',
+                    // Exertion Level Slider
+                    _buildSliderSection(
+                      icon: Icons.local_fire_department,
+                      label: 'Exertion Level',
                       value: _exertionLevel,
-                      items: List.generate(10, (index) => index + 1),
-                      onChanged: (value) => setState(() => _exertionLevel = value!),
-                      isDark: isDark,
-                      hint: 'Rate the intensity',
+                      displayValue: '${_exertionLevel.round()}/10',
+                      statusLabel: _getExertionLabel(_exertionLevel.round()),
+                      statusColor: _getExertionColor(_exertionLevel.round()),
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      onChanged: (value) {
+                        setState(() {
+                          _exertionLevel = value;
+                        });
+                      },
+                      showIndicators: true,
+                      indicators: [
+                        _IndicatorData('Very Light', Colors.green[700]!),
+                        _IndicatorData('Light', Colors.lightGreen[700]!),
+                        _IndicatorData('Moderate', Colors.yellow[700]!),
+                        _IndicatorData('Hard', Colors.orange[700]!),
+                        _IndicatorData('Maximum', Colors.red[700]!),
+                      ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
 
                     // Location
                     _buildTextField(
                       controller: _locationController,
                       label: 'Location',
                       hint: 'e.g., Gym, Park, Home',
+                      icon: Icons.location_on,
                       isDark: isDark,
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     // Custom Data Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Custom Data',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(isDark),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.add_circle_outline, size: 20, color: Colors.black),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Custom Data',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         TextButton.icon(
                           onPressed: _addCustomField,
-                          icon: Icon(
-                            Icons.add,
-                            color: AppColors.black,
-                            size: 16,
-                          ),
+                          icon: Icon(Icons.add, color: Colors.black, size: 18),
                           label: Text(
-                            'Add Custom Field',
+                            'Add Field',
                             style: TextStyle(
-                              color: AppColors.black,
+                              color: Colors.black,
                               fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 12),
 
                     // Custom Fields
                     ..._customFields.asMap().entries.map((entry) {
@@ -271,11 +318,9 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.cardBackground(isDark),
+                          color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.borderColor(isDark),
-                          ),
+                          border: Border.all(color: Colors.grey[300]!, width: 1),
                         ),
                         child: Column(
                           children: [
@@ -291,14 +336,11 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                                 ),
                                 IconButton(
                                   onPressed: () => _removeCustomField(index),
-                                  icon: Icon(
-                                    Icons.delete,
-                                    color: AppColors.errorColor,
-                                  ),
+                                  icon: Icon(Icons.delete, color: Colors.red[700]),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             _buildTextField(
                               controller: field['value']!,
                               label: 'Field Value',
@@ -310,7 +352,7 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                       );
                     }),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 40),
 
                     // Action Buttons
                     Row(
@@ -320,17 +362,18 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppColors.black),
+                              side: BorderSide(color: Colors.grey[400]!, width: 2),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              backgroundColor: AppColors.white,
+                              backgroundColor: Colors.white,
                             ),
                             child: Text(
                               'Cancel',
                               style: TextStyle(
-                                color: AppColors.black,
+                                color: Colors.black,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
@@ -341,31 +384,34 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                             onPressed: _clearForm,
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppColors.black),
+                              side: BorderSide(color: Colors.grey[400]!, width: 2),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              backgroundColor: AppColors.white,
+                              backgroundColor: Colors.white,
                             ),
                             child: Text(
-                              'Clear Form',
+                              'Clear',
                               style: TextStyle(
-                                color: AppColors.black,
+                                color: Colors.black,
                                 fontWeight: FontWeight.w600,
+                                fontSize: 16,
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
+                          flex: 2,
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _saveEntry,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.black,
+                              backgroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 0,
                             ),
                             child: _isLoading
                                 ? const SizedBox(
@@ -373,22 +419,30 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  AppColors.white,
-                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                                : const Text(
-                              'Save Entry',
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                                : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Save Entry',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -399,11 +453,172 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
     );
   }
 
+  Widget _buildSliderSection({
+    required IconData icon,
+    required String label,
+    required double value,
+    required String displayValue,
+    String? statusLabel,
+    Color? statusColor,
+    required double min,
+    required double max,
+    required int divisions,
+    required void Function(double) onChanged,
+    bool showIndicators = false,
+    List<_IndicatorData>? indicators,
+    bool showRangeLabels = false,
+    String? minLabel,
+    String? maxLabel,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  displayValue,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (statusLabel != null && statusColor != null) ...[
+            const SizedBox(height: 16),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor, width: 2),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: Colors.black,
+              inactiveTrackColor: Colors.grey[300],
+              thumbColor: Colors.black,
+              overlayColor: Colors.black.withOpacity(0.1),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12),
+              overlayShape: RoundSliderOverlayShape(overlayRadius: 24),
+              trackHeight: 6,
+              valueIndicatorColor: Colors.black,
+              valueIndicatorTextStyle: TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              label: displayValue,
+              onChanged: onChanged,
+            ),
+          ),
+
+          if (showRangeLabels && minLabel != null && maxLabel != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(minLabel, style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w500)),
+                  Text(maxLabel, style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+
+          if (showIndicators && indicators != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: indicators.map((indicator) {
+                  return _buildIndicatorLabel(indicator.label, indicator.color);
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndicatorLabel(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required bool isDark,
+    IconData? icon,
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
@@ -411,101 +626,62 @@ class _WorkoutTrackerScreenState extends State<WorkoutTrackerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: Colors.black),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
           validator: validator,
-          style: TextStyle(color: AppColors.textPrimary(isDark)),
+          style: TextStyle(color: Colors.black),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
+            hintStyle: TextStyle(color: Colors.black38),
             filled: true,
-            fillColor: AppColors.cardBackground(isDark),
+            fillColor: Colors.grey[100],
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!, width: 2),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.black, width: 2),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.black, width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.errorColor),
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.red[700]!, width: 2),
             ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildDropdownField({
-    required String label,
-    required int value,
-    required List<int> items,
-    required void Function(int?) onChanged,
-    required bool isDark,
-    required String hint,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
-          value: value,
-          items: items.map((item) {
-            return DropdownMenuItem<int>(
-              value: item,
-              child: Text(
-                item.toString(),
-                style: TextStyle(color: AppColors.textPrimary(isDark)),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textSecondary(isDark)),
-            filled: true,
-            fillColor: AppColors.cardBackground(isDark),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.borderColor(isDark)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.black, width: 2),
-            ),
-          ),
-          dropdownColor: AppColors.cardBackground(isDark),
-        ),
-      ],
-    );
-  }
+// Helper class for indicator data
+class _IndicatorData {
+  final String label;
+  final Color color;
+
+  _IndicatorData(this.label, this.color);
 }

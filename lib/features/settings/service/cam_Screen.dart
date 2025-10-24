@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:trackai/core/constants/appcolors.dart';
+// import 'package:trackai/core/constants/appcolors.dart'; // No longer needed for this file's widgets
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/home/homepage/desc%20and%20scan/gemini.dart';
 
 class ImageAnalysisScreen extends StatefulWidget {
   final String analysisType; // 'scan' or 'describe'
-  
+
   const ImageAnalysisScreen({
     Key? key,
     required this.analysisType,
@@ -41,11 +41,11 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeAnimationController, curve: Curves.easeOut),
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -64,56 +64,40 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
     super.dispose();
   }
 
+  // --- UI Enhancement ---
+  // Replaced complex gradient logic with a cleaner, monochromatic card decoration
   BoxDecoration _getCardDecoration(bool isDarkTheme) {
     if (isDarkTheme) {
+      // Dark Mode Card: Very dark gray, subtle border, and shadow
       return BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color.fromRGBO(40, 50, 49, 0.85),
-            const Color.fromARGB(215, 14, 14, 14),
-            Color.fromRGBO(33, 43, 42, 0.85),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          stops: const [0.0, 0.5, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[900], // Near-black
+        borderRadius: BorderRadius.circular(16), // Softer radius
         border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.8),
+          color: Colors.grey[700]!, // Subtle light border
           width: 0.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.darkPrimary.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.3), // Simple black shadow
             blurRadius: 8,
-            spreadRadius: 1,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 4),
           ),
         ],
       );
     } else {
+      // Light Mode Card: Pure white, subtle border, and shadow
       return BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.lightSecondary.withOpacity(0.85),
-            AppColors.lightSecondary.withOpacity(0.85),
-            AppColors.lightSecondary.withOpacity(0.85),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          stops: const [0.0, 0.5, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.lightPrimary.withOpacity(0.6),
-          width: 0.5,
+          color: Colors.grey[300]!, // Subtle dark border
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.lightPrimary.withOpacity(0.05),
-            blurRadius: 6,
-            spreadRadius: 1,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.08), // Simple, light shadow
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       );
@@ -125,18 +109,20 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: AppColors.cardBackground(isDark),
+          // --- UI Enhancement ---
+          backgroundColor: isDark ? Colors.grey[900] : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: AppColors.primary(isDark).withOpacity(0.2),
+              color: (isDark ? Colors.grey[700] : Colors.grey[300])!,
               width: 1,
             ),
           ),
           title: Text(
             'Select Image Source',
             style: TextStyle(
-              color: AppColors.textPrimary(isDark),
+              // --- UI Enhancement ---
+              color: isDark ? Colors.white : Colors.black,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -146,11 +132,13 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
               ListTile(
                 leading: Icon(
                   Icons.camera_alt,
-                  color: AppColors.primary(isDark),
+                  // --- UI Enhancement ---
+                  color: isDark ? Colors.white : Colors.black,
                 ),
                 title: Text(
                   'Camera',
-                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                  // --- UI Enhancement ---
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -160,11 +148,13 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
               ListTile(
                 leading: Icon(
                   Icons.photo_library,
-                  color: AppColors.primary(isDark),
+                  // --- UI Enhancement ---
+                  color: isDark ? Colors.white : Colors.black,
                 ),
                 title: Text(
                   'Gallery',
-                  style: TextStyle(color: AppColors.textPrimary(isDark)),
+                  // --- UI Enhancement ---
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -200,7 +190,9 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error picking image: $e'),
-            backgroundColor: AppColors.errorColor,
+            // --- UI Enhancement ---
+            // Use a standard, high-visibility error color
+            backgroundColor: Colors.red[700],
           ),
         );
       }
@@ -241,7 +233,8 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Analysis failed: $e'),
-            backgroundColor: AppColors.errorColor,
+            // --- UI Enhancement ---
+            backgroundColor: Colors.red[700],
           ),
         );
       }
@@ -249,8 +242,8 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
   }
 
   String get _getTitle {
-    return widget.analysisType == 'scan' 
-        ? 'Nutrition Scanner' 
+    return widget.analysisType == 'scan'
+        ? 'Nutrition Scanner'
         : 'Food Descriptor';
   }
 
@@ -267,248 +260,269 @@ class _ImageAnalysisScreenState extends State<ImageAnalysisScreen>
         final isDark = themeProvider.isDarkMode;
 
         return Scaffold(
-          backgroundColor: AppColors.background(isDark),
+          // --- UI Enhancement ---
+          // Set solid background colors for the B&W theme
+          backgroundColor: isDark ? Colors.black : Colors.white,
           appBar: AppBar(
             elevation: 0,
-            backgroundColor: Colors.transparent,
+            // --- UI Enhancement ---
+            // Solid AppBar background
+            backgroundColor: isDark ? Colors.black : Colors.white,
             leading: IconButton(
               icon: Icon(
                 Icons.arrow_back_ios,
-                color: AppColors.textPrimary(isDark),
+                // --- UI Enhancement ---
+                color: isDark ? Colors.white : Colors.black,
               ),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
               _getTitle,
               style: TextStyle(
-                color: AppColors.textPrimary(isDark),
+                // --- UI Enhancement ---
+                color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            flexibleSpace: Container(
-              decoration: BoxDecoration(
-                gradient: AppColors.backgroundLinearGradient(isDark),
-              ),
-            ),
+            // --- UI Enhancement ---
+            // Removed the flexibleSpace gradient
           ),
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: AppColors.backgroundLinearGradient(isDark),
-            ),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header Section
-                    Container(
-                      decoration: _getCardDecoration(isDark),
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Icon(
-                            widget.analysisType == 'scan'
-                                ? Icons.qr_code_scanner
-                                : Icons.restaurant_menu,
-                            size: 48,
-                            color: AppColors.primary(isDark),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _getTitle,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary(isDark),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _getSubtitle,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textSecondary(isDark),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Image Selection Button
-                    Container(
-                      decoration: _getCardDecoration(isDark),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _showImageSourceDialog(isDark),
-                          child: Container(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.add_photo_alternate,
-                                  size: 40,
-                                  color: AppColors.primary(isDark),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Select Image',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary(isDark),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Camera or Gallery',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary(isDark),
-                                  ),
-                                ),
-                              ],
-                            ),
+          body: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header Section
+                  Container(
+                    decoration: _getCardDecoration(isDark), // Use enhanced card
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Icon(
+                          widget.analysisType == 'scan'
+                              ? Icons.qr_code_scanner
+                              : Icons.restaurant_menu,
+                          size: 48,
+                          // --- UI Enhancement ---
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _getTitle,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            // --- UI Enhancement ---
+                            color: isDark ? Colors.white : Colors.black,
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _getSubtitle,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            // --- UI Enhancement ---
+                            color: isDark ? Colors.grey[400] : Colors.grey[700],
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    // Selected Image Display
-                    if (_selectedImage != null) ...[
-                      const SizedBox(height: 24),
-                      SlideTransition(
-                        position: _slideAnimation,
+                  const SizedBox(height: 24),
+
+                  // Image Selection Button
+                  Container(
+                    decoration: _getCardDecoration(isDark), // Use enhanced card
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16), // Match card
+                        onTap: () => _showImageSourceDialog(isDark),
                         child: Container(
-                          decoration: _getCardDecoration(isDark),
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  _selectedImage!,
-                                  height: 200,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
+                              Icon(
+                                Icons.add_photo_alternate,
+                                size: 40,
+                                // --- UI Enhancement ---
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Select Image',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  // --- UI Enhancement ---
+                                  color: isDark ? Colors.white : Colors.black,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _isAnalyzing ? null : _analyzeImage,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary(isDark),
-                                    foregroundColor: AppColors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                  child: _isAnalyzing
-                                      ? Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(
-                                                  AppColors.white,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Text(
-                                              'Analyzing...',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : Text(
-                                          widget.analysisType == 'scan'
-                                              ? 'Analyze Nutrition'
-                                              : 'Describe Food',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Camera or Gallery',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  // --- UI Enhancement ---
+                                  color:
+                                  isDark ? Colors.grey[400] : Colors.grey[700],
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ],
+                    ),
+                  ),
 
-                    // Analysis Result
-                    if (_analysisResult != null) ...[
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: _getCardDecoration(isDark),
-                        padding: const EdgeInsets.all(20),
+                  // Selected Image Display
+                  if (_selectedImage != null) ...[
+                    const SizedBox(height: 24),
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: Container(
+                        decoration: _getCardDecoration(isDark), // Use enhanced card
+                        padding: const EdgeInsets.all(16),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.analytics,
-                                  color: AppColors.primary(isDark),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Analysis Result',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary(isDark),
-                                  ),
-                                ),
-                              ],
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _selectedImage!,
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                             const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? Colors.black.withOpacity(0.3)
-                                    : Colors.white.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppColors.primary(isDark).withOpacity(0.2),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _isAnalyzing ? null : _analyzeImage,
+                                style: ElevatedButton.styleFrom(
+                                  // --- UI Enhancement (High Contrast Button) ---
+                                  backgroundColor:
+                                  isDark ? Colors.white : Colors.black,
+                                  foregroundColor:
+                                  isDark ? Colors.black : Colors.white,
+                                  padding:
+                                  const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
                                 ),
-                              ),
-                              child: Text(
-                                _analysisResult!,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  height: 1.5,
-                                  color: AppColors.textPrimary(isDark),
+                                child: _isAnalyzing
+                                    ? Row(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                        AlwaysStoppedAnimation<Color>(
+                                          // --- UI Enhancement ---
+                                          isDark
+                                              ? Colors.black
+                                              : Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Analyzing...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                                    : Text(
+                                  widget.analysisType == 'scan'
+                                      ? 'Analyze Nutrition'
+                                      : 'Describe Food',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-
-                    const SizedBox(height: 100), // Bottom padding
+                    ),
                   ],
-                ),
+
+                  // Analysis Result
+                  if (_analysisResult != null) ...[
+                    const SizedBox(height: 24),
+                    Container(
+                      decoration: _getCardDecoration(isDark), // Use enhanced card
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.analytics,
+                                // --- UI Enhancement ---
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Analysis Result',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  // --- UI Enhancement ---
+                                  color: isDark ? Colors.white : Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              // --- UI Enhancement ---
+                              // Subtle inset background
+                              color: isDark
+                                  ? Colors.black.withOpacity(0.5)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: (isDark
+                                    ? Colors.grey[700]
+                                    : Colors.grey[300])!,
+                              ),
+                            ),
+                            child: Text(
+                              _analysisResult!,
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.5,
+                                // --- UI Enhancement ---
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 100), // Bottom padding
+                ],
               ),
             ),
           ),

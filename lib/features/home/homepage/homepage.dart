@@ -498,7 +498,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               unseenCount > 99 ? '99+' : unseenCount.toString(),
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: font(0.025),
+                                fontSize: font(0.020),
                                 fontWeight: FontWeight.bold,
                               ),
                               textAlign: TextAlign.center,
@@ -685,6 +685,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 'Scan Nutrition',
                                 style: TextStyle(
                                   color: AppColors.textPrimary(isDark),
+
                                   fontSize: font(0.035),
                                   fontWeight: FontWeight.w600,
                                 ),

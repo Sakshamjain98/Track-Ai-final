@@ -17,6 +17,7 @@ class CompletionPage extends StatefulWidget {
   State<CompletionPage> createState() => _CompletionPageState();
 }
 
+
 class _CompletionPageState extends State<CompletionPage>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
@@ -111,7 +112,7 @@ class _CompletionPageState extends State<CompletionPage>
                     vertical: 24.0,
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(height: screenHeight * 0.1),
                       _buildSuccessIcon(),
@@ -183,7 +184,9 @@ class _CompletionPageState extends State<CompletionPage>
               color: Colors.white,
               letterSpacing: -0.5,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start
+
+            ,
           ),
         ),
         const SizedBox(height: 16),
@@ -195,7 +198,7 @@ class _CompletionPageState extends State<CompletionPage>
             fontWeight: FontWeight.w400,
             height: 1.5,
           ),
-          textAlign: TextAlign.center,
+          textAlign: TextAlign.start,
         ),
       ],
     );
@@ -333,7 +336,7 @@ class _CompletionPageState extends State<CompletionPage>
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: const [
             Text(
               'Start Your Journey',

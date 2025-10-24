@@ -127,11 +127,10 @@ class _HeightWeightPageState extends State<HeightWeightPage>
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 40),
-                              _buildIcon(),
-                              const SizedBox(height: 40),
+
                               _buildTitle(),
                               const SizedBox(height: 24),
                               _buildSubtitle(),
@@ -184,22 +183,6 @@ class _HeightWeightPageState extends State<HeightWeightPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.rulerCombined,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
 
   Widget _buildTitle() {
     return const Text(
@@ -210,7 +193,7 @@ class _HeightWeightPageState extends State<HeightWeightPage>
         color: Colors.black, // ✅ black text
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
 
@@ -218,7 +201,6 @@ class _HeightWeightPageState extends State<HeightWeightPage>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
@@ -229,7 +211,7 @@ class _HeightWeightPageState extends State<HeightWeightPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
       ],

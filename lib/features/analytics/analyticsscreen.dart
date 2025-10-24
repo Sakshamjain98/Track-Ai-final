@@ -3,9 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/features/analytics/analytics_provider.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
-import 'package:trackai/features/analytics/screens/correlation_labs.dart';
 import 'package:trackai/features/analytics/screens/dashboard_summary.dart';
-import 'package:trackai/features/analytics/screens/period_cycle.dart';
 import 'package:trackai/features/analytics/screens/progress_overview.dart';
 
 class AnalyticsScreen extends StatefulWidget {
@@ -16,6 +14,8 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  String _selectedView = 'Dashboard';
+
   @override
   void initState() {
     super.initState();
@@ -28,10 +28,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<AnalyticsProvider, ThemeProvider>(
-      builder: (context, analyticsProvider, themeProvider, child) {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
         final isDark = themeProvider.isDarkMode;
-
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: Container(
@@ -42,9 +41,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(context, analyticsProvider, isDark),
+                  _buildHeader(isDark),
                   Expanded(
-                    child: _buildCurrentPage(context, analyticsProvider),
+                    child: _buildCurrentPage(),
                   ),
                 ],
               ),
@@ -55,49 +54,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+  Widget _buildHeader(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColors.cardLinearGradient(isDark),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.analytics_outlined,
-                color: AppColors.black,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Your Analytics',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(isDark),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildAnalyticsTypeDropdown(context, provider, isDark),
-        ],
-      ),
+      child: _buildDropdown(isDark),
     );
   }
 
-  Widget _buildAnalyticsTypeDropdown(
-    BuildContext context,
-    AnalyticsProvider provider,
-    bool isDark,
-  ) {
+  Widget _buildDropdown(bool isDark) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -118,7 +85,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: provider.selectedAnalyticsType,
+          value: _selectedView,
           isExpanded: true,
           icon: Icon(
             Icons.keyboard_arrow_down,
@@ -130,25 +97,41 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             fontWeight: FontWeight.w500,
           ),
           dropdownColor: AppColors.inputFill(isDark),
-          items: provider.analyticsTypes.map((String type) {
-            return DropdownMenuItem<String>(
-              value: type,
+          items: [
+            DropdownMenuItem<String>(
+              value: 'Dashboard',
               child: Row(
                 children: [
                   Icon(
-                    _getIconForAnalyticsType(type),
+                    Icons.dashboard,
                     color: AppColors.black,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
-                  Text(type),
+                  const Text('Dashboard'),
                 ],
               ),
-            );
-          }).toList(),
+            ),
+            DropdownMenuItem<String>(
+              value: 'Progress Overview',
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.trending_up,
+                    color: AppColors.black,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Progress Overview'),
+                ],
+              ),
+            ),
+          ],
           onChanged: (String? newValue) {
             if (newValue != null) {
-              provider.setSelectedAnalyticsType(newValue);
+              setState(() {
+                _selectedView = newValue;
+              });
             }
           },
         ),
@@ -156,29 +139,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  IconData _getIconForAnalyticsType(String type) {
-    switch (type) {
-      case 'Dashboard & Summary':
-        return Icons.dashboard;
-      case 'Correlation Labs':
-        return Icons.scatter_plot;
-      case 'Progress Overview':
-        return Icons.trending_up;
-
-      default:
-        return Icons.analytics;
-    }
-  }
-
-  Widget _buildCurrentPage(BuildContext context, AnalyticsProvider provider) {
-    switch (provider.selectedAnalyticsType) {
-      case 'Dashboard & Summary':
+  Widget _buildCurrentPage() {
+    switch (_selectedView) {
+      case 'Dashboard':
         return const DashboardSummaryPage();
-      case 'Correlation Labs':
-        return const CorrelationLabsPage();
       case 'Progress Overview':
         return const ProgressOverviewPage();
-
       default:
         return const DashboardSummaryPage();
     }

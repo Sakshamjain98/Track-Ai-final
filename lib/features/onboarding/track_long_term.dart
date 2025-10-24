@@ -18,87 +18,137 @@ class LongTermResultsPage extends StatelessWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(25.0),
             child: Column(
               children: [
+                const SizedBox(height: 16),
+
                 const Text(
-                  'TrackAI creates long-term results',
+                  'TrackAI creates\nlong-term results',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E2E2E),
+                    color: Color(0xFF1A1A1A),
+                    height: 1.2,
                   ),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                 ),
 
-                const SizedBox(height: 10),
+                const SizedBox(height: 38),
+
+                // Graph Card - EXACT Cal AI replica
                 Container(
                   width: double.infinity,
-                  height: 350,
-                  padding: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.darkPrimary.withOpacity(0.1),
-                        spreadRadius: 0,
-                        blurRadius: 30,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: AppColors.darkPrimary.withOpacity(0.1),
-                      width: 1,
-                    ),
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Legend
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildLegendItem(
-                            'Traditional Diet',
-                            Colors.red[400]!,
+                      // Y-axis label
+                      const Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: Text(
+                          'Your weight',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1A1A1A),
                           ),
-                          const SizedBox(width: 32),
-                          _buildLegendItem('TrackAI', AppColors.darkPrimary),
-                        ],
+                        ),
                       ),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
 
-                      Expanded(child: _buildGraph()),
+                      // Graph
+                      SizedBox(
+                        height: 200,
+                        child: CustomPaint(
+                          painter: PerfectCalAIGraphPainter(),
+                          child: Container(),
+                        ),
+                      ),
 
                       const SizedBox(height: 16),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      // X-axis labels
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Month 1',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF999999),
+                              ),
+                            ),
+                            Text(
+                              'Month 6',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF999999),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Legend - Exact Cal AI style
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          _buildAxisLabel('Month 2'),
-                          _buildAxisLabel('Month 4'),
-                          _buildAxisLabel('Month 6'),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(width: 6),
+                                Text(
+                                  'TrackAI',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildLegendItem('Weight', Colors.black),
+                          _buildLegendItem('Traditional diet', const Color(0xFFE85D75)),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 22),
 
                 // Statistics text
-                Text(
-                  '80% of TrackAI users maintain their weight loss\neven 6 months later.',
+                const Text(
+                  '80% of TrackAI users maintain their\nweight loss even 6 months later',
                   style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
+                    fontSize: 14,
+                    color: Color(0xFF666666),
                     height: 1.5,
                   ),
                   textAlign: TextAlign.center,
                 ),
 
-                const SizedBox(height: 80),
+                const SizedBox(height: 60),
 
                 // Navigation buttons
                 Row(
@@ -126,11 +176,10 @@ class LongTermResultsPage extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Container(
-                        width: double.infinity,
                         height: 64,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(32),
-                          color: Colors.black, // ✅ always black background
+                          color: Colors.black,
                         ),
                         child: ElevatedButton(
                           onPressed: onNext,
@@ -145,8 +194,7 @@ class LongTermResultsPage extends StatelessWidget {
                           child: const Text(
                             'Continue',
                             style: TextStyle(
-                              color: Colors
-                                  .white, // ✅ white text on black background
+                              color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -164,197 +212,227 @@ class LongTermResultsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildGraph() {
-    return CustomPaint(painter: GraphPainter(), child: Container());
-  }
-
   Widget _buildLegendItem(String label, Color color) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 16,
-          height: 4,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(2),
+            shape: BoxShape.circle,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 14,
+          style: const TextStyle(
+            fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
+            color: Color(0xFF666666),
           ),
         ),
       ],
     );
   }
-
-  Widget _buildAxisLabel(String label) {
-    return Text(
-      label,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: Colors.grey[600],
-      ),
-    );
-  }
 }
 
-class GraphPainter extends CustomPainter {
+class PerfectCalAIGraphPainter extends CustomPainter {
+  @override
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw grid lines
-    final gridPaint = Paint()
-      ..color = Colors.grey[200]!
-      ..strokeWidth = 1;
+    // Draw horizontal dashed grid lines
+    final dashedLinePaint = Paint()
+      ..color = const Color(0xFFDDDDDD)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
 
-    // Horizontal grid lines
-    for (int i = 1; i < 5; i++) {
-      final y = size.height * i / 5;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
+    // Top dashed line
+    _drawDashedLine(
+      canvas,
+      Offset(0, size.height * 0.3),
+      Offset(size.width, size.height * 0.3),
+      dashedLinePaint,
+    );
 
-    // Vertical grid lines
-    for (int i = 1; i < 4; i++) {
-      final x = size.width * i / 3;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
+    // Bottom dashed line
+    _drawDashedLine(
+      canvas,
+      Offset(0, size.height * 0.65),
+      Offset(size.width, size.height * 0.65),
+      dashedLinePaint,
+    );
 
+    // Paint setup
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
 
-    // Traditional Diet line (red, showing weight regain)
-    paint.color = Colors.red[400]!;
-    final traditionalPath = Path();
-    traditionalPath.moveTo(
-      0,
-      size.height * 0.65,
-    ); // Start lower (initial weight loss)
-    traditionalPath.cubicTo(
+    // DRAW GRADIENT FILLS FIRST (behind the lines)
+
+    // Black gradient fill
+    final blackGradient = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.black.withOpacity(0.08),
+          Colors.black.withOpacity(0.01),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final blackFillPath = Path();
+    blackFillPath.moveTo(0, size.height);
+    blackFillPath.lineTo(0, size.height * 0.25);
+    blackFillPath.cubicTo(
       size.width * 0.2,
+      size.height * 0.28,
+      size.width * 0.3,
+      size.height * 0.38,
+      size.width * 0.45,
       size.height * 0.5,
-      size.width * 0.4,
-      size.height * 0.45,
-      size.width * 0.5,
-      size.height * 0.35,
     );
-    traditionalPath.cubicTo(
+    blackFillPath.cubicTo(
       size.width * 0.6,
-      size.height * 0.25,
+      size.height * 0.62,
       size.width * 0.8,
-      size.height * 0.15,
+      size.height * 0.7,
       size.width,
-      size.height * 0.1, // End higher (weight regained)
+      size.height * 0.75,
     );
-    canvas.drawPath(traditionalPath, paint);
+    blackFillPath.lineTo(size.width, size.height);
+    blackFillPath.close();
+    canvas.drawPath(blackFillPath, blackGradient);
 
-    // Add dots for traditional diet
+    // Pink gradient fill
+    final pinkGradient = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFFE85D75).withOpacity(0.15),
+          const Color(0xFFE85D75).withOpacity(0.02),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final pinkFillPath = Path();
+    pinkFillPath.moveTo(0, size.height);
+    pinkFillPath.lineTo(0, size.height * 0.25);
+    pinkFillPath.cubicTo(
+      size.width * 0.15,
+      size.height * 0.27,
+      size.width * 0.25,
+      size.height * 0.35,
+      size.width * 0.35,
+      size.height * 0.48,
+    );
+    pinkFillPath.cubicTo(
+      size.width * 0.45,
+      size.height * 0.6,
+      size.width * 0.52,
+      size.height * 0.58,
+      size.width * 0.6,
+      size.height * 0.45,
+    );
+    pinkFillPath.cubicTo(
+      size.width * 0.7,
+      size.height * 0.32,
+      size.width * 0.85,
+      size.height * 0.18,
+      size.width,
+      size.height * 0.12,
+    );
+    pinkFillPath.lineTo(size.width, size.height);
+    pinkFillPath.close();
+    canvas.drawPath(pinkFillPath, pinkGradient);
+
+    // NOW DRAW THE LINES ON TOP
+
+    // BLACK LINE (Weight) - GOES DOWN (weight loss maintained)
+    paint.color = Colors.black;
+    final blackPath = Path();
+    blackPath.moveTo(0, size.height * 0.25);
+    blackPath.cubicTo(
+      size.width * 0.2,
+      size.height * 0.28,
+      size.width * 0.3,
+      size.height * 0.38,
+      size.width * 0.45,
+      size.height * 0.5,
+    );
+    blackPath.cubicTo(
+      size.width * 0.6,
+      size.height * 0.62,
+      size.width * 0.8,
+      size.height * 0.7,
+      size.width,
+      size.height * 0.75,
+    );
+    canvas.drawPath(blackPath, paint);
+
+    // Add dots for black line
     paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(0, size.height * 0.65), 6, paint);
-    canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.35), 6, paint);
-    canvas.drawCircle(Offset(size.width, size.height * 0.1), 6, paint);
+    canvas.drawCircle(Offset(0, size.height * 0.25), 6, paint);
+    canvas.drawCircle(Offset(size.width, size.height * 0.75), 6, paint);
 
-    // TrackAI line (teal, showing maintained weight loss)
-    paint.color = AppColors.darkPrimary;
+    // PINK LINE (Traditional diet) - GOES UP (weight regain)
+    paint.color = const Color(0xFFE85D75);
     paint.style = PaintingStyle.stroke;
-    final trackaiPath = Path();
-    trackaiPath.moveTo(0, size.height * 0.65); // Start at same point
-    trackaiPath.cubicTo(
-      size.width * 0.2,
-      size.height * 0.62,
-      size.width * 0.4,
-      size.height * 0.68,
-      size.width * 0.5,
-      size.height * 0.7,
-    );
-    trackaiPath.cubicTo(
-      size.width * 0.6,
-      size.height * 0.72,
-      size.width * 0.8,
-      size.height * 0.75,
-      size.width,
-      size.height * 0.73, // End lower (weight maintained)
-    );
-    canvas.drawPath(trackaiPath, paint);
-
-    // Add dots for TrackAI
-    paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(0, size.height * 0.65), 6, paint);
-    canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.7), 6, paint);
-    canvas.drawCircle(Offset(size.width, size.height * 0.73), 6, paint);
-
-    // Add gradient fill areas for better visual appeal
-    final traditionalGradient = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.red[100]!.withOpacity(0.3),
-          Colors.red[50]!.withOpacity(0.1),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final traditionalFillPath = Path();
-    traditionalFillPath.moveTo(0, size.height);
-    traditionalFillPath.lineTo(0, size.height * 0.65);
-    traditionalFillPath.cubicTo(
-      size.width * 0.2,
-      size.height * 0.5,
-      size.width * 0.4,
-      size.height * 0.45,
-      size.width * 0.5,
+    final pinkPath = Path();
+    pinkPath.moveTo(0, size.height * 0.25);
+    pinkPath.cubicTo(
+      size.width * 0.15,
+      size.height * 0.27,
+      size.width * 0.25,
       size.height * 0.35,
+      size.width * 0.35,
+      size.height * 0.48,
     );
-    traditionalFillPath.cubicTo(
+    pinkPath.cubicTo(
+      size.width * 0.45,
+      size.height * 0.6,
+      size.width * 0.52,
+      size.height * 0.58,
       size.width * 0.6,
-      size.height * 0.25,
-      size.width * 0.8,
-      size.height * 0.15,
+      size.height * 0.45,
+    );
+    pinkPath.cubicTo(
+      size.width * 0.7,
+      size.height * 0.32,
+      size.width * 0.85,
+      size.height * 0.18,
       size.width,
-      size.height * 0.1,
+      size.height * 0.12,
     );
-    traditionalFillPath.lineTo(size.width, size.height);
-    traditionalFillPath.close();
-    canvas.drawPath(traditionalFillPath, traditionalGradient);
+    canvas.drawPath(pinkPath, paint);
 
-    final trackaiGradient = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          AppColors.darkPrimary.withOpacity(0.2),
-          AppColors.darkPrimary.withOpacity(0.05),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    // Add dots for pink line
+    paint.style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(0, size.height * 0.25), 6, paint);
+    canvas.drawCircle(Offset(size.width, size.height * 0.12), 6, paint);
+  }
 
-    final trackaiFillPath = Path();
-    trackaiFillPath.moveTo(0, size.height);
-    trackaiFillPath.lineTo(0, size.height * 0.65);
-    trackaiFillPath.cubicTo(
-      size.width * 0.2,
-      size.height * 0.62,
-      size.width * 0.4,
-      size.height * 0.68,
-      size.width * 0.5,
-      size.height * 0.7,
-    );
-    trackaiFillPath.cubicTo(
-      size.width * 0.6,
-      size.height * 0.72,
-      size.width * 0.8,
-      size.height * 0.75,
-      size.width,
-      size.height * 0.73,
-    );
-    trackaiFillPath.lineTo(size.width, size.height);
-    trackaiFillPath.close();
-    canvas.drawPath(trackaiFillPath, trackaiGradient);
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const dashWidth = 6.0;
+    const dashSpace = 4.0;
+
+    double currentX = start.dx;
+    bool drawing = true;
+
+    while (currentX < end.dx) {
+      final nextX = currentX + (drawing ? dashWidth : dashSpace);
+      if (drawing) {
+        canvas.drawLine(
+          Offset(currentX, start.dy),
+          Offset(nextX.clamp(start.dx, end.dx), start.dy),
+          paint,
+        );
+      }
+      currentX = nextX;
+      drawing = !drawing;
+    }
   }
 
   @override

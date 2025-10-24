@@ -149,32 +149,32 @@ class _SettingsScreenState extends State<Settingsscreen> {
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(
-                color: AppColors.textPrimary(isDarkTheme),
-              ),
-            )
+        child: CircularProgressIndicator(
+          color: AppColors.textPrimary(isDarkTheme),
+        ),
+      )
           : SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.04,
-                vertical: screenHeight * 0.02,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: screenHeight * 0.02),
-                  _buildProfileSummaryCard(isDarkTheme),
-                  SizedBox(height: screenHeight * 0.02),
-                  _buildCustomizationCard(isDarkTheme),
-                  SizedBox(height: screenHeight * 0.02),
-                  _buildPreferencesCard(isDarkTheme, themeProvider),
-                  SizedBox(height: screenHeight * 0.02),
-                  _buildSupportLegalCard(isDarkTheme),
-                  SizedBox(height: screenHeight * 0.02),
-                  _buildAccountCard(isDarkTheme),
-                  SizedBox(height: screenHeight * 0.1),
-                ],
-              ),
-            ),
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.04,
+          vertical: screenHeight * 0.02,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: screenHeight * 0.02),
+            _buildProfileSummaryCard(isDarkTheme),
+            SizedBox(height: screenHeight * 0.02),
+            _buildCustomizationCard(isDarkTheme),
+            SizedBox(height: screenHeight * 0.02),
+            _buildPreferencesCard(isDarkTheme, themeProvider),
+            SizedBox(height: screenHeight * 0.02),
+            _buildSupportLegalCard(isDarkTheme),
+            SizedBox(height: screenHeight * 0.02),
+            _buildAccountCard(isDarkTheme),
+            SizedBox(height: screenHeight * 0.1),
+          ],
+        ),
+      ),
     );
   }
 
@@ -186,9 +186,17 @@ class _SettingsScreenState extends State<Settingsscreen> {
     final height = isMetric
         ? '${_onboardingData?['heightCm'] ?? 0} cm'
         : '${_onboardingData?['heightFeet'] ?? 0} ft ${_onboardingData?['heightInches'] ?? 0} in';
+
+    // --- FIX HERE: Format weight to 2 decimal places ---
+    final double weightKg =
+        (_onboardingData?['weightKg'] as num?)?.toDouble() ?? 0.0;
+    final double weightLbs =
+        (_onboardingData?['weightLbs'] as num?)?.toDouble() ?? 0.0;
+
     final weight = isMetric
-        ? '${_onboardingData?['weightKg'] ?? 0} kg'
-        : '${_onboardingData?['weightLbs'] ?? 0} lbs';
+        ? '${weightKg.toStringAsFixed(2)} kg'
+        : '${weightLbs.toStringAsFixed(2)} lbs';
+    // --- END FIX ---
 
     return Container(
       width: double.infinity,
@@ -245,11 +253,11 @@ class _SettingsScreenState extends State<Settingsscreen> {
   }
 
   Widget _buildProfileRowWithUnit(
-    String label,
-    String value,
-    bool isMetric,
-    bool isDarkTheme,
-  ) {
+      String label,
+      String value,
+      bool isMetric,
+      bool isDarkTheme,
+      ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -263,7 +271,7 @@ class _SettingsScreenState extends State<Settingsscreen> {
         Row(
           children: [
             Text(
-              value.split(' ')[0],
+              value.split(' ')[0], // This will now be the formatted string e.g., "70.50"
               style: TextStyle(
                 color: AppColors.textPrimary(isDarkTheme),
                 fontSize: 16,
@@ -278,7 +286,7 @@ class _SettingsScreenState extends State<Settingsscreen> {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                value.split(' ')[1],
+                value.split(' ')[1], // This will be "kg" or "lbs"
                 style: TextStyle(
                   color: AppColors.textPrimary(isDarkTheme),
                   fontSize: 12,
@@ -558,7 +566,6 @@ class _SettingsScreenState extends State<Settingsscreen> {
     );
   }
 
-
   Widget _buildSettingsItem({
     required IconData icon,
     required String title,
@@ -712,9 +719,15 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       _heightFeetController.text = (data['heightFeet'] ?? 0).toString();
       _heightInchesController.text = (data['heightInches'] ?? 0).toString();
       _heightCmController.text = (data['heightCm'] ?? 0).toString();
-      _weightLbsController.text = (data['weightLbs'] ?? 0.0).toString();
-      _weightKgController.text = (data['weightKg'] ?? 0.0).toString();
-      _goalWeightController.text = (data['desiredWeight'] ?? 0.0).toString();
+
+      // --- FIX HERE: Format weight controllers to 2 decimal places ---
+      _weightLbsController.text =
+          ((data['weightLbs'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+      _weightKgController.text =
+          ((data['weightKg'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+      _goalWeightController.text =
+          ((data['desiredWeight'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+      // --- END FIX ---
     }
   }
 
@@ -809,21 +822,21 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
               onPressed: _isLoading ? null : _saveChanges,
               child: _isLoading
                   ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.textPrimary(isDarkTheme),
-                      ),
-                    )
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.textPrimary(isDarkTheme),
+                ),
+              )
                   : Text(
-                      'Save',
-                      style: TextStyle(
-                        color: AppColors.textPrimary(isDarkTheme),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                'Save',
+                style: TextStyle(
+                  color: AppColors.textPrimary(isDarkTheme),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],

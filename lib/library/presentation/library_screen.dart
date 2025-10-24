@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:trackai/core/constants/appcolors.dart';
+import 'package:trackai/core/constants/appcolors.dart'; // Assuming AppColors handles basic black/white based on theme
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/recipes/presentation/recipe_library_screen.dart';
-import '../../features/analytics/screens/period_cycle.dart';
+import '../../features/analytics/screens/WhLib/period_cycle.dart';
 import '../../features/recipes/presentation/ReadMeWhenFreeScreen.dart';
 
 
@@ -14,12 +14,22 @@ class LibraryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        final isDarkTheme = themeProvider.isDarkMode;
+        // Use simple black/white based on theme
+        final bool isDarkTheme = themeProvider.isDarkMode;
+        final Color backgroundColor = isDarkTheme ? Colors.black : Colors.white;
+        final Color primaryTextColor = isDarkTheme ? Colors.white : Colors.black;
+        final Color secondaryTextColor = isDarkTheme ? Colors.grey[400]! : Colors.grey[600]!;
+        final Color cardBackgroundColor = isDarkTheme ? Colors.grey[900]! : Colors.grey[100]!;
+        final Color borderColor = isDarkTheme ? Colors.grey[700]! : Colors.grey[300]!;
+        final Color iconContainerColor = isDarkTheme ? Colors.grey[800]! : Colors.grey[200]!;
+        final Color iconColor = isDarkTheme ? Colors.white70 : Colors.black87;
+
+
         final screenWidth = MediaQuery.of(context).size.width;
         final screenHeight = MediaQuery.of(context).size.height;
 
         return Scaffold(
-          backgroundColor: AppColors.background(isDarkTheme),
+          backgroundColor: backgroundColor,
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -32,23 +42,16 @@ class LibraryScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.teal.withOpacity(0.15),
-                              Colors.blue.withOpacity(0.1),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: iconContainerColor, // Simple background
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.teal.withOpacity(0.2),
+                            color: borderColor,
                             width: 1,
                           ),
                         ),
                         child: Icon(
                           Icons.library_books,
-                          color: Colors.teal,
+                          color: primaryTextColor, // Black/White icon
                           size: 28,
                         ),
                       ),
@@ -60,21 +63,13 @@ class LibraryScreen extends StatelessWidget {
                             Text(
                               'Library',
                               style: TextStyle(
-                                color: AppColors.textPrimary(isDarkTheme),
+                                color: primaryTextColor,
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: -0.5,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Your personal collection of wellness tools and content.',
-                              style: TextStyle(
-                                color: AppColors.textSecondary(isDarkTheme),
-                                fontSize: 16,
-                                height: 1.4,
-                              ),
-                            ),
+                            // REMOVED: "Your personal collection..." text
                           ],
                         ),
                       ),
@@ -85,6 +80,7 @@ class LibraryScreen extends StatelessWidget {
 
                   // First Row - Recipe Library & Workouts Library
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align tops
                     children: [
                       Expanded(
                         child: _buildLibraryCard(
@@ -92,9 +88,13 @@ class LibraryScreen extends StatelessWidget {
                           'Recipe Library',
                           'Browse delicious cooking guides and recipes.',
                           Icons.restaurant_menu_outlined,
-                          Colors.orange,
+                          primaryTextColor, // Use primary text color for icon
                           isDarkTheme,
-                          screenWidth,
+                          cardBackgroundColor,
+                          borderColor,
+                          primaryTextColor,
+                          secondaryTextColor,
+                          iconContainerColor,
                           onTap: () {
                             Navigator.push(
                               context,
@@ -110,12 +110,16 @@ class LibraryScreen extends StatelessWidget {
                         child: _buildLibraryCard(
                           context,
                           'Workouts Library',
-                          'Access workout guide videos. Coming soon!',
+                          'Access workout guide videos.',
                           Icons.fitness_center_outlined,
-                          Colors.blue,
+                          primaryTextColor, // Use primary text color for icon
                           isDarkTheme,
-                          screenWidth,
-                          onTap: () => _showComingSoon(context),
+                          cardBackgroundColor,
+                          borderColor,
+                          primaryTextColor,
+                          secondaryTextColor,
+                          iconContainerColor,
+                          onTap: () => _showComingSoon(context, isDarkTheme),
                         ),
                       ),
                     ],
@@ -123,149 +127,33 @@ class LibraryScreen extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-                  // Second Row - Period Cycle Tracker & Saved Items
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildLibraryCard(
-                          context,
-                          'Period Cycle',
-                          'Track your menstrual cycle and health insights.',
-                          Icons.favorite_outline,
-                          Colors.pink,
-                          isDarkTheme,
-                          screenWidth,
-                          isNew: true, // Add "New" badge
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const PeriodCycleScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Third Row - Read Me When Free (Full Width)
+                  // MODIFIED: Second Row is now just the full-width Period Cycle card
                   _buildLibraryCard(
                     context,
-                    'Read Me When Free',
-                    'Ancient wisdom and inspiring thoughts for reflection.',
-                    Icons.auto_stories,
-                    Colors.deepPurple,
+                    'Period Cycle',
+                    'Track your menstrual cycle and health insights.',
+                    Icons.favorite_outline,
+                    primaryTextColor, // This is the default icon color
                     isDarkTheme,
-                    screenWidth,
+                    cardBackgroundColor,
+                    borderColor,
+                    primaryTextColor,
+                    secondaryTextColor,
+                    iconContainerColor,
+                    isNew: true, // This will now trigger the NEW pink styling
                     isFullWidth: true,
-                    isBeta: true,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const ReadMeWhenFreeScreen(),
+                          builder: (context) => const PeriodDashboard(),
                         ),
                       );
                     },
                   ),
 
-                  const SizedBox(height: 16),
+                  // REMOVED: "Read Me When Free" Card
 
-                  // Fourth Row - Health Library (Full Width)
-                  _buildLibraryCard(
-                    context,
-                    'Health & Wellness Hub',
-                    'Comprehensive women\'s health resources and guides.',
-                    Icons.health_and_safety_outlined,
-                    Colors.teal,
-                    isDarkTheme,
-                    screenWidth,
-                    isFullWidth: true,
-                    onTap: () => _showComingSoon(context),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Coming Soon Section
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(28),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.cardBackground(isDarkTheme),
-                          AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: AppColors.textSecondary(isDarkTheme).withOpacity(0.1),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.amber.withOpacity(0.15),
-                                Colors.orange.withOpacity(0.1),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.amber.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.auto_awesome,
-                            color: Colors.amber[700],
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'More Features Coming Soon!',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(isDarkTheme),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.3,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'We\'re working hard to bring you more personalized content, guided workouts, and wellness resources. Stay tuned!',
-                          style: TextStyle(
-                            color: AppColors.textSecondary(isDarkTheme),
-                            fontSize: 16,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -275,54 +163,114 @@ class LibraryScreen extends StatelessWidget {
     );
   }
 
+  // --- WIDGET MODIFIED ---
+  // This function now includes the 'isNew' styling from your first file
   Widget _buildLibraryCard(
       BuildContext context,
       String title,
       String description,
       IconData icon,
-      Color iconColor,
+      Color iconColor, // Pass the decided icon color (black/white)
       bool isDarkTheme,
-      double screenWidth, {
+      Color cardBackgroundColor,
+      Color borderColor,
+      Color primaryTextColor,
+      Color secondaryTextColor,
+      Color iconContainerColor,
+      {
         bool isFullWidth = false,
         bool isBeta = false,
         bool isNew = false,
         required VoidCallback onTap,
       }) {
+
+    // Define badge colors based on theme
+    final Color badgeBgColor = isDarkTheme ? Colors.white : Colors.black;
+    final Color badgeTextColor = isDarkTheme ? Colors.black : Colors.white;
+    final Color betaBadgeBgColor = isDarkTheme ? Colors.grey[800]! : Colors.grey[300]!;
+    final Color betaBadgeTextColor = isDarkTheme ? Colors.grey[400]! : Colors.grey[700]!;
+
+    // The "New" border color is now pink
+    final Color newBorderColor = isDarkTheme ? Colors.pinkAccent[100]! : Colors.pinkAccent;
+
+
+    // --- NEW LOGIC from your first file ---
+    // Define final colors/decorations based on 'isNew'
+    final Color finalIconColor;
+    final Decoration finalIconContainerDecoration;
+    final Decoration finalNewBadgeDecoration;
+
+    if (isNew) {
+      finalIconColor = Colors.white; // Icon is white on pink bg
+      finalIconContainerDecoration = BoxDecoration(
+        gradient: LinearGradient( // Pink gradient bg for icon
+          colors: [Colors.pink, Colors.pink.shade400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.pink.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.pink.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
+      finalNewBadgeDecoration = BoxDecoration( // Pink gradient bg for badge
+        gradient: LinearGradient(colors: [Colors.pink, Colors.pink.shade400]),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.pink.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+    } else {
+      finalIconColor = iconColor; // Use the passed (black/white) color
+      finalIconContainerDecoration = BoxDecoration(
+        color: iconContainerColor, // Use the passed (grey) color
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
+      );
+      finalNewBadgeDecoration = BoxDecoration(
+        color: badgeBgColor, // Black/White badge
+        borderRadius: BorderRadius.circular(12),
+      );
+    }
+    // --- END NEW LOGIC ---
+
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: isFullWidth ? double.infinity : null,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.cardBackground(isDarkTheme),
-              AppColors.cardBackground(isDarkTheme).withOpacity(0.8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: cardBackgroundColor, // Simple background
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isNew
-                ? Colors.pink.withOpacity(0.3)
-                : AppColors.textSecondary(isDarkTheme).withOpacity(0.1),
-            width: isNew ? 2 : 1,
+            // Will use newBorderColor (pink) if isNew is true
+            color: isNew ? newBorderColor : borderColor,
+            width: isNew ? 1.5 : 1, // Slightly thicker border if new
           ),
+          // Simplified shadow + new pink shadow
           boxShadow: [
             BoxShadow(
-              color: AppColors.black.withOpacity(0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-            BoxShadow(
-              color: isDarkTheme
-                  ? Colors.white.withOpacity(0.02)
-                  : Colors.white.withOpacity(0.7),
+              color: Colors.black.withOpacity(isDarkTheme ? 0.2 : 0.08),
               blurRadius: 10,
-              offset: const Offset(-3, -3),
+              offset: const Offset(0, 4),
             ),
-            if (isNew)
+            if (isNew) // Add pink glow from your first file
               BoxShadow(
                 color: Colors.pink.withOpacity(0.2),
                 blurRadius: 10,
@@ -335,32 +283,14 @@ class LibraryScreen extends StatelessWidget {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: isNew
-                        ? LinearGradient(colors: [iconColor, iconColor.withOpacity(0.7)])
-                        : null,
-                    color: !isNew ? iconColor.withOpacity(0.1) : null,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: iconColor.withOpacity(0.2),
-                      width: 1,
-                    ),
-                    boxShadow: isNew
-                        ? [
-                      BoxShadow(
-                        color: iconColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                        : null,
-                  ),
+                  decoration: finalIconContainerDecoration, // <-- USE NEW DECORATION
                   child: Icon(
                     icon,
-                    color: isNew ? Colors.white : iconColor,
+                    color: finalIconColor, // <-- USE NEW COLOR
                     size: 24,
                   ),
                 ),
@@ -373,21 +303,11 @@ class LibraryScreen extends StatelessWidget {
                           horizontal: 8,
                           vertical: 4,
                         ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [Colors.pink, Colors.pink.shade400]),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.pink.withOpacity(0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
+                        decoration: finalNewBadgeDecoration, // <-- USE NEW DECORATION
                         child: Text(
                           'New',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors.white, // <-- Text on pink is white
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -401,17 +321,17 @@ class LibraryScreen extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: betaBadgeBgColor, // Greyish beta badge
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.3),
+                            color: borderColor,
                             width: 1,
                           ),
                         ),
                         child: Text(
                           'Beta',
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: betaBadgeTextColor,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -426,7 +346,7 @@ class LibraryScreen extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: AppColors.textPrimary(isDarkTheme),
+                color: primaryTextColor,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.3,
@@ -436,7 +356,7 @@ class LibraryScreen extends StatelessWidget {
             Text(
               description,
               style: TextStyle(
-                color: AppColors.textSecondary(isDarkTheme),
+                color: secondaryTextColor,
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -447,31 +367,38 @@ class LibraryScreen extends StatelessWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context) {
+  void _showComingSoon(BuildContext context, bool isDarkTheme) {
+    final Color snackBarBg = isDarkTheme ? Colors.grey[800]! : Colors.grey[900]!;
+    final Color snackBarText = Colors.white;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
-              Icons.auto_awesome,
-              color: Colors.amber,
+              Icons.info_outline, // Changed icon
+              color: snackBarText.withOpacity(0.8),
               size: 20,
             ),
             const SizedBox(width: 12),
-            Text(
-              'Coming soon! Stay tuned for updates.',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+            Expanded( // Ensure text wraps
+              child: Text(
+                'Coming soon! Stay tuned for updates.',
+                style: TextStyle(
+                  color: snackBarText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
         ),
-        backgroundColor: Colors.grey[800],
+        backgroundColor: snackBarBg,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        margin: const EdgeInsets.all(16), // Add margin
         duration: const Duration(seconds: 2),
       ),
     );

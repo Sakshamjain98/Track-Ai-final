@@ -141,8 +141,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
 
       if (goal == 'lose_weight' || goal == 'gain_weight') {
         // For weight loss/gain goals - 15 pages total (added 2 new pages)
-        _totalPages = 14
-        ;
+        _totalPages = 14;
 
         // Rebuild the entire pages list with target pages inserted after goal selection
         _pages = [
@@ -267,17 +266,36 @@ class _OnboardingFlowState extends State<OnboardingFlow>
     });
   }
 
+  //
+  // --- BUG FIX 1: CORRECTLY SAVE METRIC/IMPERIAL DATA ---
+  //
   void _updateHeightWeightData(Map<String, dynamic> data) {
     print('Height/Weight data received: $data');
     setState(() {
-      // Update the OnboardingData object with the new height/weight data
-      onboardingData.heightFeet =
-          data['heightFeet'] ?? onboardingData.heightFeet;
-      onboardingData.heightInches =
-          data['heightInches'] ?? onboardingData.heightInches;
-      onboardingData.weightLbs = (data['weightLbs'] ?? onboardingData.weightLbs)
-          .toDouble();
-      onboardingData.isMetric = data['isMetric'] ?? onboardingData.isMetric;
+      bool isMetric = data['isMetric'] ?? onboardingData.isMetric;
+      onboardingData.isMetric = isMetric;
+
+      if (isMetric) {
+        // User entered Metric (cm/kg)
+        // Your OnboardingData class uses imperial (lbs/ft/in) as the
+        // source of truth, so we MUST convert and save to those properties.
+        double cm = data['heightCm']?.toDouble() ?? onboardingData.heightCm;
+        double kg = data['weightKg']?.toDouble() ?? onboardingData.weightKg;
+
+        double totalInches = cm / 2.54;
+        onboardingData.heightFeet = (totalInches / 12).floor();
+        onboardingData.heightInches = (totalInches % 12).round();
+        onboardingData.weightLbs = kg * 2.20462;
+      } else {
+        // User entered Imperial (ft/in/lbs)
+        // This logic was already correct.
+        onboardingData.heightFeet =
+            data['heightFeet'] ?? onboardingData.heightFeet;
+        onboardingData.heightInches =
+            data['heightInches'] ?? onboardingData.heightInches;
+        onboardingData.weightLbs =
+            (data['weightLbs'] ?? onboardingData.weightLbs).toDouble();
+      }
 
       // Update the BMI page with new data - calculate correct index
       int bmiPageIndex;
@@ -295,9 +313,13 @@ class _OnboardingFlowState extends State<OnboardingFlow>
     print('Updated onboarding data: ${onboardingData.toMap()}');
   }
 
+  //
+  // --- BUG FIX 2: USE THE CORRECT KEY FROM SETYOURTARGETPAGE ---
+  //
   void _updateTargetData(Map<String, dynamic> data) {
     setState(() {
-      onboardingData.targetAmount = data['targetAmount'];
+      // The key from SetYourTargetPage is 'targetAmountKg', not 'targetAmount'.
+      onboardingData.targetAmount = data['targetAmountKg']; // <-- FIXED
       onboardingData.targetUnit = data['targetUnit'];
       onboardingData.targetTimeframe = data['targetTimeframe'];
 
@@ -306,7 +328,8 @@ class _OnboardingFlowState extends State<OnboardingFlow>
         _pages[5] = TargetAnalysisPage(
           onNext: _nextPage,
           onBack: _previousPage,
-          targetAmount: onboardingData.targetAmount ?? 0.0,
+          // We pass the *original* amount/unit for display
+          targetAmount: data['targetAmount'] ?? data['targetAmountKg'] ?? 0.0,
           targetUnit: onboardingData.targetUnit ?? 'kg',
           targetTimeframe: onboardingData.targetTimeframe ?? 0,
           goal: onboardingData.goal,
@@ -360,7 +383,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const HomePage()),
-            (route) => false,
+                (route) => false,
           );
         }
       }
@@ -480,7 +503,8 @@ class _OnboardingFlowState extends State<OnboardingFlow>
         LinearProgressIndicator(
           value: (_currentPageIndex + 1) / _totalPages,
           backgroundColor: const Color(0xFFE5E7EB),
-          valueColor: const AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 0, 0, 0)),
+          valueColor:
+          const AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 0, 0, 0)),
           borderRadius: BorderRadius.circular(4),
           minHeight: 6,
         ),

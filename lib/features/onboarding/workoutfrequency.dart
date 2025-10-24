@@ -107,10 +107,11 @@ class _WorkoutFrequencyPageState extends State<WorkoutFrequencyPage>
                       Expanded(
                         child: SingleChildScrollView(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            // --- CHANGE 1: ADD THIS LINE FOR LEFT ALIGNMENT ---
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            // --------------------------------------------------
                             children: [
-                              const SizedBox(height: 40),
-                              _buildIcon(),
                               const SizedBox(height: 40),
                               _buildTitle(),
                               const SizedBox(height: 24),
@@ -162,41 +163,27 @@ class _WorkoutFrequencyPageState extends State<WorkoutFrequencyPage>
     );
   }
 
-  Widget _buildIcon() {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: AppColors.primary(true).withOpacity(0.1),
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary(true), width: 0.5),
-      ),
-      child: Icon(
-        FontAwesomeIcons.heartPulse,
-        color: AppColors.primary(true),
-        size: 28,
-      ),
-    );
-  }
-
   Widget _buildTitle() {
     return const Text(
-      'Describe your activity level',
+      // --- CHANGE 2: UPDATE THE TITLE TEXT HERE ---
+      'Describe your goal',
+      // ---------------------------------------------
       style: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: Colors.black87,
+        height: 1.2,
         letterSpacing: -0.5,
       ),
-      textAlign: TextAlign.center,
+      textAlign: TextAlign.start,
     );
   }
 
   Widget _buildSubtitle() {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize
+          .min, // This is fine now because the parent Column aligns it left
       children: [
-        Icon(Icons.info_outline, color: AppColors.primary(true), size: 16),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
@@ -207,13 +194,12 @@ class _WorkoutFrequencyPageState extends State<WorkoutFrequencyPage>
               fontWeight: FontWeight.w400,
               height: 1.4,
             ),
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.start,
           ),
         ),
       ],
     );
   }
-
 
   Widget _buildFrequencyOptions() {
     return Column(
@@ -234,12 +220,12 @@ class _WorkoutFrequencyPageState extends State<WorkoutFrequencyPage>
   }
 
   Widget _buildFrequencyCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    String value,
-    bool isSelected,
-  ) {
+      String title,
+      String subtitle,
+      IconData icon,
+      String value,
+      bool isSelected,
+      ) {
     return GestureDetector(
       onTap: () => _selectFrequency(value),
       child: AnimatedContainer(
