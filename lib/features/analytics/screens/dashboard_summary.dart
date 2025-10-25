@@ -995,7 +995,10 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // --- FIX START ---
                 Expanded(
+                  flex: 3, // Gave more space to the dropdown
+                  // --- FIX END ---
                   child: _buildDropdownField(
                     label: 'Height Unit',
                     value: provider.heightUnit,
@@ -1009,8 +1012,11 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                     },
                   ),
                 ),
-                const SizedBox(width: 5), // MODIFIED: Reduced gap
+                // --- FIX START ---
+                const SizedBox(width: 8), // Standardized gap
                 Expanded(
+                  flex: 2, // Gave less space to the text field
+                  // --- FIX END ---
                   child: provider.heightUnit == 'Centimeters (cm)'
                       ? _buildTextFormField(
                     label: "Your Height (cm)",
@@ -1043,7 +1049,10 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // --- FIX START ---
                 Expanded(
+                  flex: 3, // Gave more space to the dropdown
+                  // --- FIX END ---
                   child: _buildDropdownField(
                     label: 'Weight Unit',
                     value: provider.weightUnit,
@@ -1057,8 +1066,11 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
                     },
                   ),
                 ),
-                const SizedBox(width: 10), // MODIFIED: Reduced gap
+                // --- FIX START ---
+                const SizedBox(width: 8), // Standardized gap
                 Expanded(
+                  flex: 2, // Gave less space to the text field
+                  // --- FIX END ---
                   child: _buildTextFormField(
                     label: "Your Weight (${provider.weightUnit == 'Kilograms (kg)' ? 'kg' : 'lbs'})",
                     controller: provider.weightController,

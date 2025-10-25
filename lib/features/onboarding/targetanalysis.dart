@@ -93,6 +93,17 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
     }
   }
 
+  // --- ADDED START ---
+  /// Helper function to build the goal summary text
+  String _buildGoalSummaryText() {
+    String action = widget.goal == 'gain_weight' ? 'Gaining' : 'Losing';
+    String timeframe = widget.targetTimeframe > 1 ? 'weeks' : 'week';
+    // Format to 0 decimal places for clean display
+    String amount = widget.targetAmount.toStringAsFixed(0);
+    return '$action $amount ${widget.targetUnit} in ${widget.targetTimeframe} $timeframe';
+  }
+  // --- ADDED END ---
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,6 +116,8 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 40),
 
@@ -124,7 +137,20 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                         textAlign: TextAlign.start,
                       ),
 
-                      const SizedBox(height: 40),
+                      // --- ADDED START ---
+                      // This is the "number text" you requested above the box
+                      const SizedBox(height: 16),
+                      Text(
+                        _buildGoalSummaryText(),
+                        style: TextStyle(
+                          fontSize: 22, // Slightly smaller than title
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black.withOpacity(0.6), // Muted color
+                        ),
+                      ),
+                      const SizedBox(height: 24), // Replaced the original 40
+                      // --- ADDED END ---
+
 
                       // Analysis Card
                       Container(
@@ -137,73 +163,73 @@ class _TargetAnalysisPageState extends State<TargetAnalysisPage> {
                         ),
                         child: _isLoading
                             ? Column(
-                                children: [
-                                  CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppColors.primary(true),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Generating your personalized analysis...',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  Text(
-                                    _analysisText,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-
-                                  const SizedBox(height: 20),
-
-                                  Text(
-                                    _recommendationText,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      height: 1.5,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-
-                                  if (_errorOccurred)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 16),
-                                      child: ElevatedButton(
-                                        onPressed: _generateAnalysis,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.black,
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Try Again',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
+                          children: [
+                            CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary(true),
                               ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Generating your personalized analysis...',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w400,
+                              ),
+                              textAlign: TextAlign.start,
+                            ),
+                          ],
+                        )
+                            : Column(
+                          children: [
+                            Text(
+                              _analysisText,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.start,
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            Text(
+                              _recommendationText,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                height: 1.5,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              textAlign: TextAlign.start,
+                            ),
+
+                            if (_errorOccurred)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: ElevatedButton(
+                                  onPressed: _generateAnalysis,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Try Again',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

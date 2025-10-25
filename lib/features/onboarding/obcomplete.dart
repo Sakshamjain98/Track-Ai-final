@@ -28,23 +28,7 @@ class _OnboardingCompletionPageState extends State<OnboardingCompletionPage> {
             children: [
               Row(
                 children: [
-                  GestureDetector(
-                    onTap: widget.onBack,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white, // ✅ white background
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: Colors.grey[300]!, width: 1),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.black, // ✅ black arrow
-                        size: 20,
-                      ),
-                    ),
-                  ),
+
                 ],
               ),
 
