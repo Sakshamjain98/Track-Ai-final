@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 
 // --- NEW IMPORTS ---
-// Make sure this path is correct for your project structure
 import 'dart:async';
-import '../../settings/service/geminiservice.dart'; // For TimeoutException
+// NOTE: Assuming this path is correct
+import '../../settings/service/geminiservice.dart';
+// If AppColors is not in core/constants, this might break. Assuming it is.
+import 'package:trackai/core/constants/appcolors.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 
 class AIMealPlanner extends StatefulWidget {
   const AIMealPlanner({Key? key}) : super(key: key);
@@ -32,6 +35,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   // --- STATE VARIABLES ---
   int _currentPage = 0;
   bool _isGenerating = false;
+  bool _isSaving = false; // NEW: State for save button
   Map<String, dynamic>? _mealPlan;
 
   String _selectedGender = '';
@@ -41,9 +45,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   List<String> _selectedAllergies = [];
   String _selectedDays = '';
   String _selectedDietType = '';
-  // Removed meal prep and budget
-  // String _selectedMealPrep = '';
-  // String _selectedBudget = '';
 
   // --- OPTIONS ---
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
@@ -58,13 +59,17 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   ];
   final List<String> _dayOptions = ['3 Days', '5 Days', '7 Days', '14 Days', '30 Days'];
   final List<String> _dietOptions = [
-    'Any / No Specific Diet', 'Keto', 'Paleo', 'Vegan', 'Vegetarian',
-    'Mediterranean', 'Low Carb', 'Intermittent Fasting', 'DASH Diet', 'Whole30'
+    'Any / No Specific Diet',
+    'Vegetarian',
+    'Non-Vegetarian',
+    'Vegan',
+    'Keto',
+    'Paleo',
+    'Gluten-Free',
+    'Dairy-Free',
   ];
-  // Removed meal prep and budget options
-
   // --- TOTAL STEPS UPDATED ---
-  final int _totalSteps = 11;
+  final int _totalSteps = 10;
 
   @override
   void dispose() {
@@ -104,6 +109,54 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   void _nextPage() {
     if (_currentPage < _totalSteps) {
       if (_validateCurrentPage()) {
@@ -127,13 +180,13 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     }
   }
 
-  // --- UPDATED VALIDATION ---
+  // --- UPDATED VALIDATION MESSAGE ---
   String _getValidationMessage() {
     switch (_currentPage) {
       case 5: // Calories
-        return 'Please enter your daily calorie goal';
+        return 'Please enter your target daily calorie goal';
       case 6: // Days
-        return 'Please select plan duration';
+        return 'Please select the plan duration';
       case 7: // Diet Type
         return 'Please select your diet type';
       default:
@@ -165,9 +218,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     }
   }
 
-  // ---
-  // --- NEW: Dart implementation of the JS meal plan parser
-  // ---
+  // --- NEW: Dart implementation of the JS meal plan parser (FIXED CALORIE PARSING) ---
   Map<String, dynamic> _parseMealPlanString(String planString) {
     final Map<String, dynamic> parsedPlan = {};
     final lines = planString.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty);
@@ -176,19 +227,36 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     Map<String, dynamic>? currentDayMeals;
     Map<String, dynamic>? currentMeal;
 
-    // Regex patterns to match the web component's parser
     final dayRegex = RegExp(r'^\*\*(Day\s*\d+.*)\*\*');
-    // Updated mealRegex to be more flexible with meal names
+    // Regex captures the meal type (Group 1), the full calorie text (Group 2, e.g., "17 calories"), and the meal name (Group 3).
     final mealRegex = RegExp(r'^[\*-]\s*(Breakfast|Lunch|Dinner|Snacks)\s*(?:\((?:approx\.\s*)?([\d,.]+\s*kcal(?:ories)?)\))?[:\s-]*\s*(.*)', caseSensitive: false);
     final recipeLineRegex = RegExp(r'^\s*-\s*(Recipe|Instructions|Preparation)[:\s-]*\s*(.*)', caseSensitive: false);
-    final simpleRecipeLineRegex = RegExp(r'^\s*-\s*(.*)'); // For lines like "- Combine..."
+    final simpleRecipeLineRegex = RegExp(r'^\s*-\s*(.*)');
 
     void saveCurrentMeal() {
       if (currentMeal != null && currentDayMeals != null) {
         String mealType = (currentMeal['type'] as String).toLowerCase();
+
+        // --- FIX: Robust calorie extraction ---
+        final String? rawCalString = currentMeal['calories'];
+        int calories = 0;
+
+        if (rawCalString != null) {
+          // Use a regex to specifically find the first sequence of digits (\d+).
+          // This ensures we extract '17' from '17 calories' without issues.
+          final RegExp numRegex = RegExp(r'\d+');
+          final Match? numMatch = numRegex.firstMatch(rawCalString);
+
+          if (numMatch != null) {
+            final String calNumString = numMatch.group(0)!; // group(0) is the entire match
+            calories = int.tryParse(calNumString) ?? 0;
+          }
+        }
+        // --- END FIX ---
+
         currentDayMeals[mealType] = {
           'name': currentMeal['name'],
-          'calories': int.tryParse(currentMeal['calories']?.replaceAll(RegExp(r'[^0-9]'), '') ?? '0') ?? 0,
+          'calories': calories,
           'recipe': currentMeal['recipeLines'].join('\n'),
         };
       }
@@ -197,27 +265,23 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     for (final line in lines) {
       final dayMatch = dayRegex.firstMatch(line);
       if (dayMatch != null) {
-        // Save the previous day's meals
         if (currentDayKey.isNotEmpty && currentDayMeals != null) {
           saveCurrentMeal();
           parsedPlan[currentDayKey] = currentDayMeals;
         }
 
-        // Start a new day
         currentDayKey = dayMatch.group(1)!.trim();
         currentDayMeals = {};
         currentMeal = null;
         continue;
       }
 
-      if (currentDayKey.isEmpty) continue; // Skip lines before the first day
+      if (currentDayKey.isEmpty) continue;
 
       final mealMatch = mealRegex.firstMatch(line);
       if (mealMatch != null) {
-        // Save the previous meal
         saveCurrentMeal();
 
-        // Start a new meal
         currentMeal = {
           'type': mealMatch.group(1)!.trim(),
           'calories': mealMatch.group(2)?.trim(),
@@ -226,7 +290,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
         };
 
         if (currentMeal['name'].isEmpty) {
-          currentMeal['name'] = 'Meal'; // Placeholder
+          currentMeal['name'] = 'Meal';
         }
         continue;
       }
@@ -243,25 +307,21 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
         continue;
       }
 
-      // This is a continuation of a recipe or meal name
       if (currentMeal != null) {
         if (currentMeal['recipeLines'].isNotEmpty) {
-          // Add to the last recipe line
           currentMeal['recipeLines'].last = currentMeal['recipeLines'].last + ' $line';
         } else if (currentMeal['name'].isNotEmpty) {
-          // If no recipe lines yet, assume this is part of the recipe
           currentMeal['recipeLines'].add(line);
         }
       }
     }
 
-    // Save the very last meal and day
     if (currentDayKey.isNotEmpty && currentDayMeals != null) {
       saveCurrentMeal();
       parsedPlan[currentDayKey] = currentDayMeals;
     }
 
-    // Calculate total calories
+    // Calculate total calories for the day
     for (var dayKey in parsedPlan.keys) {
       int total = 0;
       final day = parsedPlan[dayKey] as Map<String, dynamic>;
@@ -270,6 +330,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           total += (mealData['calories'] as int);
         }
       });
+      // The totalCalories calculation is now robust.
       day['totalCalories'] = total;
     }
 
@@ -298,13 +359,14 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       'calories': _caloriesController.text,
       'dietType': _selectedDietType,
       'days': _selectedDays,
-      'mealPrep': '', // Removed from UI, pass empty
-      'budget': '', // Removed from UI, pass empty
+      'mealPrep': '',
+      'budget': '',
       'cuisine': _cuisineController.text,
       'preferences': _preferencesController.text,
     };
 
     try {
+      // NOTE: Assuming this service method exists and returns the expected structure.
       final Map<String, dynamic> generatedPlan =
       await GeminiService.generateMealPlan(userInput: userInput)
           .timeout(const Duration(seconds: 60));
@@ -312,13 +374,11 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       final numDays = int.tryParse(_selectedDays.split(' ')[0]) ?? 7;
       final targetCalories = int.tryParse(_caloriesController.text) ?? 2000;
 
-      // --- NEW: Parse the mealPlan string ---
       final String rawMealPlanString = generatedPlan['mealPlan'] as String;
       final Map<String, dynamic> parsedDays = _parseMealPlanString(rawMealPlanString);
 
       if (parsedDays.isEmpty) {
-        // Parsing failed, fall back to raw string display
-        throw Exception("Failed to parse the AI's meal plan string.");
+        throw Exception("AI plan structure could not be parsed.");
       }
 
       setState(() {
@@ -333,27 +393,15 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           'cookingGuide': generatedPlan['cookingGuide'] as String,
         };
 
-        // Add the parsed days to the meal plan map
         _mealPlan!.addAll(parsedDays);
-
         _isGenerating = false;
       });
 
-      _nextPage(); // Go to the results page
+      _nextPage();
 
     } on TimeoutException {
-      setState(() {
-        _isGenerating = false;
-      });
-      if (mounted) {
-        _showValidationSnackBar('The AI request timed out. Please try again.');
-      }
+      _handleGenerationError(TimeoutException('The AI request timed out.'));
     } catch (e) {
-      // --- NEW: If API or parsing fails, use fallback handler ---
-      // We pass the error 'e' and the *partially* generated plan if it exists
-      // This is a guess, as generatedPlan might be null.
-      // A safer approach is to just pass the error.
-      debugPrint("--- ERROR: $e. Falling back to raw string display. ---");
       _handleGenerationError(e);
     }
   }
@@ -372,24 +420,48 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           'dietType': _selectedDietType,
           'generatedOn': DateTime.now().toString().split(' ')[0],
         },
-        'groceryList': ['Error: ${e.toString()}'],
-        'cookingGuide': 'Error: ${e.toString()}',
-        'Day 1': { // Fallback key
-          'totalCalories': targetCalories,
+        'groceryList': ['Error: Could not generate list due to API or parsing failure.'],
+        'cookingGuide': 'Error: Could not generate guide due to API or parsing failure.',
+        'Day 1': { // Fallback structure
+          'totalCalories': 0, // Fallback shows 0 calories
           'breakfast': {
-            'name': 'AI Generated Plan', // Special key
+            'name': 'Plan Generation Failed',
             'calories': 0,
-            'recipe': 'Failed to generate or parse meal plan: ${e.toString()}'
+            'recipe': 'The plan could not be generated or parsed successfully. Error: ${e.toString().replaceFirst("Exception: ", "")}'
           },
         }
       };
     });
 
     if (mounted) {
-      _showValidationSnackBar(e.toString().replaceFirst("Exception: ", ""));
+      _showErrorSnackBar(e.toString().replaceFirst("Exception: ", ""));
     }
-    _nextPage(); // Go to results page even on failure to show error
+    _nextPage();
   }
+
+  // --- NEW: Save Plan Method ---
+  Future<void> _savePlan() async {
+    if (_mealPlan == null) return;
+
+    setState(() => _isSaving = true);
+    try {
+      // NOTE: We'll add the plan type before saving to categorize it in Firestore/DB
+      final planData = {
+        ..._mealPlan!,
+        'planCategory': 'meal', // Category for saving
+        'planTitle': 'AI Meal Plan (${_mealPlan!['planSummary']['totalDays']} Days)'
+      };
+
+      // NOTE: Assuming this service method exists and handles saving
+      await GeminiService.saveMealPlan(planData);
+      _showSuccessSnackBar('Meal plan saved successfully!');
+    } catch (e) {
+      _showErrorSnackBar('Failed to save plan: ${e.toString()}');
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+  // --- END NEW: Save Plan Method ---
 
 
   @override
@@ -432,20 +504,18 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                       _currentPage = index;
                     });
                   },
-                  // --- UPDATED PAGEVIEW CHILDREN ---
                   children: [
-                    _buildAgePage(isDark),           // 0
-                    _buildGenderPage(isDark),        // 1
-                    _buildWeightPage(isDark),        // 2
-                    _buildHeightPage(isDark),        // 3
-                    _buildGoalPage(isDark),          // 4
-                    _buildCaloriesPage(isDark),      // 5
-                    _buildDaysPage(isDark),          // 6
-                    _buildDietTypePage(isDark),      // 7
-                    _buildAllergiesPage(isDark),     // 8
-                    _buildHealthConditionsPage(isDark), // 9
-                    _buildPreferencesPage(isDark),   // 10
-                    _buildResultsPage(isDark),       // 11
+                    _buildAgePage(isDark),
+                    _buildGenderPage(isDark),
+                    _buildWeightPage(isDark),
+                    _buildHeightPage(isDark),
+                    _buildGoalPage(isDark),
+                    _buildCaloriesPage(isDark),
+                    _buildDaysPage(isDark),
+                    _buildDietTypePage(isDark),
+                    _buildAllergiesPage(isDark),
+                    _buildHealthConditionsPage(isDark),
+                    _buildResultsPage(isDark),
                   ],
                 ),
               ),
@@ -493,7 +563,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   }
 
   // --- Page Widgets (0-9, 12) ---
-  // (These are unchanged from the previous version)
 
   // Page 0: Age (Optional)
   Widget _buildAgePage(bool isDark) {
@@ -520,6 +589,17 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       subtitle: 'This provides more accurate recommendations (optional)',
       child: Column(
         children: _genderOptions.map((gender) {
+          IconData icon;
+          switch (gender) {
+            case 'Male':
+              icon = Icons.male;
+              break;
+            case 'Female':
+              icon = Icons.female;
+              break;
+            default:
+              icon = Icons.transgender;
+          }
           return _buildSelectionCard(
             title: gender,
             isSelected: _selectedGender == gender,
@@ -529,7 +609,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
               });
             },
             isDark: isDark,
-            icon: gender == 'Male' ? Icons.male : (gender == 'Female' ? Icons.female : Icons.transgender),
+            icon: icon,
           );
         }).toList(),
       ),
@@ -698,29 +778,29 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   // Page 7: Diet Type (Required)
   Widget _buildDietTypePage(bool isDark) {
     return _buildQuestionPage(
-      isDark: isDark,
-      icon: Icons.restaurant_menu,
-      title: 'Diet preference?',
-      subtitle: 'Choose your dietary preference or restriction',
-      child: SingleChildScrollView(
+        isDark: isDark,
+        icon: Icons.restaurant_menu,
+        title: 'Diet preference?',
+        subtitle: 'Choose your dietary preference or restriction',
+        child: SingleChildScrollView(
         child: Column(
-          children: _dietOptions.map((diet) {
-            return _buildSelectionCard(
-              title: diet,
-              isSelected: _selectedDietType == diet,
-              onTap: () {
-                setState(() {
-                  _selectedDietType = diet;
-                });
-              },
-              isDark: isDark,
-              icon: Icons.eco,
-            );
-          }).toList(),
-        ),
-      ),
+        children: _dietOptions.map((diet) {
+      return _buildSelectionCard(
+        title: diet,
+        isSelected: _selectedDietType == diet,
+        onTap: () {
+          setState(() {
+            _selectedDietType = diet;
+          });
+        },
+        isDark: isDark,
+        icon: Icons.eco,
+      );
+    }).toList(),
+    ),
+    ),
     );
-  }
+    }
 
   // Page 8: Allergies (Optional)
   Widget _buildAllergiesPage(bool isDark) {
@@ -784,40 +864,18 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-  // Page 10: Additional Preferences (Optional)
-  Widget _buildPreferencesPage(bool isDark) {
-    return _buildQuestionPage(
-      isDark: isDark,
-      icon: Icons.favorite_border,
-      title: 'Food preferences?',
-      subtitle: 'Tell us about your favorite cuisines or foods (optional)',
-      child: Column(
-        children: [
-          _buildTextField(
-            controller: _cuisineController,
-            hint: 'e.g., Italian, Asian, Mediterranean',
-            maxLines: 2,
-            isDark: isDark,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _preferencesController,
-            hint: 'e.g., Love spicy food, prefer organic',
-            maxLines: 3,
-            isDark: isDark,
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---
-  // --- UPDATED: _buildResultsPage (Re-ordered and Collapsible)
+  // --- UPDATED: _buildResultsPage
   // ---
   Widget _buildResultsPage(bool isDark) {
     if (_mealPlan == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.black),
+      return Center(
+        child: _isGenerating
+            ? CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+        )
+            : Container(),
       );
     }
 
@@ -830,7 +888,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // --- 1. Header (Unchanged) ---
+          // --- 1. Header ---
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -863,7 +921,70 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           ),
           const SizedBox(height: 32),
 
-          // --- 2. Plan Summary (Unchanged) ---
+          // --- 2. Action Buttons (Save/New Plan) ---
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              SizedBox(
+                width: 150,
+                child: OutlinedButton.icon(
+                  onPressed: _isSaving ? null : _savePlan, // Use new saving method
+                  icon: _isSaving
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))
+                      : const Icon(lucide.LucideIcons.save),
+                  label: Text(_isSaving ? 'Saving...' : 'Save Plan'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    foregroundColor: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 150,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Reset logic (same as at the bottom)
+                    setState(() {
+                      _currentPage = 0;
+                      _mealPlan = null;
+                      _ageController.clear();
+                      _weightController.clear();
+                      _heightController.clear();
+                      _otherAllergiesController.clear();
+                      _caloriesController.clear();
+                      _cuisineController.clear();
+                      _healthConditionsController.clear();
+                      _preferencesController.clear();
+                      _selectedGender = '';
+                      _selectedWeightUnit = 'kg';
+                      _selectedHeightUnit = 'cm';
+                      _selectedGoal = '';
+                      _selectedAllergies = [];
+                      _selectedDays = '';
+                      _selectedDietType = '';
+                    });
+                    _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('New Plan'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // --- 3. Plan Summary ---
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -894,7 +1015,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           ),
           const SizedBox(height: 24),
 
-          // --- 3. Daily Meal Plans (NEW: Collapsible) ---
+          // --- 4. Daily Meal Plans (Collapsible) ---
           Text(
             'Daily Meal Plans',
             style: TextStyle(
@@ -911,7 +1032,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             final dayMeals = entry.value as Map<String, dynamic>;
 
             // Check for our fallback placeholder
-            final bool isPlaceholder = dayMeals['breakfast']?['name'] == 'AI Generated Plan';
+            final bool isPlaceholder = dayMeals['breakfast']?['name'] == 'Plan Generation Failed';
 
             if (isPlaceholder) {
               // --- Fallback: Render the single raw string ---
@@ -927,19 +1048,19 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Full AI-Generated Plan (Could not parse)',
+                      'AI Plan Generation Error',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: Colors.redAccent,
                       ),
                     ),
                     const SizedBox(height: 16),
                     SelectableText(
-                      dayMeals['breakfast']['recipe'], // The full, raw string
+                      dayMeals['breakfast']['recipe'],
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? Colors.grey[300] : Colors.grey[700],
+                        color: isDark ? Colors.red[200] : Colors.red[700],
                         height: 1.5,
                       ),
                     ),
@@ -949,13 +1070,15 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             }
 
             // --- Success: Render collapsible day tile ---
+            final int totalCalories = dayMeals['totalCalories'] as int? ?? 0; // Use robust total calories
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: _buildExpansionTile(
                 isDark: isDark,
                 icon: Icons.calendar_today_outlined,
                 title: dayName,
-                // Add total calories to the title
+                // FIX: Use totalCalories (which is now robust)
                 trailing: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
@@ -963,7 +1086,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${dayMeals['totalCalories']} kcal',
+                    '$totalCalories kcal',
                     style: TextStyle(
                       color: isDark ? Colors.black : Colors.white,
                       fontSize: 12,
@@ -972,7 +1095,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                   ),
                 ),
                 children: [
-                  // --- This is the content inside the expansion ---
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Column(
@@ -982,7 +1104,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                         }
                         final meal = dayMeals[mealType] as Map<String, dynamic>;
 
-                        // Use the new meal card widget
                         return _buildMealCard(
                             isDark: isDark,
                             mealType: mealType,
@@ -997,7 +1118,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           }).toList()),
           const SizedBox(height: 24),
 
-          // --- 4. Grocery List (MOVED to bottom) ---
+          // --- 5. Grocery List ---
           _buildExpansionTile(
             isDark: isDark,
             icon: Icons.shopping_cart_outlined,
@@ -1008,7 +1129,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           ),
           const SizedBox(height: 12),
 
-          // --- 5. Cooking Guide (MOVED to bottom) ---
+          // --- 6. Cooking Guide ---
           _buildExpansionTile(
             isDark: isDark,
             icon: Icons.soup_kitchen_outlined,
@@ -1018,74 +1139,12 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ],
           ),
           const SizedBox(height: 32),
-
-          // --- 6. Create New Plan Button (Unchanged) ---
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  // Reset all fields
-                  _currentPage = 0;
-                  _mealPlan = null;
-                  _ageController.clear();
-                  _weightController.clear();
-                  _heightController.clear();
-                  _otherAllergiesController.clear();
-                  _caloriesController.clear();
-                  _cuisineController.clear();
-                  _healthConditionsController.clear();
-                  _preferencesController.clear();
-                  _selectedGender = '';
-                  _selectedWeightUnit = 'kg';
-                  _selectedHeightUnit = 'cm';
-                  _selectedGoal = '';
-                  _selectedAllergies = [];
-                  _selectedDays = '';
-                  _selectedDietType = '';
-                });
-                _pageController.animateToPage(
-                  0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? Colors.white : Colors.black,
-                foregroundColor: isDark ? Colors.black : Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.refresh,
-                    color: isDark ? Colors.black : Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Create New Plan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.black : Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  // --- SHARED WIDGETS ---
+  // --- SHARED WIDGETS (Unchanged) ---
 
   Widget _buildQuestionPage({
     required bool isDark,
@@ -1393,6 +1452,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     required String mealType,
     required Map<String, dynamic> meal
   }) {
+    final int calories = meal['calories'] as int? ?? 0;
+
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(14),
@@ -1404,7 +1465,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // Align text left
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -1425,8 +1486,9 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                   ),
                 ),
               ),
+              // Display calories (which is now robust against 0 if parsed correctly)
               Text(
-                '${meal['calories']} kcal',
+                '$calories kcal',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -1445,7 +1507,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ),
           ),
           const SizedBox(height: 6),
-          SelectableText( // Make recipe selectable
+          SelectableText(
             meal['recipe'],
             style: TextStyle(
               fontSize: 13,

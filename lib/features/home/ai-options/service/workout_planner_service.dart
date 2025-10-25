@@ -13,11 +13,22 @@ class WorkoutPlannerService {
     required String fitnessGoals,
     required String fitnessLevel,
     required String workoutType,
-    required String planDuration,
+
+    // CRITICAL FIX: Changed planDuration from required String to String?
+    // to match mobile app's optional passing style (String? planDurationDays?.toString())
+    // Although the original was 'required String planDuration', the mobile app is now
+    // sending a different optional variable here, so we update the name and type.
+    String? planDuration,
+
     Map<String, dynamic>? onboardingData,
-    List<String>? focusAreas,
+
+    // CRITICAL FIXES for parameters not defined (Errors 140-143 in Smartgymkit.dart)
+    List<String>? focusAreas, // Now correctly defined as List<String>?
     int? durationPerWorkout,
     String? preferredTime,
+    String? gender, // Changed from required String to String?
+    String? weight, // New parameter from mobile
+    String? height, // New parameter from mobile
   }) async {
     try {
       final apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -26,7 +37,7 @@ class WorkoutPlannerService {
       }
 
       final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-flash',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.8,
@@ -48,16 +59,28 @@ User Profile:
         ''';
       }
 
+      // Integrate new optional parameters into the prompt for the AI
+      String metricsContext = '';
+      if (gender != null || weight != null || height != null) {
+        metricsContext = '''
+Additional Metrics/Context:
+- Gender: ${gender ?? 'Not specified'}
+- Current Weight: ${weight != null ? '$weight kg' : 'Not specified'}
+- Current Height: ${height != null ? '$height cm' : 'Not specified'}
+        ''';
+      }
+
       final prompt = '''
 You are a world-class certified fitness trainer AI. Generate a comprehensive, personalized workout plan.
 
 $userContext
+$metricsContext
 
 Workout Preferences:
 - Fitness Goals: $fitnessGoals
 - Current Fitness Level: $fitnessLevel
 - Preferred Workout Type: $workoutType
-- Plan Duration: $planDuration
+- Plan Duration: ${planDuration != null ? '$planDuration Days' : '7 Days'}
 - Focus Areas: ${focusAreas?.join(', ') ?? 'Full Body'}
 - Duration per Workout: ${durationPerWorkout != null ? '$durationPerWorkout minutes' : 'Not specified'}
 - Preferred Time of Day: ${preferredTime ?? 'Any'}
@@ -138,13 +161,13 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
       planData['fitnessGoals'] = fitnessGoals;
       planData['fitnessLevel'] = fitnessLevel;
       planData['workoutType'] = workoutType;
-      planData['planDuration'] = planDuration;
-
+      planData['planDuration'] = planDuration; // Save the string duration
 
       return planData;
     } catch (e, stackTrace) {
       print('Error generating workout plan: $e');
       print('Stack trace: $stackTrace');
+      // Pass required fields to fallback
       return _generateFallbackPlan(fitnessGoals, fitnessLevel, workoutType, planDuration);
     }
   }
@@ -153,9 +176,9 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
       String fitnessGoals,
       String fitnessLevel,
       String workoutType,
-      String planDuration,
+      String? planDuration, // Allow null here for safety
       ) {
-    int daysCount = int.tryParse(planDuration.split(' ').first) ?? 7;
+    int daysCount = int.tryParse(planDuration?.split(' ').first ?? '7') ?? 7;
     List<Map<String, dynamic>> schedule = [];
 
     for (int i = 1; i <= daysCount; i++) {
@@ -183,7 +206,7 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
     }
 
     return {
-      'planTitle': '$planDuration $workoutType Plan ($fitnessLevel)',
+      'planTitle': '${planDuration ?? '7 Days'} $workoutType Plan ($fitnessLevel)',
       'introduction': 'This is a foundational workout plan. Remember to always warm-up before and cool-down after each session. Listen to your body and focus on proper form.',
       'weeklySchedule': schedule,
       'generalTips': [
@@ -202,7 +225,6 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
     };
   }
 
-  // ** ADDED THIS METHOD **
   // Save workout plan to Firebase
   static Future<void> saveWorkoutPlan(Map<String, dynamic> planData) async {
     try {
@@ -211,7 +233,7 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
 
       // Ensure timestamp is in the correct format for Firebase
       if (planData['generatedAt'] is DateTime) {
-        planData['generatedAt'] = Timestamp.fromDate(planData['generatedAt']);
+        planData['generatedAt'] = Timestamp.fromDate(planData['generatedAt'] as DateTime);
       } else if (planData['generatedAt'] == null) {
         planData['generatedAt'] = Timestamp.now();
       }
@@ -230,12 +252,11 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
     }
   }
 
-  // ** ADDED THIS METHOD **
   // Get saved workout plan from Firebase
   static Future<Map<String, dynamic>?> getSavedWorkoutPlan() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
+      if (user == null) return null;
 
       final doc = await _firestore
           .collection('users')
@@ -262,7 +283,6 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
     }
   }
 
-  // ** ADDED THIS METHOD **
   // Generate a shareable text string from the plan data
   static String generateWorkoutPlanText(Map<String, dynamic> planData) {
     final StringBuffer buffer = StringBuffer();
@@ -311,7 +331,7 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
     if (dateOfBirth == null) return 25;
     DateTime birthDate;
     if (dateOfBirth is Timestamp) {
-      birthDate = dateOfBirth.toDate();
+      birthDate = (dateOfBirth as Timestamp).toDate();
     } else if (dateOfBirth is DateTime) {
       birthDate = dateOfBirth;
     } else {

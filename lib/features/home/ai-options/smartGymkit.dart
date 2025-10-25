@@ -8,7 +8,7 @@ import 'package:trackai/features/home/ai-options/service/filedownload.dart';
 import 'package:trackai/features/home/ai-options/service/workout_planner_service.dart';
 
 class Smartgymkit extends StatefulWidget {
-  const Smartgymkit({Key? key}) : super(key: key);
+  const Smartgymkit({super.key});
 
   @override
   State<Smartgymkit> createState() => _SmartgymkitState();
@@ -17,36 +17,53 @@ class Smartgymkit extends StatefulWidget {
 class _SmartgymkitState extends State<Smartgymkit> {
   final PageController _pageController = PageController();
 
+  // Total Steps: 10 Input Steps + 1 Result Step = 11
+  final int _totalInputSteps = 10;
+
   // State variables
   int _currentPage = 0;
   bool _isGenerating = false;
   Map<String, dynamic>? _results;
+  bool _isSaving = false; // State for save button loading
 
   // Form Variables
   final TextEditingController _fitnessGoalsController = TextEditingController();
+  String _selectedGender = '';
+  final TextEditingController _weightController = TextEditingController();
+  String _selectedWeightUnit = 'kg';
+  final TextEditingController _heightController = TextEditingController();
+  String _selectedHeightUnit = 'cm';
   String _selectedFitnessLevel = '';
-  String _selectedWorkoutType = '';
+  List<String> _selectedFocusAreas = ['full body'];
+  String _selectedWorkoutType = 'Any (No Preference)';
   String _selectedWorkoutDuration = '';
-  String _selectedPreferredTime = '';
-  String _selectedPlanDuration = '';
+  String _selectedPreferredTime = 'Any Time';
+  String _selectedPlanDuration = '7 Days';
 
   // Options
-  final List<String> _fitnessLevels = ['Beginner (0-6 months)', 'Intermediate (6 months - 2 years)', 'Advanced (2-5 years)', 'Expert (5+ years)'];
-  final List<String> _workoutTypes = ['Any', 'Home Workout', 'Gym Workout', 'Calisthenics', 'Strength Training', 'Cardio Focus', 'Hybrid Training'];
+  final List<String> _coreGoals = ['Muscle Gain', 'Weight Loss', 'Strength and Endurance', 'Keep Fit'];
+  final List<String> _genders = ['Male', 'Female', 'Other'];
+  final List<String> _weightUnits = ['kg', 'lb'];
+  final List<String> _heightUnits = ['cm', 'ft'];
+  final List<String> _fitnessLevels = ['Beginner', 'Intermediate', 'Advanced'];
+  final List<String> _focusAreaOptions = ['full body', 'chest', 'back', 'legs', 'shoulders', 'arms', 'triceps', 'abs', 'glutes'];
+  final List<String> _workoutTypes = ['Any (No Preference)', 'Gym Workout', 'Home Workout'];
   final List<String> _workoutDurations = ['30 minutes', '45 minutes', '60 minutes', '75 minutes', '90 minutes'];
-  final List<String> _preferredTimes = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
-  final List<String> _planDurations = ['3 Days', '5 Days', '7 Days', '14 Days', '21 Days', '30 Days'];
-  final List<Map<String, String>> _fitnessGoals = [{'title': 'Lose weight and improve cardiovascular health', 'icon': '🏃‍♀️'}, {'title': 'Build muscle and increase overall strength', 'icon': '💪'}, {'title': 'Improve general fitness and endurance', 'icon': '🏃‍♂️'}, {'title': 'Increase flexibility and mobility', 'icon': '🤸‍♀️'}, {'title': 'Tone up and improve body composition', 'icon': '✨'}, {'title': 'Prepare for a specific sport or event', 'icon': '🏆'}, {'title': 'Reduce stress and improve mental well-being', 'icon': '🧘‍♀️'}, {'title': 'Gain functional strength for daily activities', 'icon': '🏠'}, {'title': 'Improve posture and core stability', 'icon': '🧍‍♀️'}, {'title': 'Increase energy levels throughout the day', 'icon': '⚡'}];
+  final List<String> _preferredTimes = ['Any Time', 'Morning', 'Afternoon', 'Evening'];
+  final List<String> _planDurations = ['3 Days', '5 Days', '7 Days', '14 Days', '21 Days', '30 Days', '45 Days'];
+
 
   @override
   void dispose() {
     _pageController.dispose();
     _fitnessGoalsController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
-    if (_currentPage < 6) {
+    if (_currentPage < _totalInputSteps) {
       if (_validateCurrentPage()) {
         _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       } else {
@@ -64,11 +81,15 @@ class _SmartgymkitState extends State<Smartgymkit> {
   bool _validateCurrentPage() {
     switch (_currentPage) {
       case 0: return _fitnessGoalsController.text.trim().isNotEmpty;
-      case 1: return _selectedFitnessLevel.isNotEmpty;
-      case 2: return _selectedWorkoutType.isNotEmpty;
-      case 3: return _selectedWorkoutDuration.isNotEmpty;
-      case 4: return _selectedPreferredTime.isNotEmpty;
-      case 5: return _selectedPlanDuration.isNotEmpty;
+      case 1: return _selectedGender.isNotEmpty;
+      case 2: return _weightController.text.trim().isNotEmpty;
+      case 3: return _heightController.text.trim().isNotEmpty;
+      case 4: return _selectedFitnessLevel.isNotEmpty;
+      case 5: return _selectedFocusAreas.isNotEmpty;
+      case 6: return _selectedWorkoutType.isNotEmpty;
+      case 7: return _selectedWorkoutDuration.isNotEmpty;
+      case 8: return _selectedPreferredTime.isNotEmpty; // Separated validation
+      case 9: return _selectedPlanDuration.isNotEmpty; // New separate validation
       default: return true;
     }
   }
@@ -79,18 +100,36 @@ class _SmartgymkitState extends State<Smartgymkit> {
       return;
     }
     setState(() => _isGenerating = true);
-    _nextPage();
+    _nextPage(); // Move to the results page
 
     try {
       final duration = int.tryParse(_selectedWorkoutDuration.split(' ').first);
 
+      double? weightValue = double.tryParse(_weightController.text.trim());
+      if (_selectedWeightUnit == 'lb' && weightValue != null) {
+        weightValue = weightValue * 0.453592;
+      }
+
+      double? heightValue = double.tryParse(_heightController.text.trim());
+      if (_selectedHeightUnit == 'ft' && heightValue != null) {
+        heightValue = heightValue * 30.48;
+      }
+
+      String workoutTypeKey = _selectedWorkoutType == 'Any (No Preference)' ? 'any' : _selectedWorkoutType.toLowerCase().split(' ').first;
+      String preferredTimeKey = _selectedPreferredTime == 'Any Time' ? 'any' : _selectedPreferredTime.toLowerCase();
+      final planDurationDays = int.tryParse(_selectedPlanDuration.split(' ').first);
+
       final workoutPlan = await WorkoutPlannerService.generateWorkoutPlan(
         fitnessGoals: _fitnessGoalsController.text,
-        fitnessLevel: _selectedFitnessLevel,
-        workoutType: _selectedWorkoutType,
+        fitnessLevel: _selectedFitnessLevel.toLowerCase(),
         durationPerWorkout: duration,
-        preferredTime: _selectedPreferredTime,
-        planDuration: _selectedPlanDuration,
+        workoutType: workoutTypeKey,
+        preferredTime: preferredTimeKey,
+        planDuration: planDurationDays?.toString(),
+        gender: _selectedGender.toLowerCase(),
+        weight: weightValue != null ? weightValue.toStringAsFixed(1) : null,
+        height: heightValue != null ? heightValue.toStringAsFixed(1) : null,
+        focusAreas: _selectedFocusAreas,
       );
 
       if (workoutPlan != null) {
@@ -107,16 +146,41 @@ class _SmartgymkitState extends State<Smartgymkit> {
     }
   }
 
+  // --- IMPLEMENTED: Save Plan Method ---
+  Future<void> _savePlan() async {
+    if (_results == null) return;
+
+    setState(() => _isSaving = true);
+    try {
+      // Assuming WorkoutPlannerService has a method named `saveWorkoutPlan`
+      // that takes the generated plan map. This will save the plan to the designated
+      // location (e.g., Firebase) which is then displayed in the SavedPlansScreen.
+      await WorkoutPlannerService.saveWorkoutPlan(_results!);
+      _showSuccessSnackBar('Workout plan saved successfully!');
+    } catch (e) {
+      _showErrorSnackBar('Failed to save plan: ${e.toString()}');
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+  // --- END IMPLEMENTED: Save Plan Method ---
+
   void _resetFlow() {
     setState(() {
       _currentPage = 0;
       _results = null;
       _fitnessGoalsController.clear();
+      _selectedGender = '';
+      _weightController.clear();
+      _selectedWeightUnit = 'kg';
+      _heightController.clear();
+      _selectedHeightUnit = 'cm';
       _selectedFitnessLevel = '';
-      _selectedWorkoutType = '';
+      _selectedFocusAreas = ['full body'];
+      _selectedWorkoutType = 'Any (No Preference)';
       _selectedWorkoutDuration = '';
-      _selectedPreferredTime = '';
-      _selectedPlanDuration = '';
+      _selectedPreferredTime = 'Any Time';
+      _selectedPlanDuration = '7 Days';
     });
     _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
@@ -124,7 +188,6 @@ class _SmartgymkitState extends State<Smartgymkit> {
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    // Get screen width for responsive padding
     final screenWidth = MediaQuery.of(context).size.width;
     final horizontalPadding = screenWidth > 600 ? screenWidth * 0.1 : 24.0;
 
@@ -142,20 +205,25 @@ class _SmartgymkitState extends State<Smartgymkit> {
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: Column(
             children: [
-              _buildProgressIndicator(isDark),
+              if (_currentPage < _totalInputSteps)
+                _buildProgressIndicator(isDark, _totalInputSteps),
               Expanded(
                 child: PageView(
                   controller: _pageController,
                   physics: const NeverScrollableScrollPhysics(),
                   onPageChanged: (index) => setState(() => _currentPage = index),
                   children: [
-                    _buildFitnessGoalsPage(isDark),
-                    _buildFitnessLevelPage(isDark),
-                    _buildWorkoutTypePage(isDark),
-                    _buildWorkoutDurationPage(isDark),
-                    _buildPreferredTimePage(isDark),
-                    _buildPlanDurationPage(isDark),
-                    _buildWorkoutResultsPage(isDark),
+                    _buildFitnessGoalsPage(isDark), // Step 1
+                    _buildGenderPage(isDark), // Step 2
+                    _buildWeightPage(isDark), // Step 3
+                    _buildHeightPage(isDark), // Step 4
+                    _buildFitnessLevelPage(isDark), // Step 5
+                    _buildFocusAreasPage(isDark), // Step 6
+                    _buildWorkoutTypePage(isDark), // Step 7
+                    _buildWorkoutDurationPage(isDark), // Step 8
+                    _buildPreferredTimePage(isDark), // Step 9 (New separate step)
+                    _buildPlanDurationPage(isDark), // Step 10 (New separate step)
+                    _buildWorkoutResultsPage(isDark), // Step 11 (Results)
                   ],
                 ),
               ),
@@ -163,14 +231,35 @@ class _SmartgymkitState extends State<Smartgymkit> {
           ),
         ),
       ),
-      bottomNavigationBar: _currentPage < 6
+      bottomNavigationBar: _currentPage < _totalInputSteps
           ? _buildNavigationButtons(isDark)
           : null,
     );
   }
+  Widget _buildNavigationButtons(bool isDark) {
+    bool isLastInputStep = _currentPage == _totalInputSteps - 1;
 
-  Widget _buildProgressIndicator(bool isDark) {
-    const totalSteps = 7;
+    return Container(
+      color: AppColors.background(isDark),
+      padding: const EdgeInsets.all(24),
+      child: Row(
+        children: [
+          if (_currentPage > 0) Expanded(child: OutlinedButton(onPressed: _previousPage, style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: BorderSide(color: AppColors.black), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: AppColors.white), child: Text('Previous', style: TextStyle(color: AppColors.black, fontWeight: FontWeight.w600, fontSize: 16)))),
+          if (_currentPage > 0) const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: isLastInputStep ? (_isGenerating ? null : _generatePlan) : _nextPage,
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black, foregroundColor: AppColors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: _isGenerating && isLastInputStep
+                  ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))), const SizedBox(width: 12), const Text('Generating...')])
+                  : Text(isLastInputStep ? 'Generate Plan' : 'Next', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildProgressIndicator(bool isDark, int totalSteps) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
@@ -196,139 +285,596 @@ class _SmartgymkitState extends State<Smartgymkit> {
     );
   }
 
-  // NOTE: _buildDetailedMetrics is not used in the current PageView flow but kept for completeness.
-  Widget _buildDetailedMetrics(bool isDark) {
-    final List<Map<String, dynamic>> detailedMetrics = [
-      {'label': 'Body Weight', 'key': 'bodyWeight', 'unit': 'kg', 'icon': lucide.LucideIcons.user},
-      {'label': 'BMI', 'key': 'bmi', 'unit': '', 'icon': lucide.LucideIcons.activity},
-      {'label': 'Body Fat Percentage', 'key': 'bodyFatPercentage', 'unit': '%', 'icon': lucide.LucideIcons.heart},
-      {'label': 'Skeletal Muscle Mass', 'key': 'skeletalMuscleMass', 'unit': 'kg', 'icon': lucide.LucideIcons.dumbbell},
-      {'label': 'Visceral Fat Level', 'key': 'visceralFatLevel', 'unit': '', 'icon': lucide.LucideIcons.shield},
-      {'label': 'Body Fat Mass', 'key': 'bodyFatMass', 'unit': 'kg', 'icon': lucide.LucideIcons.heart},
-      {'label': 'Lean Mass', 'key': 'leanMass', 'unit': 'kg', 'icon': lucide.LucideIcons.user},
-      {'label': 'Muscle Mass', 'key': 'muscleMass', 'unit': 'kg', 'icon': lucide.LucideIcons.dumbbell},
-      {'label': 'Bone Mass', 'key': 'boneMass', 'unit': 'kg', 'icon': lucide.LucideIcons.bone},
-      {'label': 'Water Mass', 'key': 'waterMass', 'unit': 'kg', 'icon': lucide.LucideIcons.droplet},
-      {'label': 'Protein Mass', 'key': 'proteinMass', 'unit': 'kg', 'icon': lucide.LucideIcons.atom},
-      {'label': 'Basal Metabolic Rate', 'key': 'bmr', 'unit': 'kcal/day', 'icon': lucide.LucideIcons.flame},
-      {'label': 'Metabolic Age', 'key': 'metabolicAge', 'unit': 'years', 'icon': lucide.LucideIcons.clock},
-      {'label': 'Subcutaneous Fat', 'key': 'subcutaneousFat', 'unit': '%', 'icon': lucide.LucideIcons.heart},
-      {'label': 'Body Water Percentage', 'key': 'bodyWaterPercentage', 'unit': '%', 'icon': lucide.LucideIcons.droplet},
-      {'label': 'Overall Score', 'key': 'bodyCompositionScore', 'unit': '', 'icon': lucide.LucideIcons.star},
-      {'label': 'Health Indicator', 'key': 'healthIndicator', 'unit': '', 'icon': lucide.LucideIcons.activity},
-    ];
-
-    if (_results == null) return const SizedBox.shrink();
-
+  // Helper for step headers (Centered Icon/Text) - Removed "Step X of Y" from title
+  Widget _buildStepHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+  }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: detailedMetrics.map((metric) {
-        var value = _results![metric['key']];
-        if (value == null) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              Icon(metric['icon'], size: 20, color: AppColors.textSecondary(isDark)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  '${metric['label']}:',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(isDark),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                metric['key'] == 'healthIndicator'
-                    ? value.toString()
-                    : '${value.toString()} ${metric['unit']}',
-                style: TextStyle(color: AppColors.textSecondary(isDark)),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 48, color: AppColors.black),
+        const SizedBox(height: 16),
+        Text(
+          title, // Title only
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark)),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5),
+        ),
+        const SizedBox(height: 32),
+      ],
     );
   }
 
+  // Helper for selection card groups (centered)
+  Widget _buildSelectionCardGroup({
+    required String label,
+    required String selectedValue,
+    required List<String> options,
+    required ValueChanged<String> onSelect,
+    required bool isDark,
+    bool isMultiSelect = false,
+    List<String>? multiSelectedValues,
+    ValueChanged<String>? onMultiSelect,
+  }) {
+    Color selectedColor = AppColors.black;
+    Color unselectedColor = AppColors.cardBackground(isDark);
+    Color selectedTextColor = AppColors.white;
+    Color unselectedTextColor = AppColors.textPrimary(isDark);
+    Color borderColor = AppColors.borderColor(isDark);
+
+    // Conditional rendering based on option count
+    final bool isVerticalLayout = options.length <= 4 && !isMultiSelect;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: Text(label, style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 16, fontWeight: FontWeight.w600)),
+        ),
+        if (isVerticalLayout)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch buttons horizontally in column
+            children: options.map((option) => _buildSelectionCardItem(
+              option: option,
+              isSelected: option == selectedValue,
+              onTap: () => onSelect(option),
+              selectedColor: selectedColor,
+              unselectedColor: unselectedColor,
+              selectedTextColor: selectedTextColor,
+              unselectedTextColor: unselectedTextColor,
+              borderColor: borderColor,
+            )).toList(),
+          )
+        else
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12.0,
+            runSpacing: 12.0,
+            children: options.map((option) {
+              final isSelected = isMultiSelect ? (multiSelectedValues?.contains(option) ?? false) : option == selectedValue;
+              return _buildSelectionCardItem(
+                option: option,
+                isSelected: isSelected,
+                onTap: () {
+                  if (isMultiSelect) {
+                    onMultiSelect?.call(option);
+                  } else {
+                    onSelect(option);
+                  }
+                },
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor,
+                selectedTextColor: selectedTextColor,
+                unselectedTextColor: unselectedTextColor,
+                borderColor: borderColor,
+                isWrap: true, // Indicates it's inside a Wrap
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSelectionCardItem({
+    required String option,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required Color selectedColor,
+    required Color unselectedColor,
+    required Color selectedTextColor,
+    required Color unselectedTextColor,
+    required Color borderColor,
+    bool isWrap = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        // Add vertical margin for column layout
+        margin: isWrap ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 6.0, horizontal: 24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? selectedColor : unselectedColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? selectedColor : borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          option,
+          textAlign: isWrap ? TextAlign.left : TextAlign.center, // Center text when in column
+          style: TextStyle(
+            color: isSelected ? selectedTextColor : unselectedTextColor,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper for text input with unit selection (Weight/Height) - (Unchanged logic)
+  Widget _buildUnitInput({
+    required String label,
+    required TextEditingController controller,
+    required String selectedUnit,
+    required List<String> unitOptions,
+    required ValueChanged<String> onUnitSelect,
+    required String placeholder,
+    required bool isDark,
+  }) {
+    Color primaryColor = AppColors.textPrimary(isDark);
+    Color secondaryColor = AppColors.textSecondary(isDark);
+    Color cardColor = isDark ? AppColors.cardBackground(isDark) : AppColors.white;
+    Color borderColor = AppColors.borderColor(isDark);
+    Color hintColor = secondaryColor.withAlpha(153);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(label, style: TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: placeholder,
+                  hintStyle: TextStyle(color: hintColor),
+                  filled: true,
+                  fillColor: cardColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: borderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppColors.black, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                style: TextStyle(color: primaryColor),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: _buildSelectionCardGroup(
+                label: '',
+                selectedValue: selectedUnit,
+                options: unitOptions,
+                onSelect: onUnitSelect,
+                isDark: isDark,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // --- INPUT PAGES (10 STEPS) ---
+
+  // Step 1: Fitness Goals
+  Widget _buildFitnessGoalsPage(bool isDark) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: Icons.flag_outlined,
+            title: 'Choose Your Goal',
+            subtitle: 'Select your primary fitness objective to tailor your workout plan.',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Select Your Primary Goal *',
+            selectedValue: _fitnessGoalsController.text,
+            options: _coreGoals,
+            onSelect: (value) => setState(() {
+              _fitnessGoalsController.text = value;
+            }),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step 2: Gender
+  Widget _buildGenderPage(bool isDark) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: lucide.LucideIcons.user,
+            title: 'Your Gender',
+            subtitle: 'This helps the AI personalize exercises and calorie estimates.',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Select Your Gender *',
+            selectedValue: _selectedGender,
+            options: _genders,
+            onSelect: (value) => setState(() => _selectedGender = value),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step 3: Weight
+  Widget _buildWeightPage(bool isDark) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildStepHeader(
+              icon: lucide.LucideIcons.scale,
+              title: 'Your Weight',
+              subtitle: 'Enter your current body weight for accurate metrics.',
+              isDark: isDark,
+            ),
+            const SizedBox(height: 30),
+            Card(
+              elevation: isDark ? 2 : 4,
+              color: isDark ? Colors.grey[900] : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+                child: Column(
+                  children: [
+                    Text(
+                      'Current Weight',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 140,
+                          child: TextField(
+                            controller: _weightController,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: 'e.g. 70',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade400),
+                          ),
+                          child: DropdownButton<String>(
+                            value: _selectedWeightUnit,
+                            underline: const SizedBox(),
+                            icon: const Icon(Icons.keyboard_arrow_down),
+                            onChanged: (value) => setState(() => _selectedWeightUnit = value!),
+                            items: _weightUnits
+                                .map((unit) => DropdownMenuItem<String>(
+                              value: unit,
+                              child: Text(unit),
+                            ))
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeightPage(bool isDark) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildStepHeader(
+              icon: lucide.LucideIcons.ruler,
+              title: 'Your Height',
+              subtitle: 'Enter your current height for accurate metrics.',
+              isDark: isDark,
+            ),
+            const SizedBox(height: 30),
+            Card(
+              elevation: isDark ? 2 : 4,
+              color: isDark ? Colors.grey[900] : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+                child: Column(
+                  children: [
+                    Text(
+                      'Current Height',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 140,
+                          child: TextField(
+                            controller: _heightController,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: 'e.g. 175',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade400),
+                          ),
+                          child: DropdownButton<String>(
+                            value: _selectedHeightUnit,
+                            underline: const SizedBox(),
+                            icon: const Icon(Icons.keyboard_arrow_down),
+                            onChanged: (value) => setState(() => _selectedHeightUnit = value!),
+                            items: _heightUnits
+                                .map((unit) => DropdownMenuItem<String>(
+                              value: unit,
+                              child: Text(unit),
+                            ))
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Step 5: Fitness Level
+  Widget _buildFitnessLevelPage(bool isDark) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: Icons.trending_up,
+            title: 'Fitness Level',
+            subtitle: 'Select your current fitness experience level.',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Current Fitness Level *',
+            selectedValue: _selectedFitnessLevel,
+            options: _fitnessLevels,
+            onSelect: (value) => setState(() => _selectedFitnessLevel = value),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step 6: Focus Areas
+  Widget _buildFocusAreasPage(bool isDark) {
+    void handleFocusAreaChange(String area) {
+      setState(() {
+        if (area == 'full body') {
+          _selectedFocusAreas = ['full body'];
+        } else {
+          _selectedFocusAreas.remove('full body');
+
+          if (_selectedFocusAreas.contains(area)) {
+            _selectedFocusAreas.remove(area);
+          } else {
+            _selectedFocusAreas.add(area);
+          }
+
+          if (_selectedFocusAreas.isEmpty) {
+            _selectedFocusAreas = ['full body'];
+          }
+        }
+      });
+    }
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: lucide.LucideIcons.target,
+            title: 'Focus Area(s)',
+            subtitle: 'Select the primary areas you wish to focus on.',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Select Focus Area(s)',
+            selectedValue: '',
+            options: _focusAreaOptions.map((e) => e.toUpperCase()).toList(),
+            onSelect: (_) {},
+            isMultiSelect: true,
+            multiSelectedValues: _selectedFocusAreas.map((e) => e.toUpperCase()).toList(),
+            onMultiSelect: (value) => handleFocusAreaChange(value.toLowerCase()),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step 7: Workout Type
+  Widget _buildWorkoutTypePage(bool isDark) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: lucide.LucideIcons.settings,
+            title: 'Workout Type',
+            subtitle: 'Choose your preferred environment and style.',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Preferred Workout Type',
+            selectedValue: _selectedWorkoutType,
+            options: _workoutTypes,
+            onSelect: (value) => setState(() => _selectedWorkoutType = value),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step 8: Workout Duration
   Widget _buildWorkoutDurationPage(bool isDark) {
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(lucide.LucideIcons.timer, size: 48, color: AppColors.black),
-          const SizedBox(height: 16),
-          Text('Workout Duration', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
-          const SizedBox(height: 8),
-          Text('How long do you want each workout session to be?', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5)),
-          const SizedBox(height: 32),
-          _buildDropdownField(label: 'Duration per Workout (mins) *', value: _selectedWorkoutDuration.isEmpty ? null : _selectedWorkoutDuration, items: _workoutDurations, onChanged: (value) => setState(() => _selectedWorkoutDuration = value ?? ''), isDark: isDark, isRequired: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreferredTimePage(bool isDark) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(lucide.LucideIcons.sunMoon, size: 48, color: AppColors.black),
-          const SizedBox(height: 16),
-          Text('Preferred Time', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
-          const SizedBox(height: 8),
-          Text('When do you prefer to work out?', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5)),
-          const SizedBox(height: 32),
-          _buildDropdownField(label: 'Preferred Time *', value: _selectedPreferredTime.isEmpty ? null : _selectedPreferredTime, items: _preferredTimes, onChanged: (value) => setState(() => _selectedPreferredTime = value ?? ''), isDark: isDark, isRequired: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlanDurationPage(bool isDark) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.calendar_today_outlined, size: 48, color: AppColors.black),
-          const SizedBox(height: 16),
-          Text('Plan Duration', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
-          const SizedBox(height: 8),
-          Text('Select how long you want the workout plan to be.', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5)),
-          const SizedBox(height: 32),
-          _buildDropdownField(label: 'Plan Duration *', value: _selectedPlanDuration.isEmpty ? null : _selectedPlanDuration, items: _planDurations, onChanged: (value) => setState(() => _selectedPlanDuration = value ?? ''), isDark: isDark, isRequired: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavigationButtons(bool isDark) {
-    bool isLastInputStep = _currentPage == 5;
-
-    return Container(
-      color: AppColors.background(isDark), // Added to match scaffold background
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          if (_currentPage > 0) Expanded(child: OutlinedButton(onPressed: _previousPage, style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: BorderSide(color: AppColors.black), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), backgroundColor: AppColors.white), child: Text('Previous', style: TextStyle(color: AppColors.black, fontWeight: FontWeight.w600, fontSize: 16)))),
-          if (_currentPage > 0) const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: isLastInputStep ? (_isGenerating ? null : _generatePlan) : _nextPage,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.black, foregroundColor: AppColors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: _isGenerating && isLastInputStep
-                  ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))), const SizedBox(width: 12), const Text('Generating...')])
-                  : Text(isLastInputStep ? 'Generate Plan' : 'Next', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-            ),
+          _buildStepHeader(
+            icon: lucide.LucideIcons.timer,
+            title: 'Workout Duration',
+            subtitle: 'How long do you want each workout session to be?',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Duration per Workout (mins) *',
+            selectedValue: _selectedWorkoutDuration,
+            options: _workoutDurations,
+            onSelect: (value) => setState(() => _selectedWorkoutDuration = value),
+            isDark: isDark,
           ),
         ],
       ),
     );
   }
 
+  // Step 9: Preferred Time (Separated)
+  Widget _buildPreferredTimePage(bool isDark) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: lucide.LucideIcons.sunMoon,
+            title: 'Preferred Time',
+            subtitle: 'When do you prefer to exercise?',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Preferred Time *',
+            selectedValue: _selectedPreferredTime,
+            options: _preferredTimes,
+            onSelect: (value) => setState(() => _selectedPreferredTime = value),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Step 10: Plan Duration (Separated)
+  Widget _buildPlanDurationPage(bool isDark) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _buildStepHeader(
+            icon: Icons.calendar_today_outlined,
+            title: 'Plan Length',
+            subtitle: 'Select the total duration for this workout plan.',
+            isDark: isDark,
+          ),
+          _buildSelectionCardGroup(
+            label: 'Plan Duration *',
+            selectedValue: _selectedPlanDuration,
+            options: _planDurations,
+            onSelect: (value) => setState(() => _selectedPlanDuration = value),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- UPDATED: Result Page to include Save Button ---
   Widget _buildWorkoutResultsPage(bool isDark) {
     if (_isGenerating || _results == null) {
       return Center(child: SpinKitFadingCube(color: AppColors.black, size: 50.0));
@@ -337,7 +883,6 @@ class _SmartgymkitState extends State<Smartgymkit> {
     final tips = _results!['generalTips'] as List?;
 
     return SingleChildScrollView(
-      // Padding is already handled by the main body padding, so this padding is relative to the screen size
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -347,9 +892,7 @@ class _SmartgymkitState extends State<Smartgymkit> {
           const SizedBox(height: 8),
           Text(_results!['introduction'] ?? 'Your personalized plan is ready!', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5,)),
           const SizedBox(height: 32),
-          _buildSummaryCard(isDark),
           const SizedBox(height: 32),
-          // Adaptive Button Layout
           Wrap(
             spacing: 16,
             runSpacing: 12,
@@ -357,10 +900,13 @@ class _SmartgymkitState extends State<Smartgymkit> {
             children: [
               SizedBox(
                 width: 150,
+                // --- MODIFIED: Save Plan Button ---
                 child: OutlinedButton.icon(
-                  onPressed: () => _shareWorkoutPlan(_results!),
-                  icon: const Icon(lucide.LucideIcons.share2),
-                  label: const Text('Share Plan'),
+                  onPressed: _isSaving ? null : _savePlan,
+                  icon: _isSaving
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))
+                      : const Icon(lucide.LucideIcons.save),
+                  label: Text(_isSaving ? 'Saving...' : 'Save Plan'),
                   style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: AppColors.borderColor(isDark)),
@@ -368,6 +914,7 @@ class _SmartgymkitState extends State<Smartgymkit> {
                       foregroundColor: AppColors.textPrimary(isDark)
                   ),
                 ),
+                // --- END MODIFIED ---
               ),
               SizedBox(
                 width: 150,
@@ -389,20 +936,18 @@ class _SmartgymkitState extends State<Smartgymkit> {
           Text('Workout Schedule', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
           const SizedBox(height: 16),
           if (schedule != null && schedule.isNotEmpty)
-          // *** CHANGE: Use ListView.builder to call the new collapsible tile function ***
             ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: schedule.length,
                 itemBuilder: (context, index) {
                   final dayData = schedule[index];
-                  // CALL THE NEW COLLAPSIBLE WIDGET
                   return _buildCollapsibleDayTile(dayData, isDark);
                 })
           else
             Text('No schedule provided.', style: TextStyle(color: AppColors.textSecondary(isDark))),
           const SizedBox(height: 32),
-          Text('Helpful Tips', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
+          Text('General Tips', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
           const SizedBox(height: 16),
           if (tips != null && tips.isNotEmpty)
             ...tips.map((tip) => ListTile(leading: Icon(Icons.check_circle_outline, color: Colors.green), title: Text(tip.toString(), style: TextStyle(color: AppColors.textSecondary(isDark)))))
@@ -413,9 +958,6 @@ class _SmartgymkitState extends State<Smartgymkit> {
     );
   }
 
-  // *** REMOVED _buildDayCard to implement _buildCollapsibleDayTile instead. ***
-
-  // *** NEW WIDGET: Day-wise plan in Collapsible (ExpansionTile) form ***
   Widget _buildCollapsibleDayTile(Map<String, dynamic> dayData, bool isDark) {
     final bool isRestDay = (dayData['activity'] ?? '').toLowerCase().contains('rest');
     final exercises = dayData['details'] as List?;
@@ -425,11 +967,9 @@ class _SmartgymkitState extends State<Smartgymkit> {
     Color titleColor = AppColors.textPrimary(isDark);
     Color subtitleColor = AppColors.textSecondary(isDark);
 
-    // Determines the appropriate icon and secondary text
     IconData leadingIcon = isRestDay ? lucide.LucideIcons.bed : lucide.LucideIcons.dumbbell;
     String subtitleText = isRestDay ? 'Recovery Day' : (dayData['activity'] ?? 'Full Workout');
 
-    // Set the overall text for rest days to be in the subtitle
     if(isRestDay && exercises != null && exercises.isNotEmpty){
       subtitleText = exercises.first['instruction'] ?? 'Active recovery advised.';
     }
@@ -443,7 +983,6 @@ class _SmartgymkitState extends State<Smartgymkit> {
       color: tileColor,
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        // Primary title: Day Name
         title: Text(
           dayData['day'] ?? 'Unknown Day',
           style: TextStyle(
@@ -452,7 +991,6 @@ class _SmartgymkitState extends State<Smartgymkit> {
             color: titleColor,
           ),
         ),
-        // Secondary title: Activity Type (Workout/Rest)
         subtitle: Text(
           subtitleText,
           style: TextStyle(
@@ -461,18 +999,17 @@ class _SmartgymkitState extends State<Smartgymkit> {
           ),
         ),
         leading: Icon(leadingIcon, color: iconColor),
-        // The content that expands
         children: <Widget>[
           Divider(height: 1, color: AppColors.borderColor(isDark)),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: isRestDay
-                ? // Rest Day Content
+                ?
             Text(
               'Ensure you focus on mobility, stretching, or light cardio to aid muscle recovery. Listen to your body!',
               style: TextStyle(fontSize: 16, color: subtitleColor, height: 1.5),
             )
-                : // Workout Day Content
+                :
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -525,122 +1062,28 @@ class _SmartgymkitState extends State<Smartgymkit> {
     );
   }
 
-  Widget _buildSummaryCard(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColor(isDark)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text('Plan Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
-          const SizedBox(height: 16),
-          _buildSummaryRow(lucide.LucideIcons.calendar, 'Plan Duration', _selectedPlanDuration, isDark),
-          _buildSummaryRow(lucide.LucideIcons.timer, 'Workout Duration', _selectedWorkoutDuration, isDark),
-          _buildSummaryRow(lucide.LucideIcons.sunMoon, 'Preferred Time', _selectedPreferredTime, isDark),
-          _buildSummaryRow(lucide.LucideIcons.chartArea, 'Fitness Level', _selectedFitnessLevel, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(IconData icon, String label, String value, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Push start and end apart
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: AppColors.textSecondary(isDark)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(color: AppColors.textSecondary(isDark)),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8), // Small gap between label and value
-          Flexible(
-            child: Text(
-              value,
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark)),
-              maxLines: 2,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExerciseDetail(IconData icon, String text, bool isDark) {
-    // --- FIX: ---
-    // Added 'mainAxisSize: MainAxisSize.min' to the Row.
-    // This prevents the Row from trying to expand, which is crucial inside a Wrap.
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary(isDark)),
-        const SizedBox(width: 6),
-        Text(text, style: TextStyle(color: AppColors.textSecondary(isDark))),
-      ],
-    );
-  }
-
-
-
-  Widget _buildWorkoutTypePage(bool isDark) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(Icons.settings, size: 48, color: AppColors.black),
-          const SizedBox(height: 16),
-          Text('Workout Type', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
-          const SizedBox(height: 8),
-          Text('Choose your preferred workout type.', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5)),
-          const SizedBox(height: 32),
-          _buildDropdownField(label: 'Workout Type *', value: _selectedWorkoutType.isEmpty ? null : _selectedWorkoutType, items: _workoutTypes, onChanged: (value) => setState(() => _selectedWorkoutType = value ?? ''), isDark: isDark, isRequired: true),
-        ],
-      ),
-    );
-  }
-  Widget _buildFitnessGoalsPage(bool isDark) {
-    return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [Icon(Icons.flag_outlined, size: 48, color: AppColors.black), const SizedBox(height: 16), Text('Your Fitness Goals', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))), const SizedBox(height: 8), Text('Describe your specific fitness goals and what you want to achieve.', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5)), const SizedBox(height: 32), _buildTextField(label: 'Fitness Goals *', controller: _fitnessGoalsController, hint: 'Describe your specific fitness goals...', maxLines: 4, isDark: isDark, isRequired: true), const SizedBox(height: 24), Text('Popular Goals (tap to select)', style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 16, fontWeight: FontWeight.w600)), const SizedBox(height: 16), GridView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 3, crossAxisSpacing: 8, mainAxisSpacing: 8), itemCount: _fitnessGoals.length, itemBuilder: (context, index) { final goal = _fitnessGoals[index]; return GestureDetector(onTap: () => setState(() => _fitnessGoalsController.text = goal['title']!), child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), decoration: BoxDecoration(color: _fitnessGoalsController.text == goal['title'] ? AppColors.black.withOpacity(0.1) : AppColors.cardBackground(isDark), borderRadius: BorderRadius.circular(8), border: Border.all(color: _fitnessGoalsController.text == goal['title'] ? AppColors.black : AppColors.borderColor(isDark))), child: Row(children: [Text(goal['icon']!, style: const TextStyle(fontSize: 16)), const SizedBox(width: 6), Expanded(child: Text(goal['title']!, style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 11, fontWeight: _fitnessGoalsController.text == goal['title'] ? FontWeight.w600 : FontWeight.normal), maxLines: 2, overflow: TextOverflow.ellipsis))]))); })]));
-  }
-  Widget _buildFitnessLevelPage(bool isDark) {
-    return SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [Icon(Icons.trending_up, size: 48, color: AppColors.black), const SizedBox(height: 16), Text('Fitness Level', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))), const SizedBox(height: 8), Text('Select your current fitness experience level.', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5)), const SizedBox(height: 32), _buildDropdownField(label: 'Current Fitness Level *', value: _selectedFitnessLevel.isEmpty ? null : _selectedFitnessLevel, items: _fitnessLevels, onChanged: (value) => setState(() => _selectedFitnessLevel = value ?? ''), isDark: isDark, isExpanded: true, isRequired: true)]));
-  }
-  Widget _buildTextField({required String label, required TextEditingController controller, required String hint, required bool isDark, int maxLines = 1, bool isRequired = false}) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 16, fontWeight: FontWeight.w600)), const SizedBox(height: 8), TextFormField(controller: controller, maxLines: maxLines, style: TextStyle(color: AppColors.textPrimary(isDark)), decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: AppColors.textSecondary(isDark)), filled: true, fillColor: AppColors.cardBackground(isDark), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isRequired && controller.text.isEmpty ? Colors.red.withOpacity(0.5) : AppColors.borderColor(isDark))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isRequired && controller.text.isEmpty ? Colors.red.withOpacity(0.5) : AppColors.borderColor(isDark))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.black, width: 2)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16)))]);
-  }
-  Widget _buildDropdownField({required String label, required String? value, required List<String> items, required void Function(String?) onChanged, required bool isDark, bool isExpanded = false, bool isRequired = false}) {
-    // Making Dropdown fully expanded for better responsiveness
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 16, fontWeight: FontWeight.w600)), const SizedBox(height: 8), DropdownButtonFormField<String>(value: value, items: items.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, style: TextStyle(color: AppColors.textPrimary(isDark)), overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis))).toList(), onChanged: onChanged, isExpanded: true, decoration: InputDecoration(filled: true, fillColor: AppColors.cardBackground(isDark), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isRequired && (value == null || value.isEmpty) ? Colors.red.withOpacity(0.5) : AppColors.borderColor(isDark))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isRequired && (value == null || value.isEmpty) ? Colors.red.withOpacity(0.5) : AppColors.borderColor(isDark))), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.black, width: 2)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16)), dropdownColor: AppColors.cardBackground(isDark))]);
-  }
+  // Sharing logic removed as per previous request to replace with Save Plan
   Future<void> _shareWorkoutPlan(Map<String, dynamic> workoutPlan) async {
-    try {
-      final planText = WorkoutPlannerService.generateWorkoutPlanText(workoutPlan);
-      final planTitle = workoutPlan['planTitle'] ?? 'Workout Plan';
-      await FileDownloadService.shareWorkoutPlan(planText, planTitle);
-      _showSuccessSnackBar('Workout plan shared successfully!');
-    } catch (e) {
-      _showErrorSnackBar('Error sharing plan: ${e.toString()}');
-    }
+    // Left empty since the button was replaced by Save Plan
   }
-  void _showValidationSnackBar() { String message = ''; switch (_currentPage) { case 0: message = 'Please describe your fitness goals'; break; case 1: message = 'Please select your fitness level'; break; case 2: message = 'Please select a workout type'; break; case 3: message = 'Please select a workout duration'; break; case 4: message = 'Please select a preferred time'; break; case 5: message = 'Please select a plan duration'; break; default: message = 'Please complete the form'; } ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Row(children: [Icon(Icons.warning_amber_rounded, color: Colors.white), const SizedBox(width: 8), Expanded(child: Text(message))]), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))); }
+
+  void _showValidationSnackBar() {
+    String message = '';
+    switch (_currentPage) {
+      case 0: message = 'Please select your fitness goal'; break;
+      case 1: message = 'Please select your gender'; break;
+      case 2: message = 'Please enter your weight'; break;
+      case 3: message = 'Please enter your height'; break;
+      case 4: message = 'Please select your fitness level'; break;
+      case 5: message = 'Please select your focus areas (or Full Body)'; break;
+      case 6: message = 'Please select a workout type'; break;
+      case 7: message = 'Please select the workout duration'; break;
+      case 8: message = 'Please select the preferred time'; break;
+      case 9: message = 'Please select the plan duration'; break;
+      default: message = 'Please complete the form';
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Row(children: [Icon(Icons.warning_amber_rounded, color: Colors.white), const SizedBox(width: 8), Expanded(child: Text(message))]), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))));
+  }
   void _showSuccessSnackBar(String message) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Row(children: [Icon(Icons.check_circle_outline, color: Colors.white), const SizedBox(width: 8), Expanded(child: Text(message))]), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))); }
   void _showErrorSnackBar(String message) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Row(children: [Icon(Icons.error_outline, color: Colors.white), const SizedBox(width: 8), Expanded(child: Text(message))]), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))); }
 }

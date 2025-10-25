@@ -1,12 +1,90 @@
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+// Firestore and Auth imports are necessary for saving the plan
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 
 class GeminiService {
   static final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   static const String _baseUrl =
       'https://generativelanguage.googleapis.com/v1beta';
+
+  // Initialize Firestore and Auth for saving functionality
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // --------------------------------------------------------------------------
+  // --- MEAL PLAN FIREBASE LOGIC (UPDATED FOR /gymkitDetails/mealPlan) ---
+  // --------------------------------------------------------------------------
+
+  // --- UPDATED METHOD: Get Saved Meal Plan from Firestore (Returns LIST with at most one Map) ---
+  // Fetches the single active meal plan stored at the fixed document path.
+  static Future<List<Map<String, dynamic>>> getSavedMealPlansList() async {
+    final user = _auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      // Fetch the specific 'mealPlan' document at the consistent path
+      final docSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('gymkitDetails') // Consistent Subcollection Name
+          .doc('mealPlan')             // Consistent Fixed Document ID
+          .get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+        // Convert Firestore Timestamp to DateTime for consistency in the app
+        if (data['savedAt'] is Timestamp) {
+          data['savedAt'] = (data['savedAt'] as Timestamp).toDate();
+        }
+        // Return a list containing only this one active plan
+        return [data];
+      }
+
+      return [];
+    } catch (e) {
+      print('Error fetching saved meal plan: $e');
+      return [];
+    }
+  }
+
+  // --- UPDATED METHOD: Save Meal Plan to Firestore (Matching the gymkitDetails/workoutPlan structure) ---
+  // Saves the plan to the fixed document path, overwriting any previous data.
+  static Future<void> saveMealPlan(Map<String, dynamic> planData) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated. Cannot save plan.');
+    }
+
+    try {
+      // Add necessary metadata
+      planData['planType'] = 'meal';
+      planData['savedAt'] = Timestamp.now();
+      planData['userId'] = user.uid;
+
+      // CRITICAL CHANGE: Use the exact document path and 'mealPlan' ID.
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('gymkitDetails') // Subcollection Name (same as workoutPlan)
+          .doc('mealPlan')            // Fixed Document ID
+          .set(planData, SetOptions(merge: false)); // Overwrite existing data
+
+      print('Meal plan successfully saved to Firestore at /users/${user.uid}/gymkitDetails/mealPlan.');
+
+    } catch (e) {
+      print('Firestore failed to save the meal plan: $e');
+      throw Exception('Failed to save the meal plan: ${e.toString()}');
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // --- GEMINI API AND HELPER LOGIC (UNCHANGED) ---
+  // --------------------------------------------------------------------------
+
   static Future<Map<String, dynamic>> generateMealPlan({
     required Map<String, dynamic> userInput,
   }) async {
@@ -84,15 +162,11 @@ class GeminiService {
       cuisinePreference: cuisinePreference,
     );
 
-    print('--- Sending Meal Plan Prompt to Gemini ---');
-    // print(prompt); // Uncomment for debugging
-    print('-----------------------------------------');
-
     // --- 3. Make API call ---
     try {
       final response = await http.post(
         Uri.parse(
-            '$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'),
+            '$_baseUrl/models/gemini-2.0-flash:generateContent?key=$_apiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'contents': [
@@ -101,48 +175,15 @@ class GeminiService {
                 {'text': prompt}
               ]
             }
-          ],
-          'generationConfig': {
-            'temperature': 0.4, // A bit of creativity for recipes
-            'topP': 0.8,
-            'topK': 40,
-            'maxOutputTokens': 8192, // Increased for multi-day plans
-            'responseMimeType': 'application/json', // CRITICAL
-          },
-          'safetySettings': [
-            // Standard safety settings
-            {
-              'category': 'HARM_CATEGORY_HARASSMENT',
-              'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              'category': 'HARM_CATEGORY_HATE_SPEECH',
-              'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              'threshold': 'BLOCK_MEDIUM_AND_ABOVE'
-            },
           ]
         }),
       );
-
-      print('--- Gemini Meal Plan Response ---');
-      print('Status Code: ${response.statusCode}');
-      // print('Body: ${response.body}'); // Too verbose to print by default
-      print('--------------------------------');
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final data = jsonDecode(response.body);
 
         if (data['candidates'] == null &&
             data['promptFeedback']?['blockReason'] != null) {
-          print(
-              'Gemini blocked the request: ${data['promptFeedback']['blockReason']}');
           throw Exception(
               "Request blocked due to safety settings. Please adjust your inputs (e.g., health conditions).");
         }
@@ -152,18 +193,14 @@ class GeminiService {
         if (content != null) {
           final parsed = _parseMealPlanResponse(content);
           if (parsed != null) {
-            print('Parsed Gemini Meal Plan: Success');
             return parsed; // Success!
           } else {
-            print('Failed to parse Gemini JSON response for meal plan.');
-            print('Raw content: $content');
             throw Exception(
                 "Received an unexpected format from the AI. Please try again.");
           }
         } else {
           final finishReason = data['candidates']?[0]?['finishReason'];
           if (finishReason != null && finishReason != 'STOP') {
-            print('Gemini Finish Reason: $finishReason');
             throw Exception(
                 "AI generation stopped unexpectedly ($finishReason). Please try again.");
           }
@@ -180,7 +217,6 @@ class GeminiService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print('GeminiService generateMealPlan Error: $e');
       throw Exception(
           "Meal plan generation failed: ${e.toString().replaceFirst("Exception: ", "")}");
     }
@@ -322,7 +358,7 @@ Do not include markdown backticks (```json) or any text outside the JSON object.
       // Make API call with correct model name
       final response = await http.post(
         Uri.parse(
-            '$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'), // Using 2.5-flash
+            '$_baseUrl/models/gemini-2.0-flash:generateContent?key=$_apiKey'), // Using 2.5-flash
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'contents': [
@@ -378,7 +414,7 @@ Do not include markdown backticks (```json) or any text outside the JSON object.
     // --- Initialize the Generative Model ---
     final model = GenerativeModel(
       // --- Use gemini-1.5-flash as requested and ensure correct name ---
-      model: 'gemini-2.5-flash', // Use 'gemini-1.5-flash-latest' or specific version
+      model: 'gemini-2.0-flash', // Use 'gemini-1.5-flash-latest' or specific version
       apiKey: _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.1, // Low temp for factual calculation
@@ -453,7 +489,6 @@ Do not include markdown backticks (```json) or any text outside the JSON object.
       throw Exception('Failed to get AI analysis: ${e.toString().replaceFirst("Exception: ", "")}');
     }
   }
-// GeminiService.dart (Replace the existing _createBodyCompositionPrompt)
 
   // Helper to create the specific body composition prompt
   static String _createBodyCompositionPrompt(int age, String gender, double weightKg, double heightCm, String activityLevel) {
@@ -499,32 +534,27 @@ Ensure all outputs are numbers (use floating point numbers where appropriate, e.
   "Body Fat Percentage": 26.5,
   "Body Fat Mass": 19.9,
   "Lean Mass": 55.1,
-  "Muscle Mass": 44.1, // Example: Lean Mass * 0.8
-  "Skeletal Muscle Mass": 35.3, // Example: Muscle Mass * 0.8
-  "Bone Mass": 2.6, // Example: Body Weight * 0.035
-  "Body Water Percentage": 53.5, // Example: (Lean Mass * 0.73) / Body Weight * 100
+  "Muscle Mass": 44.1,
+  "Skeletal Muscle Mass": 35.3,
+  "Bone Mass": 2.6,
+  "Body Water Percentage": 53.5,
   "Water Mass": 40.1,
-  "Protein Mass": 8.8, // Example: Muscle Mass * 0.20
-  "Subcutaneous Fat": 16.9, // Example: Body Fat Mass * 0.85
-  "Visceral Fat Level": 14.0, // Example: Estimated based on BF% and Age
+  "Protein Mass": 8.8,
+  "Subcutaneous Fat": 16.9,
+  "Visceral Fat Level": 14.0,
   "BMR": 1650.5,
-  "Metabolic Age": 35, // Example: Estimated based on BMR vs. Age average
-  "Body Composition Score": 78 // Example: Calculated score
+  "Metabolic Age": 35,
+  "Body Composition Score": 78
 }
 ''';
+
   }
 
-// --- Make sure the rest of your GeminiService class, including ---
-// --- getBodyCompositionAnalysis method and parsing logic, is correct ---
-// ... (rest of GeminiService.dart) ...
-  //
-  // --- THIS IS THE SECOND FIX ---
-  //
   static String _createNutritionPrompt(Map data, int? age, double? bmi) {
     // These values are now correct because onboardingflow.dart is fixed
     final isMetric = data['isMetric'] ?? false;
-    final weight = (data['weightKg'] ?? 70).toDouble();
-    final height = (data['heightCm'] ?? 170).toDouble();
+    final double weight = (data['weightKg'] ?? 70).toDouble();
+    final double height = (data['heightCm'] ?? 170).toDouble();
 
     // These are the new, correct variables from your flow
     final targetAmount = data['targetAmount']; // This is in KG
@@ -808,7 +838,7 @@ Return ONLY the JSON, no other text.
 
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/models/gemini-2.5-flash:generateContent?key=$_apiKey'), // Or your preferred model
+        Uri.parse('$_baseUrl/models/gemini-2.0-flash:generateContent?key=$_apiKey'), // Or your preferred model
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'contents': [

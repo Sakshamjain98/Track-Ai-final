@@ -78,11 +78,9 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
   final List<String> _unitOptions = ['kg', 'lbs'];
   final List<String> _heightUnits = ['cm', 'ft/in'];
   final List<String> _activityLevels = [
-    'Sedentary (little/no exercise)',
     'Light (1-3 days/week)',
     'Moderate (3-5 days/week)',
     'Active (6-7 days a week)',
-    'Very Active (very hard exercise)',
   ];
 
   @override
@@ -243,11 +241,9 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
   // Helper to map UI activity level to simpler terms if needed
   String _mapActivityLevel(String uiLevel) {
     switch(uiLevel) {
-      case 'Sedentary (little/no exercise)': return 'sedentary';
       case 'Light (1-3 days/week)': return 'light';
       case 'Moderate (3-5 days/week)': return 'moderate';
       case 'Active (6-7 days a week)': return 'active';
-      case 'Very Active (very hard exercise)': return 'very_active';
       default: return 'moderate';
     }
   }
@@ -274,8 +270,8 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
             title: Text('Body Analysis', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 18, fontWeight: FontWeight.w600)),
             centerTitle: true,
             actions: [
-              IconButton(
-                icon: Icon(Icons.history, color: isDark ? Colors.white : Colors.black),
+              // MODIFICATION 1: Use TextButton for "History" with bold text
+              TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -285,6 +281,14 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
                     )),
                   ).then((_) => _loadHistory()); // Refresh history on return
                 },
+                child: Text(
+                  'HISTORY',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold, // Enhanced
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ],
           ),
@@ -468,7 +472,8 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
 } // End Analyzer State
 
 // --- Results Page (Needs significant modification) ---
-class ResultsPage extends StatefulWidget { // Make it StatefulWidget
+// --- Results Page (Modified for Enhanced UI) ---
+class ResultsPage extends StatefulWidget {
   final AnalysisReport report;
   final String gender;
   const ResultsPage({Key? key, required this.report, required this.gender}) : super(key: key);
@@ -479,31 +484,46 @@ class ResultsPage extends StatefulWidget { // Make it StatefulWidget
 
 class _ResultsPageState extends State<ResultsPage> {
   bool _showRecommendations = false;
-  Map<String, dynamic>? _generatedRecommendations; // Store generated recommendations
+  Map<String, dynamic>? _generatedRecommendations;
+
+  // --- DEFINITION OF METRIC GROUPS (16 Metrics + 1 Score) ---
+  final Map<String, List<String>> _metricGroups = {
+    'Key Metrics': [
+      'Body Weight', 'BMI', 'Body Fat Percentage', 'Skeletal Muscle Mass', 'Visceral Fat Level',
+    ],
+    'Mass Breakdown': [
+      'Body Fat Mass', 'Lean Mass', 'Muscle Mass', 'Bone Mass', 'Water Mass', 'Protein Mass',
+    ],
+    'Other Indicators': [
+      'BMR', 'Metabolic Age', 'Subcutaneous Fat', 'Body Water Percentage',
+    ]
+  };
 
   @override
   void initState() {
     super.initState();
-    // Initially, recommendations are not generated or shown
-    // If the report loaded from history already has recommendations, show them
     if (widget.report.recommendations != null) {
       _generatedRecommendations = widget.report.recommendations;
       _showRecommendations = true;
     }
   }
 
+  // Helper to determine the color of the score (Green for good, Red for bad)
+  Color _getScoreColor(int score) {
+    if (score >= 80) return Colors.green.shade600;
+    if (score >= 60) return Colors.lightGreen.shade400;
+    if (score >= 40) return Colors.amber.shade600;
+    return Colors.red.shade600;
+  }
 
-  // --- Logic to generate recommendations LOCALLY based on AI METRICS ---
-  // (Moved from _BodyCompositionAnalyzerState)
+  // --- (Existing _generateAndShowRecommendations logic is unchanged) ---
   void _generateAndShowRecommendations() {
+    // ... (Your existing _generateAndShowRecommendations logic here) ...
     Map<String, dynamic> recommendations = {};
     List<String> focus = [];
     List<String> good = [];
 
-    final metrics = widget.report.metrics; // Use metrics from the report
-
-    // --- Analyze AI Metrics ---
-    // Use try-catch or null checks for safety as AI might not return all keys
+    final metrics = widget.report.metrics;
     try {
       double bmi = (metrics['BMI'] as num? ?? 0.0).toDouble();
       double bf = (metrics['Body Fat Percentage'] as num? ?? 0.0).toDouble();
@@ -525,7 +545,7 @@ class _ResultsPageState extends State<ResultsPage> {
 
       // Body Fat Analysis
       bool isMale = widget.gender == 'Male';
-      double idealBfMax = isMale ? 20.0 : 28.0; // Adjusted ideal ranges slightly
+      double idealBfMax = isMale ? 20.0 : 28.0;
       double idealBfMin = isMale ? 10.0 : 18.0;
       if (bf > idealBfMax) { focus.add("Body Fat Percentage\nProblem: Your body fat percentage of ${bf.toStringAsFixed(1)}% is above the ideal range (${idealBfMin.toStringAsFixed(0)}-${idealBfMax.toStringAsFixed(0)}%).\nSolution: Incorporate more cardiovascular exercise (like running, cycling, swimming) and strength training (2-3 times/week) into your routine, and focus on a balanced diet with adequate protein and controlled calories."); }
       else if (bf < idealBfMin) { focus.add("Body Fat Percentage\nProblem: Your body fat percentage of ${bf.toStringAsFixed(1)}% is below the typical healthy range (${idealBfMin.toStringAsFixed(0)}-${idealBfMax.toStringAsFixed(0)}%).\nSolution: Ensure you are consuming enough healthy fats and overall calories. Consult a healthcare provider if concerned."); }
@@ -533,14 +553,11 @@ class _ResultsPageState extends State<ResultsPage> {
 
       // Visceral Fat Analysis
       if (vfl > 12) { focus.add("Visceral Fat Level\nProblem: Your visceral fat level of ${vfl.toStringAsFixed(0)} is elevated above the ideal range of 1-12.\nSolution: Focus on reducing overall body fat through diet (limit processed foods, sugary drinks) and regular exercise, particularly including 2-3 sessions of High-Intensity Interval Training (HIIT) per week if appropriate for your fitness level."); }
-      else if (vfl < 1) { focus.add("Visceral Fat Level\nProblem: Your visceral fat level of ${vfl.toStringAsFixed(0)} is very low. While generally good, extremely low levels can sometimes be indicative of other issues.\nSolution: Ensure adequate intake of essential fats. If concerned, consult a healthcare provider.");} // Added low VFL case
+      else if (vfl < 1) { focus.add("Visceral Fat Level\nProblem: Your visceral fat level of ${vfl.toStringAsFixed(0)} is very low. While generally good, extremely low levels can sometimes be indicative of other issues.\nSolution: Ensure adequate intake of essential fats. If concerned, consult a healthcare provider.");}
       else { good.add("Visceral Fat Level\nYour visceral fat level of ${vfl.toStringAsFixed(0)} is within the ideal range of 1-12."); }
 
-      // Metabolic Age Analysis (Compare to actual age if available, or just state the value)
-      // Assuming age is available from the report or can be calculated if DoB was stored
-      // For now, just present the value and general advice.
+      // Metabolic Age Analysis
       if (metabolicAge != null) {
-        // You might fetch the user's actual age here if needed for comparison
         focus.add("Metabolic Age\nValue: Your estimated metabolic age is $metabolicAge years.\nSolution: If this is higher than your actual age, prioritize healthy lifestyle choices like regular exercise (both cardio and strength) and a balanced, whole-foods diet to potentially lower your metabolic age over time.");
       } else {
         good.add("Metabolic Age\nYour metabolic age was estimated. Maintaining a healthy lifestyle supports a youthful metabolic rate.");
@@ -572,8 +589,6 @@ class _ResultsPageState extends State<ResultsPage> {
       focus.add("Could not fully generate recommendations due to unexpected metric data.");
     }
 
-
-    // Use the AI's healthIndicator as the overall summary
     recommendations['summary'] = metrics['healthIndicator'] ?? "Analysis complete. Review individual metrics for details.";
     recommendations['focus'] = focus.isNotEmpty ? focus : ["Great job! No major areas need immediate focus based on these key metrics. Maintain your healthy habits!"];
     recommendations['good'] = good.isNotEmpty ? good : ["Continue monitoring your metrics."];
@@ -585,33 +600,26 @@ class _ResultsPageState extends State<ResultsPage> {
     });
   }
 
-
-  // --- Helper to get category (same as before) ---
-  String _getCategoryForMetric(String metricName, double value) { /* ... same as before ... */
+  // --- (Existing _getCategoryForMetric logic is unchanged) ---
+  String _getCategoryForMetric(String metricName, double value) {
     switch (metricName) {
       case 'BMI':
         if (value < 18.5) return 'Underweight'; if (value < 25) return 'Normal'; if (value < 30) return 'Overweight'; return 'Obese';
       case 'Body Fat Percentage':
         bool isMale = widget.gender == 'Male';
-        double athMax = isMale ? 14.0 : 20.0; // Adjusted athletic ranges
-        double goodMax = isMale ? 20.0 : 28.0; // Adjusted good ranges
+        double athMax = isMale ? 14.0 : 20.0;
+        double goodMax = isMale ? 20.0 : 28.0;
         if (value < athMax) return 'Athletic'; if (value < goodMax) return 'Good'; return 'Excess';
-    // --- Keep 'Subcutaneous Fat' if AI returns it ---
-    // case 'Subcutaneous Fat':
-    //   bool isMale = widget.gender == 'Male';
-    //   double goodMax = isMale ? 16.0 : 22.0;
-    //   if (value < goodMax) return 'Good'; return 'Excess';
       case 'Visceral Fat Level':
-        if (value < 10) return 'Healthy'; if (value < 13) return 'Acceptable'; if (value < 16) return 'High'; return 'Very High'; // Refined VFL categories
+        if (value < 10) return 'Healthy'; if (value < 13) return 'Acceptable'; if (value < 16) return 'High'; return 'Very High';
       case 'Body Water Percentage':
         bool isMale = widget.gender == 'Male';
         double minWater = isMale ? 50.0 : 45.0;
         double maxWater = isMale ? 65.0 : 60.0;
         if (value < minWater) return 'Low'; if (value < maxWater) return 'Normal'; return 'High';
-    // --- Add categories for other metrics if desired, otherwise default ---
-      case 'Metabolic Age': return 'Value'; // Just show the value
-      case 'Body Composition Score': return 'Score'; // Just show the score
-      default: return 'Value'; // Default category if none specific apply
+      case 'Metabolic Age': return 'Value';
+      case 'Body Composition Score': return 'Score';
+      default: return 'Value';
     }
   }
 
@@ -620,11 +628,37 @@ class _ResultsPageState extends State<ResultsPage> {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
     final Color primaryTextColor = isDark ? Colors.white : Colors.black;
     final Color secondaryTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final metrics = widget.report.metrics;
+
+    // Get the score and its color/progress value
+    final int score = (metrics['Body Composition Score'] as num?)?.round() ?? 0;
+    final Color scoreColor = _getScoreColor(score);
+    final double scoreProgress = score / 100.0;
+
+    // Helper to build a metric group
+    Widget _buildMetricGroup(String title, List<String> metricKeys) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryTextColor)),
+          const SizedBox(height: 16),
+          ...metricKeys.map((key) {
+            if (metrics.containsKey(key) && metrics[key] is num) {
+              final metricValue = (metrics[key] as num).toDouble();
+              final category = _getCategoryForMetric(key, metricValue);
+              return _buildMetricCard(key, metricValue, category, isDark);
+            }
+            return const SizedBox.shrink();
+          }).toList(),
+          const SizedBox(height: 32),
+        ],
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
-      appBar: AppBar( /* ... AppBar ... */
-        title: Text('Analysis Results', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
+      appBar: AppBar(
+        title: Text('AI Body Composition Report', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         backgroundColor: Colors.transparent, elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
       ),
@@ -633,98 +667,112 @@ class _ResultsPageState extends State<ResultsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Overall Score Card (uses AI metric)
-            Container( /* ... Score Card Decoration ... */
+            // 🌟 ENHANCED Overall Score Card 🌟
+            Container(
               width: double.infinity,
               padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(color: isDark ? Colors.grey[900] : Colors.grey[50], borderRadius: BorderRadius.circular(20), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
+              // Use a subtle background gradient for flair
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[900] : Colors.grey[50],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: scoreColor.withOpacity(0.5), width: 1),
+                boxShadow: [BoxShadow(color: scoreColor.withOpacity(isDark ? 0.2 : 0.1), blurRadius: 10, spreadRadius: 1)],
+              ),
               child: Column(
                 children: [
-                  Text('Body Score', style: TextStyle(fontSize: 16, color: secondaryTextColor)), // Renamed for clarity
+                  Text('Body Composition Score', style: TextStyle(fontSize: 16, color: secondaryTextColor)),
                   const SizedBox(height: 16),
+                  // Score Value with Green/Contextual Color
                   Text(
-                      '${(widget.report.metrics['Body Composition Score'] as num?)?.round() ?? '--'}', // Use AI Score
-                      style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: primaryTextColor)
+                      '$score',
+                      style: TextStyle(fontSize: 64, fontWeight: FontWeight.w900, color: scoreColor)
                   ),
                   Text('out of 100', style: TextStyle(fontSize: 14, color: secondaryTextColor.withOpacity(0.7))),
+                  const SizedBox(height: 16),
+                  // Progress Bar Enhancement
+                  LinearProgressIndicator(
+                    value: scoreProgress,
+                    backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 24),
+                  // Health Indicator / Overall Summary (AI TEXT)
+                  Text(
+                    metrics['healthIndicator'] as String? ?? 'No detailed summary provided.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: primaryTextColor),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 32),
 
-            // Key Metrics Section (uses AI metrics)
-            Text('Key Metrics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryTextColor)),
-            const SizedBox(height: 16),
-            ...widget.report.metrics.entries
-                .where((e) => e.key != 'Body Composition Score' && e.key != 'healthIndicator') // Filter out score & summary
-                .map((entry) {
-              // Safely attempt to convert value to double for category check
-              double? metricValue = (entry.value as num?)?.toDouble();
-              String category = metricValue != null ? _getCategoryForMetric(entry.key, metricValue) : 'N/A';
-              return _buildMetricCard( entry.key, entry.value, category, isDark );
-            }),
-            const SizedBox(height: 32),
+            // --- ALL 16 METRICS DISPLAYED IN GROUPS ---
+            _buildMetricGroup('Key Metrics', _metricGroups['Key Metrics']!),
+            _buildMetricGroup('Mass Breakdown', _metricGroups['Mass Breakdown']!),
+            _buildMetricGroup('Other Indicators', _metricGroups['Other Indicators']!),
 
             // --- Recommendation Section (Conditional Display) ---
             if (!_showRecommendations)
-              Center( // Center the button
+              Center(
                 child: ElevatedButton.icon(
-                  icon: Icon(lucide.LucideIcons.brainCircuit, size: 18), // AI icon
+                  icon: Icon(lucide.LucideIcons.sparkles, size: 18),
                   label: Text('Get AI Recommendations'),
                   style: ElevatedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.black : Colors.white, backgroundColor: isDark ? Colors.white : Colors.black, // Contrasting colors
+                    foregroundColor: isDark ? Colors.black : Colors.white, backgroundColor: isDark ? Colors.white : Colors.black,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _generateAndShowRecommendations, // Trigger local generation
+                  onPressed: _generateAndShowRecommendations,
                 ),
               )
-            else if (_generatedRecommendations != null) ...[ // Use else if to ensure it exists
-              Text('Recommendations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryTextColor)),
+            else if (_generatedRecommendations != null) ...[
+              Text('AI-Powered Recommendations', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryTextColor)),
               const SizedBox(height: 16),
+              // Overall Recommendation (from AI's healthIndicator field)
               _buildRecommendationCard(
                   'Overall Recommendation',
-                  _generatedRecommendations!['summary'] ?? 'No summary available.', // Use AI summary
-                  Icons.article_outlined, // More appropriate icon
-                  Colors.blueAccent, // Consistent color
+                  _generatedRecommendations!['summary'] ?? 'No summary available.',
+                  lucide.LucideIcons.brainCircuit,
+                  Colors.blueAccent,
                   isDark
               ),
+              // Areas for Focus (Local Logic)
               _buildRecommendationCard(
                   'Areas for Focus',
-                  (_generatedRecommendations!['focus'] as List<dynamic>?)?.map((item) => "- $item").join('\n\n') ?? 'None specified.', // Format list
-                  Icons.track_changes_outlined, // More appropriate icon
-                  Colors.orangeAccent, // Consistent color
+                  (_generatedRecommendations!['focus'] as List<dynamic>?)?.map((item) => "- $item").join('\n\n') ?? 'None specified.',
+                  lucide.LucideIcons.triangle,
+                  Colors.orangeAccent,
                   isDark
               ),
+              // What's Going Well (Local Logic)
               _buildRecommendationCard(
                   "What's Going Well",
-                  (_generatedRecommendations!['good'] as List<dynamic>?)?.map((item) => "- $item").join('\n\n') ?? 'Keep monitoring.', // Format list
-                  Icons.check_circle_outline, // More appropriate icon
-                  Colors.green, // Consistent color
+                  (_generatedRecommendations!['good'] as List<dynamic>?)?.map((item) => "- $item").join('\n\n') ?? 'Keep monitoring.',
+                  lucide.LucideIcons.circleCheck,
+                  Colors.green,
                   isDark
               ),
-            ] else // Case where generation might fail unexpectedly
+            ] else
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
-                child: Text(
-                    "Could not generate recommendations at this time.",
-                    style: TextStyle(color: Colors.redAccent)
-                ),
+                child: Text("Could not generate recommendations at this time.", style: TextStyle(color: Colors.redAccent)),
               ),
-            const SizedBox(height: 20), // Bottom padding
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 
-  // --- Helper Widgets (_buildMetricCard, _buildRecommendationCard) ---
-  // Keep these mostly the same, ensure they handle the data types correctly
-  Widget _buildMetricCard(String title, dynamic value, String category, bool isDark) { /* ... same as before ... */
-    Color categoryColor = Colors.grey; // Default
-    Color categoryTextColor = isDark ? Colors.black : Colors.white; // Default text on grey
+  // --- (Existing _buildMetricCard logic is unchanged and sufficient for the metrics) ---
+  Widget _buildMetricCard(String title, dynamic value, String category, bool isDark) {
+    // ... (This function remains as provided in your last submission) ...
+    Color categoryColor = Colors.grey;
+    Color categoryTextColor = isDark ? Colors.black : Colors.white;
 
-    // Define colors based on category - refine these as needed
     switch(category.toLowerCase()) {
       case 'underweight': categoryColor = Colors.blueAccent; categoryTextColor = Colors.white; break;
       case 'normal':
@@ -740,36 +788,23 @@ class _ResultsPageState extends State<ResultsPage> {
       case 'excess':
       case 'high':
       case 'very high': categoryColor = Colors.redAccent; categoryTextColor = Colors.white; break;
-      default: categoryColor = isDark ? Colors.grey[700]! : Colors.grey[300]!; categoryTextColor = isDark ? Colors.white : Colors.black; break; // Use subtle grey for unknown/default
+      default: categoryColor = isDark ? Colors.grey[700]! : Colors.grey[300]!; categoryTextColor = isDark ? Colors.white : Colors.black; break;
     }
 
-
     // Format value: Show 1 decimal for doubles, 0 for integers/levels
-    String valueString = (value is double && !['Metabolic Age', 'Visceral Fat Level', 'Body Composition Score'].contains(title))
+    String valueString = (value is double && !['Metabolic Age', 'Visceral Fat Level', 'Body Composition Score', 'BMR'].contains(title))
         ? value.toStringAsFixed(1)
-        : (value as num?)?.round().toString() ?? '--'; // Handle null or non-num
-
+        : (value as num?)?.round().toString() ?? '--';
 
     // Updated unit map - ensure keys match PascalCase from AI
     String unit = {
-      'Body Weight': 'kg',
-      'Body Fat Percentage': '%',
-      'Body Water Percentage': '%',
-      //'Subcutaneous Fat': '%', // Keep if AI returns it
-      'Skeletal Muscle Mass': 'kg',
-      'Muscle Mass': 'kg',
-      'Lean Mass': 'kg',
-      'Body Fat Mass': 'kg',
-      'Bone Mass': 'kg',
-      'Water Mass': 'kg',
-      'Protein Mass': 'kg',
-      'BMR': 'kcal/day',
-      'Metabolic Age': 'years',
-      'Visceral Fat Level': '', // No unit, just level
-      'BMI': '', // No unit
+      'Body Weight': 'kg', 'Body Fat Percentage': '%', 'Body Water Percentage': '%', 'Skeletal Muscle Mass': 'kg',
+      'Muscle Mass': 'kg', 'Lean Mass': 'kg', 'Body Fat Mass': 'kg', 'Bone Mass': 'kg', 'Water Mass': 'kg',
+      'Protein Mass': 'kg', 'BMR': 'kcal/day', 'Metabolic Age': 'years', 'Visceral Fat Level': 'level',
+      'BMI': '', 'Subcutaneous Fat': '%',
     }[title] ?? '';
 
-    return Container( /* ... Decoration ... */
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(color: isDark ? Colors.grey[900] : Colors.grey[50], borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!)),
@@ -777,29 +812,29 @@ class _ResultsPageState extends State<ResultsPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            flex: 3, // Give more space to title/category
+            flex: 3,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
-              if (category != 'Value' && category != 'Score' && category != 'N/A') // Only show category chip if meaningful
+              if (category != 'Value' && category != 'Score' && category != 'N/A')
                 Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: categoryColor, borderRadius: BorderRadius.circular(8)), // Use direct color
-                    child: Text(category, style: TextStyle(color: categoryTextColor, fontSize: 11, fontWeight: FontWeight.bold))), // Use contrasting text
+                    decoration: BoxDecoration(color: categoryColor, borderRadius: BorderRadius.circular(8)),
+                    child: Text(category, style: TextStyle(color: categoryTextColor, fontSize: 11, fontWeight: FontWeight.bold))),
             ]),
           ),
           const SizedBox(width: 10),
-          Expanded( // Value and unit
+          Expanded(
             flex: 2,
             child: Row(
-                mainAxisAlignment: MainAxisAlignment.end, // Align value to the right
-                crossAxisAlignment: CrossAxisAlignment.baseline, // Align baseline of value and unit
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Flexible( // Allow value to wrap if extremely long (unlikely)
+                  Flexible(
                     child: Text(
                       valueString,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold), // Slightly smaller value text
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.right,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -812,9 +847,9 @@ class _ResultsPageState extends State<ResultsPage> {
     );
   }
 
-  Widget _buildRecommendationCard(String title, String content, IconData icon, Color color, bool isDark) { /* ... same as before ... */
-    // Improved formatting for lists within the content
-    content = content.replaceAll('- ', '\n • ').trim(); // Add bullet points
+  // --- (Existing _buildRecommendationCard logic is unchanged) ---
+  Widget _buildRecommendationCard(String title, String content, IconData icon, Color color, bool isDark) {
+    content = content.replaceAll('- ', '\n • ').trim();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -827,11 +862,10 @@ class _ResultsPageState extends State<ResultsPage> {
           Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
         ]),
         const SizedBox(height: 12),
-        Text(content, style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[300] : Colors.grey[700], height: 1.6)), // Increased line height
+        Text(content, style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[300] : Colors.grey[700], height: 1.6)),
       ]),
     );
   }
-
 }
 
 
@@ -871,20 +905,39 @@ class _HistoryPageState extends State<HistoryPage> { /* ... same state and metho
         backgroundColor: Colors.transparent, elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         actions: [
-          if (_selectedIds.length == 2) IconButton(
-            icon: Icon(Icons.compare_arrows, color: isDark ? Colors.white : Colors.black),
-            onPressed: () {
-              final report1 = widget.history.firstWhere((r) => r.id == _selectedIds[0]);
-              final report2 = widget.history.firstWhere((r) => r.id == _selectedIds[1]);
-              // --- Ensure Gender is passed if ComparisonPage needs it ---
-              String gender1 = report1.metrics['gender'] == 'female' ? 'Female' : 'Male'; // Determine gender from metrics
-              Navigator.push(context, MaterialPageRoute(builder: (_) => ComparisonPage(
-                report1: report1.date.isBefore(report2.date) ? report1 : report2,
-                report2: report1.date.isAfter(report2.date) ? report1 : report2,
-                // gender: gender1, // Pass gender if ComparisonPage needs it for category display
-              )));
-            },
-          )
+          // MODIFICATION 2: Use an ElevatedButton/TextButton style for "COMPARE"
+          if (_selectedIds.length == 2)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  final report1 = widget.history.firstWhere((r) => r.id == _selectedIds[0]);
+                  final report2 = widget.history.firstWhere((r) => r.id == _selectedIds[1]);
+                  // Sort by date so report1 is always the older date
+                  final olderReport = report1.date.isBefore(report2.date) ? report1 : report2;
+                  final newerReport = report1.date.isAfter(report2.date) ? report1 : report2;
+
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => ComparisonPage(
+                    report1: olderReport,
+                    report2: newerReport,
+                  )));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent, // Highlighted color
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 5,
+                ),
+                child: const Text(
+                  'COMPARE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, // Enhanced
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       body: widget.history.isEmpty
@@ -904,14 +957,39 @@ class _HistoryPageState extends State<HistoryPage> { /* ... same state and metho
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(color: isSelected ? Colors.blue.withOpacity(0.1) : (isDark ? Colors.grey[900] : Colors.grey[50]), borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? Colors.blue : (isDark ? Colors.grey[800]! : Colors.grey[200]!))),
+              // Use a slight highlight for selected items
+              decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue.withOpacity(0.15) : (isDark ? Colors.grey[900] : Colors.grey[50]),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isSelected ? Colors.blue : (isDark ? Colors.grey[800]! : Colors.grey[200]!))),
               child: Row(
                 children: [
-                  Checkbox(value: isSelected, onChanged: (_) => _toggleSelection(report.id)),
+                  // Smaller size checkbox for design
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: (_) => _toggleSelection(report.id),
+                      activeColor: Colors.blueAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(DateFormat('MMM d, yyyy - h:mm a').format(report.date), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
-                      Text('Score: ${report.metrics['Body Composition Score'] ?? '--'}', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])), // Use AI Score
+                      Text(
+                          DateFormat('MMM d, yyyy - h:mm a').format(report.date),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, // Very Bold
+                              color: isDark ? Colors.white : Colors.black
+                          )),
+                      // Highlight the score value
+                      Text(
+                          'Score: ${report.metrics['Body Composition Score'] ?? '--'}',
+                          style: TextStyle(
+                              color: Colors.lightGreen, // Highlighting score color
+                              fontWeight: FontWeight.bold
+                          )),
                     ]),
                   ),
                   IconButton(
@@ -937,19 +1015,18 @@ class _HistoryPageState extends State<HistoryPage> { /* ... same state and metho
   }
 }
 
-// Comparison Page (keep as is)
-class ComparisonPage extends StatelessWidget { /* ... same ... */
+// Comparison Page (Modified to include + sign and correct color logic)
+class ComparisonPage extends StatelessWidget {
   final AnalysisReport report1;
   final AnalysisReport report2;
-  // final String gender; // Add gender if needed for categories
 
-  const ComparisonPage({Key? key, required this.report1, required this.report2 /*, required this.gender*/}) : super(key: key);
+  const ComparisonPage({Key? key, required this.report1, required this.report2}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) { /* ... same build method ... */
+  Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    final allKeys = (report1.metrics.keys.toList()..addAll(report2.metrics.keys.toList()))
-        .toSet()
+    // Filter keys to only include numerical metrics present in both reports
+    final allKeys = (report1.metrics.keys.toSet()..addAll(report2.metrics.keys.toSet()))
         .where((key) => key != 'healthIndicator' && report1.metrics[key] is num && report2.metrics[key] is num)
         .toList();
     allKeys.sort((a, b) => a.compareTo(b));
@@ -965,45 +1042,92 @@ class ComparisonPage extends StatelessWidget { /* ... same ... */
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Header Row
+            // Custom Header matching the screenshot look
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              decoration: BoxDecoration(color: isDark ? Colors.grey[900] : Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Expanded(flex: 3, child: Text('Metric', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
-                Expanded(flex: 2, child: Text(DateFormat('MMM d').format(report1.date), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
-                Expanded(flex: 2, child: Text(DateFormat('MMM d').format(report2.date), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
-                Expanded(flex: 2, child: Text('Change', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black))),
-              ]),
+              decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[900] : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8)), // Slight change for cleaner look
+              child: Row(
+                children: [
+                  // Metric Header is bold
+                  Expanded(flex: 3, child: Text('Metric', style: TextStyle(fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black))),
+                  // Date Headers are bold
+                  Expanded(flex: 2, child: Text(DateFormat('Oct d').format(report1.date), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black))),
+                  Expanded(flex: 2, child: Text(DateFormat('Oct d').format(report2.date), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black))),
+                  // Change Header is bold
+                  Expanded(flex: 2, child: Text('Change', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, color: isDark ? Colors.white : Colors.black))),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             // Metric Rows
             ...allKeys.map((key) => _buildComparisonRow(key, report1.metrics[key], report2.metrics[key], isDark)),
+            const SizedBox(height: 30),
+            Text('Comparing reports from ${DateFormat('MMM d, yyyy').format(report1.date)} and ${DateFormat('MMM d, yyyy').format(report2.date)}',
+                style: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[600], fontSize: 13)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildComparisonRow(String metric, dynamic val1, dynamic val2, bool isDark) { /* ... same ... */
-    final v1 = (val1 as num).toDouble();
-    final v2 = (val2 as num).toDouble();
-    final diff = v2 - v1;
-    bool isImprovement = (metric.contains('Fat') || metric.contains('BMI') || metric.contains('Age') || metric.contains('Level')) ? diff < 0 : diff > 0;
-    Color diffColor = diff == 0 ? (isDark ? Colors.grey[400]! : Colors.grey[600]!) : (isImprovement ? Colors.green : Colors.red);
-    IconData diffIcon = diff == 0 ? Icons.remove : (diff > 0 ? Icons.arrow_upward : Icons.arrow_downward);
+  Widget _buildComparisonRow(String metric, dynamic val1, dynamic val2, bool isDark) {
+    // Ensure both values are valid numbers before proceeding
+    if (val1 is! num || val2 is! num) return const SizedBox.shrink();
+
+    final v1 = val1.toDouble();
+    final v2 = val2.toDouble();
+    final diff = v2 - v1; // New value (v2) minus old value (v1)
+
+    // Determine if the change (diff) is an improvement based on the metric name
+    // Metrics where DECREASE is good: Fat, BMI, Age, Level (e.g., Visceral Fat Level)
+    bool isDecreaseGood = metric.contains('Fat') || metric.contains('BMI') || metric.contains('Age') || metric.contains('Level');
+
+    // Determine the color based on whether the change is an improvement
+    bool isImprovement = isDecreaseGood ? diff < 0 : diff > 0;
+
+    // Set color and icon
+    Color diffColor;
+    IconData diffIcon;
+
+    if (diff == 0) {
+      diffColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+      diffIcon = Icons.remove; // Placeholder for no change
+    } else {
+      diffColor = isImprovement ? Colors.green : Colors.redAccent;
+      diffIcon = diff > 0 ? Icons.arrow_upward : Icons.arrow_downward;
+    }
+
+    // Format the difference string: always show a sign for non-zero changes
+    String diffString;
+    if (diff == 0) {
+      diffString = diff.toStringAsFixed(1);
+    } else {
+      // Replicate the screenshot: show the diff with a sign (e.g., +50.0 or -1.0)
+      diffString = diff > 0 ? '+${diff.toStringAsFixed(1)}' : diff.toStringAsFixed(1);
+    }
+
+    // Value for display (1 decimal place)
+    String v1String = v1.toStringAsFixed(1);
+    String v2String = v2.toStringAsFixed(1);
+
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!))),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text(metric, style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.white : Colors.black))),
-          Expanded(flex: 2, child: Text(v1.toStringAsFixed(1), textAlign: TextAlign.center, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]))),
-          Expanded(flex: 2, child: Text(v2.toStringAsFixed(1), textAlign: TextAlign.center, style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]))),
+          // Metric name bold
+          Expanded(flex: 3, child: Text(metric, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black))),
+          // Value columns slightly less bold than metric name
+          Expanded(flex: 2, child: Text(v1String, textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.grey[300] : Colors.grey[700]))),
+          Expanded(flex: 2, child: Text(v2String, textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.grey[300] : Colors.grey[700]))),
+          // Change column bold and colored
           Expanded( flex: 2, child: Row( mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(diffIcon, color: diffColor, size: 14), const SizedBox(width: 4),
-            Text(diff.abs().toStringAsFixed(1), style: TextStyle(color: diffColor, fontWeight: FontWeight.bold)), // Show absolute difference
+            if (diff != 0) Icon(diffIcon, color: diffColor, size: 14),
+            const SizedBox(width: 4),
+            Text(diffString, style: TextStyle(color: diffColor, fontWeight: FontWeight.bold)),
           ],),
           ),
         ],

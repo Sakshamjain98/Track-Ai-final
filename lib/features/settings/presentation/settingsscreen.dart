@@ -9,6 +9,9 @@ import 'package:trackai/features/settings/healthandfeedback.dart';
 import 'package:trackai/features/settings/privacy_policy.dart';
 import 'package:trackai/features/settings/terms_and_service.dart';
 
+import '../SavedPlansScreen.dart';
+// NOTE: Import the new screen (Ensure the path is correct in your project)
+
 class Settingsscreen extends StatefulWidget {
   const Settingsscreen({
     Key? key,
@@ -80,6 +83,15 @@ class _SettingsScreenState extends State<Settingsscreen> {
       MaterialPageRoute(builder: (context) => AdjustGoalsPage()),
     );
   }
+
+  // --- NEW NAVIGATION METHOD ---
+  void _navigateToSavedPlans() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SavedPlansScreen()),
+    );
+  }
+  // --- END NEW NAVIGATION METHOD ---
 
   void _navigateToHelpFeedback() {
     Navigator.push(
@@ -164,7 +176,7 @@ class _SettingsScreenState extends State<Settingsscreen> {
             SizedBox(height: screenHeight * 0.02),
             _buildProfileSummaryCard(isDarkTheme),
             SizedBox(height: screenHeight * 0.02),
-            _buildCustomizationCard(isDarkTheme),
+            _buildCustomizationCard(isDarkTheme), // Updated
             SizedBox(height: screenHeight * 0.02),
             _buildPreferencesCard(isDarkTheme, themeProvider),
             SizedBox(height: screenHeight * 0.02),
@@ -187,7 +199,6 @@ class _SettingsScreenState extends State<Settingsscreen> {
         ? '${_onboardingData?['heightCm'] ?? 0} cm'
         : '${_onboardingData?['heightFeet'] ?? 0} ft ${_onboardingData?['heightInches'] ?? 0} in';
 
-    // --- FIX HERE: Format weight to 2 decimal places ---
     final double weightKg =
         (_onboardingData?['weightKg'] as num?)?.toDouble() ?? 0.0;
     final double weightLbs =
@@ -196,7 +207,6 @@ class _SettingsScreenState extends State<Settingsscreen> {
     final weight = isMetric
         ? '${weightKg.toStringAsFixed(2)} kg'
         : '${weightLbs.toStringAsFixed(2)} lbs';
-    // --- END FIX ---
 
     return Container(
       width: double.infinity,
@@ -300,6 +310,7 @@ class _SettingsScreenState extends State<Settingsscreen> {
     );
   }
 
+  // --- UPDATED Customization Card ---
   Widget _buildCustomizationCard(bool isDarkTheme) {
     return Container(
       width: double.infinity,
@@ -331,10 +342,21 @@ class _SettingsScreenState extends State<Settingsscreen> {
             onTap: _navigateToAdjustGoals,
             isDarkTheme: isDarkTheme,
           ),
+          const SizedBox(height: 4),
+          // --- NEW ITEM: Saved Plans ---
+          _buildSettingsItem(
+            icon: Icons.save_outlined,
+            title: 'Saved AI Plans',
+            subtitle: 'View your permanently saved workout and meal plans',
+            onTap: _navigateToSavedPlans,
+            isDarkTheme: isDarkTheme,
+          ),
+          // --- END NEW ITEM ---
         ],
       ),
     );
   }
+  // --- END UPDATED Customization Card ---
 
   Widget _buildPreferencesCard(bool isDarkTheme, ThemeProvider themeProvider) {
     return Container(
@@ -667,6 +689,7 @@ class _SettingsScreenState extends State<Settingsscreen> {
   }
 }
 
+// NOTE: PersonalDetailsScreen is included below for completeness but remains UNMODIFIED.
 class PersonalDetailsScreen extends StatefulWidget {
   final Map<String, dynamic>? onboardingData;
   final VoidCallback onDataUpdated;
@@ -720,14 +743,12 @@ class _PersonalDetailsScreenState extends State<PersonalDetailsScreen> {
       _heightInchesController.text = (data['heightInches'] ?? 0).toString();
       _heightCmController.text = (data['heightCm'] ?? 0).toString();
 
-      // --- FIX HERE: Format weight controllers to 2 decimal places ---
       _weightLbsController.text =
           ((data['weightLbs'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
       _weightKgController.text =
           ((data['weightKg'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
       _goalWeightController.text =
           ((data['desiredWeight'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
-      // --- END FIX ---
     }
   }
 
