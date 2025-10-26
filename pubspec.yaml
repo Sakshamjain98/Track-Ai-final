@@ -48,6 +48,8 @@ dependencies:
   flutter_dotenv:
   http:
   intl:
+  pdf:
+  universal_html:
   flutter_spinkit:
   share_plus:
   path_provider:

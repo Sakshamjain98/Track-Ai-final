@@ -21,7 +21,8 @@ class AIMealPlanner extends StatefulWidget {
 class _AIMealPlannerState extends State<AIMealPlanner> {
   final PageController _pageController = PageController();
   final _formKey = GlobalKey<FormState>();
-
+  final _feetController = TextEditingController();
+  final _inchesController = TextEditingController();
   // --- CONTROLLERS ---
   final _ageController = TextEditingController();
   final _weightController = TextEditingController();
@@ -37,7 +38,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   bool _isGenerating = false;
   bool _isSaving = false; // NEW: State for save button
   Map<String, dynamic>? _mealPlan;
-
+  final List<String> _heightUnits = ['cm', 'ft/in'];
+  final List<String> _weightUnits = ['kg', 'lb']; // FIX: Ensure this is correctly defined here
   String _selectedGender = '';
   String _selectedWeightUnit = 'kg';
   String _selectedHeightUnit = 'cm';
@@ -48,7 +50,11 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
 
   // --- OPTIONS ---
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
-  final List<String> _goalOptions = ['Weight Loss', 'Weight Gain', 'Maintenance'];
+  final List<String> _goalOptions = [
+    'Weight Loss',
+    'Weight Gain',
+    'Maintenance'
+  ];
   final List<Map<String, String>> _allergyOptions = [
     {'id': 'gluten', 'label': 'Gluten'},
     {'id': 'dairy', 'label': 'Dairy'},
@@ -57,7 +63,13 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     {'id': 'soy', 'label': 'Soy'},
     {'id': 'seafood', 'label': 'Seafood'},
   ];
-  final List<String> _dayOptions = ['3 Days', '5 Days', '7 Days', '14 Days', '30 Days'];
+  final List<String> _dayOptions = [
+    '3 Days',
+    '5 Days',
+    '7 Days',
+    '14 Days',
+    '30 Days'
+  ];
   final List<String> _dietOptions = [
     'Any / No Specific Diet',
     'Vegetarian',
@@ -68,6 +80,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     'Gluten-Free',
     'Dairy-Free',
   ];
+
   // --- TOTAL STEPS UPDATED ---
   final int _totalSteps = 10;
 
@@ -82,6 +95,10 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     _healthConditionsController.dispose();
     _preferencesController.dispose();
     _pageController.dispose();
+    _feetController.dispose();
+    _inchesController.dispose();
+
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -90,12 +107,14 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+            const Icon(
+                Icons.warning_amber_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -114,12 +133,14 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(
+                Icons.check_circle_outline, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -143,7 +164,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -195,67 +217,118 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   }
 
   // --- UPDATED VALIDATION ---
+  // --- Inside _AIRecipeGeneratorState._validateCurrentPage ---
+  // --- VALIDATION LOGIC ---
   bool _validateCurrentPage() {
     switch (_currentPage) {
-      case 0: // Age
-      case 1: // Gender
+      case 0: // Gender
+        return _selectedGender.isNotEmpty;
+      case 1: // Age
+        return _ageController.text.isNotEmpty && int.tryParse(_ageController.text) != null && int.parse(_ageController.text) > 0;
+
       case 2: // Weight
-      case 3: // Height
+        if (_weightController.text.isEmpty || double.tryParse(_weightController.text) == null || double.parse(_weightController.text) <= 0) return false;
+        return true;
+
+      case 3: // Height (Corrected Logic)
+        if (_selectedHeightUnit.isEmpty) return false;
+        if (_selectedHeightUnit == 'cm') {
+          if (_heightController.text.isEmpty || double.tryParse(_heightController.text) == null || double.parse(_heightController.text) <= 0) return false;
+        } else if (_selectedHeightUnit == 'ft/in') {
+          final feet = int.tryParse(_feetController.text);
+          final inches = double.tryParse(_inchesController.text);
+          if (feet == null || feet < 0 || inches == null || inches < 0 || inches >= 12) return false;
+        }
+        return true;
+
       case 4: // Goal
-        return true; // Optional fields
+        return _selectedGoal.isNotEmpty;
+
       case 5: // Calories
-        return _caloriesController.text.isNotEmpty;
+        if (_caloriesController.text.isEmpty || int.tryParse(_caloriesController.text) == null || int.parse(_caloriesController.text) <= 0) return false;
+        return true;
+
       case 6: // Days
         return _selectedDays.isNotEmpty;
+
       case 7: // Diet Type
         return _selectedDietType.isNotEmpty;
+
       case 8: // Allergies
       case 9: // Health Conditions
-      case 10: // Preferences
-        return true; // Optional fields
+        return true;
+
       default:
         return true;
     }
   }
-
   // --- NEW: Dart implementation of the JS meal plan parser (FIXED CALORIE PARSING) ---
+  // --- NEW: Dart implementation of the JS meal plan parser (REFINED CALORIE FIX) ---
+  // --- FIXED: Improved meal plan parser with better calorie extraction ---
+  // --- FIXED: Parser that extracts calories from meal names ---
   Map<String, dynamic> _parseMealPlanString(String planString) {
     final Map<String, dynamic> parsedPlan = {};
-    final lines = planString.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty);
+    final lines = planString.split('\n').map((l) => l.trim()).where((l) =>
+    l.isNotEmpty);
 
     String currentDayKey = '';
     Map<String, dynamic>? currentDayMeals;
     Map<String, dynamic>? currentMeal;
 
     final dayRegex = RegExp(r'^\*\*(Day\s*\d+.*)\*\*');
-    // Regex captures the meal type (Group 1), the full calorie text (Group 2, e.g., "17 calories"), and the meal name (Group 3).
-    final mealRegex = RegExp(r'^[\*-]\s*(Breakfast|Lunch|Dinner|Snacks)\s*(?:\((?:approx\.\s*)?([\d,.]+\s*kcal(?:ories)?)\))?[:\s-]*\s*(.*)', caseSensitive: false);
-    final recipeLineRegex = RegExp(r'^\s*-\s*(Recipe|Instructions|Preparation)[:\s-]*\s*(.*)', caseSensitive: false);
+    // Updated regex to capture meal type only
+    final mealRegex = RegExp(
+        r'^[\*-]\s*(Breakfast|Lunch|Dinner|Snacks)\s*[:\s-]*\s*(.*)',
+        caseSensitive: false);
+    final recipeLineRegex = RegExp(
+        r'^\s*-\s*(Recipe|Instructions|Preparation)[:\s-]*\s*(.*)',
+        caseSensitive: false);
     final simpleRecipeLineRegex = RegExp(r'^\s*-\s*(.*)');
 
     void saveCurrentMeal() {
       if (currentMeal != null && currentDayMeals != null) {
         String mealType = (currentMeal['type'] as String).toLowerCase();
 
-        // --- FIX: Robust calorie extraction ---
-        final String? rawCalString = currentMeal['calories'];
+        // --- EXTRACT CALORIES FROM MEAL NAME ---
+        String mealName = currentMeal['name'];
         int calories = 0;
 
-        if (rawCalString != null) {
-          // Use a regex to specifically find the first sequence of digits (\d+).
-          // This ensures we extract '17' from '17 calories' without issues.
-          final RegExp numRegex = RegExp(r'\d+');
-          final Match? numMatch = numRegex.firstMatch(rawCalString);
+        // Look for calorie patterns in the meal name
+        final caloriePattern = RegExp(
+            r'\(approx\.\s*(\d+)\s*calories?\)', caseSensitive: false);
+        final match = caloriePattern.firstMatch(mealName);
 
-          if (numMatch != null) {
-            final String calNumString = numMatch.group(0)!; // group(0) is the entire match
-            calories = int.tryParse(calNumString) ?? 0;
+        if (match != null) {
+          calories = int.tryParse(match.group(1)!) ?? 0;
+          // Remove the calorie part from the meal name for cleaner display
+          mealName = mealName
+              .replaceAll(match.group(0)!, '')
+              .replaceAll(':', '')
+              .trim();
+        }
+
+        // If no calories found, use reasonable defaults
+        if (calories == 0) {
+          switch (mealType) {
+            case 'breakfast':
+              calories = 400;
+              break;
+            case 'lunch':
+              calories = 600;
+              break;
+            case 'dinner':
+              calories = 800;
+              break;
+            case 'snacks':
+              calories = 200;
+              break;
+            default:
+              calories = 500;
           }
         }
-        // --- END FIX ---
 
         currentDayMeals[mealType] = {
-          'name': currentMeal['name'],
+          'name': mealName,
           'calories': calories,
           'recipe': currentMeal['recipeLines'].join('\n'),
         };
@@ -284,14 +357,10 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
 
         currentMeal = {
           'type': mealMatch.group(1)!.trim(),
-          'calories': mealMatch.group(2)?.trim(),
-          'name': mealMatch.group(3)!.trim(),
+          'name': mealMatch.group(2)?.trim() ?? 'Meal',
           'recipeLines': <String>[],
         };
 
-        if (currentMeal['name'].isEmpty) {
-          currentMeal['name'] = 'Meal';
-        }
         continue;
       }
 
@@ -309,7 +378,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
 
       if (currentMeal != null) {
         if (currentMeal['recipeLines'].isNotEmpty) {
-          currentMeal['recipeLines'].last = currentMeal['recipeLines'].last + ' $line';
+          currentMeal['recipeLines'].last =
+              currentMeal['recipeLines'].last + ' $line';
         } else if (currentMeal['name'].isNotEmpty) {
           currentMeal['recipeLines'].add(line);
         }
@@ -330,14 +400,23 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           total += (mealData['calories'] as int);
         }
       });
-      // The totalCalories calculation is now robust.
       day['totalCalories'] = total;
     }
 
     return parsedPlan;
   }
 
-  // ---
+  void _debugMealPlanParsing(String rawPlanString) {
+    print('=== RAW MEAL PLAN STRING ===');
+    print(rawPlanString);
+    print('=== END RAW STRING ===');
+
+    final parsed = _parseMealPlanString(rawPlanString);
+    print('=== PARSED RESULT ===');
+    print(parsed);
+    print('=== END PARSED RESULT ===');
+  }
+
   // --- UPDATED: _generateMealPlan (Calls GeminiService AND Parser)
   // ---
   Future<void> _generateMealPlan() async {
@@ -375,7 +454,10 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       final targetCalories = int.tryParse(_caloriesController.text) ?? 2000;
 
       final String rawMealPlanString = generatedPlan['mealPlan'] as String;
-      final Map<String, dynamic> parsedDays = _parseMealPlanString(rawMealPlanString);
+      _debugMealPlanParsing(rawMealPlanString);
+
+      final Map<String, dynamic> parsedDays = _parseMealPlanString(
+          rawMealPlanString);
 
       if (parsedDays.isEmpty) {
         throw Exception("AI plan structure could not be parsed.");
@@ -398,7 +480,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       });
 
       _nextPage();
-
     } on TimeoutException {
       _handleGenerationError(TimeoutException('The AI request timed out.'));
     } catch (e) {
@@ -420,14 +501,18 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           'dietType': _selectedDietType,
           'generatedOn': DateTime.now().toString().split(' ')[0],
         },
-        'groceryList': ['Error: Could not generate list due to API or parsing failure.'],
+        'groceryList': [
+          'Error: Could not generate list due to API or parsing failure.'
+        ],
         'cookingGuide': 'Error: Could not generate guide due to API or parsing failure.',
         'Day 1': { // Fallback structure
           'totalCalories': 0, // Fallback shows 0 calories
           'breakfast': {
             'name': 'Plan Generation Failed',
             'calories': 0,
-            'recipe': 'The plan could not be generated or parsed successfully. Error: ${e.toString().replaceFirst("Exception: ", "")}'
+            'recipe': 'The plan could not be generated or parsed successfully. Error: ${e
+                .toString()
+                .replaceFirst("Exception: ", "")}'
           },
         }
       };
@@ -461,6 +546,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       setState(() => _isSaving = false);
     }
   }
+
   // --- END NEW: Save Plan Method ---
 
 
@@ -505,17 +591,17 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                     });
                   },
                   children: [
-                    _buildAgePage(isDark),
-                    _buildGenderPage(isDark),
-                    _buildWeightPage(isDark),
-                    _buildHeightPage(isDark),
-                    _buildGoalPage(isDark),
-                    _buildCaloriesPage(isDark),
-                    _buildDaysPage(isDark),
-                    _buildDietTypePage(isDark),
-                    _buildAllergiesPage(isDark),
-                    _buildHealthConditionsPage(isDark),
-                    _buildResultsPage(isDark),
+                    _buildGenderPage(isDark), // NEW Index 0: Gender
+                    _buildAgePage(isDark),    // NEW Index 1: Age
+                    _buildWeightPage(isDark), // 2
+                    _buildHeightPage(isDark), // 3
+                    _buildGoalPage(isDark),   // 4
+                    _buildCaloriesPage(isDark), // 5
+                    _buildDaysPage(isDark),   // 6
+                    _buildDietTypePage(isDark), // 7
+                    _buildAllergiesPage(isDark), // 8
+                    _buildHealthConditionsPage(isDark), // 9
+                    _buildResultsPage(isDark), // 10
                   ],
                 ),
               ),
@@ -537,7 +623,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
               return Expanded(
                 child: Container(
                   height: 3,
-                  margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 6 : 0),
+                  margin: EdgeInsets.only(
+                      right: index < _totalSteps - 1 ? 6 : 0),
                   decoration: BoxDecoration(
                     color: index <= _currentPage
                         ? (isDark ? Colors.white : Colors.black)
@@ -562,13 +649,206 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
+
+  Widget _buildQuestionPage({
+    required bool isDark,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 15,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+          child,
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // Builder for single select options (dynamic 1- or 2-column layout)
+  Widget _buildDynamicSelection({
+    required List<String> options,
+    required String selectedValue,
+    required Function(String) onSelect,
+    required bool isDark,
+    bool showIcons = true,
+  }) {
+    // Determine if we need 2-column layout (if options > 4)
+    final useTwoColumnLayout = options.length > 4;
+
+    // Calculate width for 2-column layout if needed
+    final screenWidth = MediaQuery.of(context).size.width;
+    const double totalHorizontalSpacing = 24.0 * 2;
+    const double itemSpacing = 12.0;
+    final itemWidth = (screenWidth - totalHorizontalSpacing - itemSpacing) / 2;
+
+    if (useTwoColumnLayout) {
+      return Wrap(
+        spacing: 12.0,
+        runSpacing: 12.0,
+        alignment: WrapAlignment.start,
+        children: options.map((option) {
+          return SizedBox(
+            width: itemWidth,
+            child: _buildSelectionCard(
+              title: option,
+              isSelected: selectedValue == option,
+              onTap: () => onSelect(option),
+              isDark: isDark,
+              icon: Icons.check, // Dummy icon for compilation
+              useCompactStyle: true,
+            ),
+          );
+        }).toList(),
+      );
+    } else {
+      // 1-column layout (default)
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: options.map((option) {
+          IconData? icon;
+          // Logic for Gender/Goal icons
+          if (showIcons) {
+            switch (option) {
+              case 'Male': icon = Icons.male; break;
+              case 'Female': icon = Icons.female; break;
+              case 'Other': icon = Icons.transgender; break;
+              case 'Weight Loss': icon = Icons.trending_down; break;
+              case 'Weight Gain': icon = Icons.trending_up; break;
+              case 'Maintenance': icon = Icons.sync; break;
+              default: icon = Icons.check;
+            }
+          }
+          return _buildSelectionCard(
+            title: option,
+            isSelected: selectedValue == option,
+            onTap: () => onSelect(option),
+            isDark: isDark,
+            icon: icon,
+            useCompactStyle: false,
+          );
+        }).toList(),
+      );
+    }
+  }
+
+  Widget _buildSelectionCard({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    IconData? icon,
+    bool useCompactStyle = false,
+    bool isUnitSelector = false, // Added for Weight/Height Unit Pill Selector
+  }) {
+    Color selectedColor = isDark ? Colors.white : Colors.black;
+    Color unselectedColor = isDark ? Colors.grey[900]! : Colors.grey[50]!;
+    Color selectedTextColor = isDark ? Colors.black : Colors.white;
+    Color unselectedTextColor = isDark ? Colors.white : Colors.black;
+    Color borderColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+
+    // --- Special handling for the compact Unit Selector Pill ---
+    if (isUnitSelector) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 55, // Fixed height for pill feel
+            decoration: BoxDecoration(
+              color: isSelected ? selectedColor : Colors.transparent, // Only color the selected part
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? selectedTextColor : unselectedTextColor,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // --- Standard 1-Col / 2-Col Selection Card ---
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: useCompactStyle ? EdgeInsets.zero : const EdgeInsets.only(bottom: 12),
+        padding: useCompactStyle
+            ? const EdgeInsets.symmetric(vertical: 16, horizontal: 10)
+            : const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: isSelected ? selectedColor : unselectedColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: isSelected ? selectedColor : borderColor,
+              width: isSelected ? 2 : 1
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null && !useCompactStyle)
+              Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: Icon(icon,
+                    color: isSelected ? selectedTextColor : unselectedTextColor,
+                    size: 24
+                ),
+              ),
+            Expanded(
+              child: Text(title,
+                  textAlign: useCompactStyle ? TextAlign.center : TextAlign.left,
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected ? selectedTextColor : unselectedTextColor
+                  )),
+            ),
+            if (isSelected)
+              Icon(useCompactStyle ? Icons.check : Icons.check_circle,
+                  color: selectedTextColor,
+                  size: useCompactStyle ? 18 : 22
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // --- Page Widgets (0-9, 12) ---
 
   // Page 0: Age (Optional)
   Widget _buildAgePage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.cake_outlined,
       title: 'How old are you?',
       subtitle: 'Your age helps in tailoring the meal plan (optional)',
       child: _buildTextField(
@@ -584,7 +864,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   Widget _buildGenderPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.person_outline,
       title: 'What\'s your gender?',
       subtitle: 'This provides more accurate recommendations (optional)',
       child: Column(
@@ -616,82 +895,140 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-  // Page 2: Weight (Optional)
+  // Page 2: Weight (Unified Input)
   Widget _buildWeightPage(bool isDark) {
+    final Color primaryTextColor = isDark ? Colors.white : Colors.black;
+
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.monitor_weight_outlined,
-      title: 'Your current weight?',
-      subtitle: 'Used to calculate your nutritional needs (optional)',
+      title: 'What is your weight?',
+      subtitle: 'Select your preferred unit and enter your weight.',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Weight Unit Selector (Pill Style)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.grey[200],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: _weightUnits.map((option) =>
+                  _buildSelectionCard(
+                    title: option == 'kg' ? 'Kilograms (kg)' : 'Pounds (lb)',
+                    isSelected: _selectedWeightUnit == option,
+                    onTap: () => setState(() => _selectedWeightUnit = option),
+                    isDark: isDark,
+                    isUnitSelector: true, // Use the special unit pill style
+                  )
+              ).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Weight Input Field
           _buildTextField(
             controller: _weightController,
-            hint: 'e.g., 70',
+            hint: 'Enter weight in $_selectedWeightUnit',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             isDark: isDark,
-            isNumeric: true, // Allow decimal
-          ),
-          const SizedBox(height: 20),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(value: 'kg', label: Text('kg')),
-              ButtonSegment<String>(value: 'lb', label: Text('lbs')),
-            ],
-            selected: {_selectedWeightUnit},
-            onSelectionChanged: (Set<String> newSelection) {
-              setState(() {
-                _selectedWeightUnit = newSelection.first;
-              });
-            },
-            style: SegmentedButton.styleFrom(
-              backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
-              foregroundColor: isDark ? Colors.white : Colors.black,
-              selectedBackgroundColor: isDark ? Colors.white : Colors.black,
-              selectedForegroundColor: isDark ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+            isNumeric: true,
           ),
         ],
       ),
     );
   }
 
-  // Page 3: Height (Optional)
+
+
+
+  // --- Inside _AIRecipeGeneratorState class ---
+// Page 3: Height (Unified Input UI)
   Widget _buildHeightPage(bool isDark) {
+    final Color primaryTextColor = isDark ? Colors.white : Colors.black;
+
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.height_outlined,
-      title: 'What\'s your height?',
+      title: 'What is your height?',
       subtitle: 'Used to calculate your nutritional needs (optional)',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTextField(
-            controller: _heightController,
-            hint: 'e.g., 175',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            isDark: isDark,
-            isNumeric: true, // Allow decimal
-          ),
-          const SizedBox(height: 20),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(value: 'cm', label: Text('cm')),
-              ButtonSegment<String>(value: 'ft', label: Text('ft')),
-            ],
-            selected: {_selectedHeightUnit},
-            onSelectionChanged: (Set<String> newSelection) {
-              setState(() {
-                _selectedHeightUnit = newSelection.first;
-              });
-            },
-            style: SegmentedButton.styleFrom(
-              backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
-              foregroundColor: isDark ? Colors.white : Colors.black,
-              selectedBackgroundColor: isDark ? Colors.white : Colors.black,
-              selectedForegroundColor: isDark ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          // Height Unit Selector (Pill Style)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[900] : Colors.grey[200],
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: Row(
+              children: _heightUnits.map((option) =>
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedHeightUnit = option;
+                          _heightController.clear();
+                          _feetController.clear();
+                          _inchesController.clear();
+                        });
+                      },
+                      child: Container(
+                        height: 55,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedHeightUnit == option ? AppColors.black : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            option == 'cm' ? 'Centimeters (cm)' : 'Feet/Inches (ft/in)',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _selectedHeightUnit == option ? AppColors.white : primaryTextColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+              ).toList(),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Height Input Field(s) (Conditional)
+          _selectedHeightUnit == 'cm'
+              ? _buildTextField(
+            controller: _heightController,
+            hint: 'Enter height in cm',
+            keyboardType: TextInputType.number,
+            isDark: isDark,
+            isNumeric: true,
+          )
+              : Row(
+            children: [
+              Expanded(
+                  child: _buildTextField(
+                      controller: _feetController,
+                      hint: 'Feet',
+                      keyboardType: TextInputType.number,
+                      isDark: isDark
+                  )
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: _buildTextField(
+                      controller: _inchesController,
+                      hint: 'Inches',
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      isDark: isDark
+                  )
+              ),
+            ],
           ),
         ],
       ),
@@ -699,46 +1036,26 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   }
 
   // Page 4: Goal (Optional)
+  // --- Inside _AIRecipeGeneratorState class ---
+// Page 4: Goal (Optional)
   Widget _buildGoalPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.flag_outlined,
       title: 'Fitness goal?',
       subtitle: 'Select your primary fitness objective (optional)',
-      child: Column(
-        children: _goalOptions.map((goal) {
-          IconData icon;
-          switch (goal) {
-            case 'Weight Loss':
-              icon = Icons.trending_down;
-              break;
-            case 'Weight Gain':
-              icon = Icons.trending_up;
-              break;
-            default:
-              icon = Icons.sync;
-          }
-          return _buildSelectionCard(
-            title: goal,
-            isSelected: _selectedGoal == goal,
-            onTap: () {
-              setState(() {
-                _selectedGoal = goal;
-              });
-            },
-            isDark: isDark,
-            icon: icon,
-          );
-        }).toList(),
+      child: _buildDynamicSelection( // <-- USE DYNAMIC SELECTION
+        options: _goalOptions,
+        selectedValue: _selectedGoal,
+        onSelect: (val) => setState(() => _selectedGoal = val),
+        isDark: isDark,
+        showIcons: true,
       ),
     );
   }
-
   // Page 5: Calories (Required)
   Widget _buildCaloriesPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.local_fire_department_outlined,
       title: 'Daily calorie goal?',
       subtitle: 'Enter your target daily calorie intake for the meal plan',
       child: _buildTextField(
@@ -750,63 +1067,41 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-  // Page 6: Days (Required)
+  // --- Inside _AIRecipeGeneratorState class ---
+// Page 6: Days (Required)
   Widget _buildDaysPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.calendar_month_outlined,
       title: 'Plan duration?',
       subtitle: 'How many days do you want your meal plan for?',
-      child: Column(
-        children: _dayOptions.map((days) {
-          return _buildSelectionCard(
-            title: days,
-            isSelected: _selectedDays == days,
-            onTap: () {
-              setState(() {
-                _selectedDays = days;
-              });
-            },
-            isDark: isDark,
-            icon: Icons.event,
-          );
-        }).toList(),
+      child: _buildDynamicSelection( // <-- USE DYNAMIC SELECTION
+        options: _dayOptions,
+        selectedValue: _selectedDays,
+        onSelect: (val) => setState(() => _selectedDays = val),
+        isDark: isDark,
+        showIcons: false,
       ),
     );
   }
-
   // Page 7: Diet Type (Required)
   Widget _buildDietTypePage(bool isDark) {
     return _buildQuestionPage(
+      isDark: isDark,
+      title: 'Diet preference?',
+      subtitle: 'Choose your dietary preference or restriction',
+      child: _buildDynamicSelection( // <-- USE DYNAMIC SELECTION
+        options: _dietOptions,
+        selectedValue: _selectedDietType,
+        onSelect: (val) => setState(() => _selectedDietType = val),
         isDark: isDark,
-        icon: Icons.restaurant_menu,
-        title: 'Diet preference?',
-        subtitle: 'Choose your dietary preference or restriction',
-        child: SingleChildScrollView(
-        child: Column(
-        children: _dietOptions.map((diet) {
-      return _buildSelectionCard(
-        title: diet,
-        isSelected: _selectedDietType == diet,
-        onTap: () {
-          setState(() {
-            _selectedDietType = diet;
-          });
-        },
-        isDark: isDark,
-        icon: Icons.eco,
-      );
-    }).toList(),
-    ),
-    ),
+        showIcons: false,
+      ),
     );
-    }
-
+  }
   // Page 8: Allergies (Optional)
   Widget _buildAllergiesPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.block,
       title: 'Any allergies?',
       subtitle: 'Select any allergies or intolerances (optional)',
       child: Column(
@@ -816,7 +1111,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             return CheckboxListTile(
               title: Text(
                 allergy['label']!,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w500),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w500),
               ),
               value: isSelected,
               onChanged: (bool? value) {
@@ -833,7 +1129,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
               controlAffinity: ListTileControlAffinity.leading,
               contentPadding: EdgeInsets.zero,
               tileColor: isDark ? Colors.grey[900] : Colors.grey[50],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             );
           }).toList(),
           const SizedBox(height: 16),
@@ -852,7 +1149,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   Widget _buildHealthConditionsPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.health_and_safety_outlined,
       title: 'Health conditions?',
       subtitle: 'Share any health conditions we should consider (optional)',
       child: _buildTextField(
@@ -873,15 +1169,18 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       return Center(
         child: _isGenerating
             ? CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+          valueColor: AlwaysStoppedAnimation<Color>(
+              isDark ? Colors.white : Colors.black),
         )
             : Container(),
       );
     }
 
     final summary = _mealPlan!['planSummary'] as Map<String, dynamic>;
-    final groceryList = _mealPlan!['groceryList'] as List<String>? ?? ['No grocery list generated.'];
-    final cookingGuide = _mealPlan!['cookingGuide'] as String? ?? 'No cooking guide generated.';
+    final groceryList = _mealPlan!['groceryList'] as List<String>? ??
+        ['No grocery list generated.'];
+    final cookingGuide = _mealPlan!['cookingGuide'] as String? ??
+        'No cooking guide generated.';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -930,15 +1229,21 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
               SizedBox(
                 width: 150,
                 child: OutlinedButton.icon(
-                  onPressed: _isSaving ? null : _savePlan, // Use new saving method
+                  onPressed: _isSaving ? null : _savePlan,
+                  // Use new saving method
                   icon: _isSaving
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green))
+                      ? const SizedBox(width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.green))
                       : const Icon(lucide.LucideIcons.save),
                   label: Text(_isSaving ? 'Saving...' : 'Save Plan'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: BorderSide(
+                        color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     foregroundColor: isDark ? Colors.white : Colors.black,
                   ),
                 ),
@@ -967,7 +1272,9 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                       _selectedDays = '';
                       _selectedDietType = '';
                     });
-                    _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                    _pageController.animateToPage(
+                        0, duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut);
                   },
                   icon: const Icon(Icons.refresh),
                   label: const Text('New Plan'),
@@ -975,7 +1282,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                     backgroundColor: isDark ? Colors.white : Colors.black,
                     foregroundColor: isDark ? Colors.black : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                 ),
@@ -1007,8 +1315,11 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSummaryItem('Duration', '${summary['totalDays']} Days', isDark),
-                _buildSummaryItem('Daily Calories', '${summary['avgDailyCalories']} kcal', isDark),
+                _buildSummaryItem(
+                    'Duration', '${summary['totalDays']} Days', isDark),
+                _buildSummaryItem(
+                    'Daily Calories', '${summary['avgDailyCalories']} kcal',
+                    isDark),
                 _buildSummaryItem('Diet Type', summary['dietType'], isDark),
               ],
             ),
@@ -1032,7 +1343,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             final dayMeals = entry.value as Map<String, dynamic>;
 
             // Check for our fallback placeholder
-            final bool isPlaceholder = dayMeals['breakfast']?['name'] == 'Plan Generation Failed';
+            final bool isPlaceholder = dayMeals['breakfast']?['name'] ==
+                'Plan Generation Failed';
 
             if (isPlaceholder) {
               // --- Fallback: Render the single raw string ---
@@ -1042,7 +1354,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                 decoration: BoxDecoration(
                   color: isDark ? Colors.grey[900] : Colors.grey[50],
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
+                  border: Border.all(
+                      color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1070,7 +1383,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             }
 
             // --- Success: Render collapsible day tile ---
-            final int totalCalories = dayMeals['totalCalories'] as int? ?? 0; // Use robust total calories
+            final int totalCalories = dayMeals['totalCalories'] as int? ??
+                0; // Use robust total calories
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
@@ -1080,7 +1394,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                 title: dayName,
                 // FIX: Use totalCalories (which is now robust)
                 trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white : Colors.black,
                     borderRadius: BorderRadius.circular(20),
@@ -1098,7 +1413,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Column(
-                      children: ['breakfast', 'lunch', 'dinner', 'snacks'].map((mealType) {
+                      children: ['breakfast', 'lunch', 'dinner', 'snacks'].map((
+                          mealType) {
                         if (!dayMeals.containsKey(mealType)) {
                           return const SizedBox.shrink();
                         }
@@ -1146,115 +1462,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
 
   // --- SHARED WIDGETS (Unchanged) ---
 
-  Widget _buildQuestionPage({
-    required bool isDark,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Widget child,
-  }) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              icon,
-              size: 40,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-              height: 1.3,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 15,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 32),
-          child,
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectionCard({
-    required String title,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-    required IconData icon,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? Colors.white : Colors.black)
-              : (isDark ? Colors.grey[900] : Colors.grey[50]),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? (isDark ? Colors.black : Colors.white)
-                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              size: 22,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? (isDark ? Colors.black : Colors.white)
-                      : (isDark ? Colors.white : Colors.black),
-                ),
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: isDark ? Colors.black : Colors.white,
-                size: 22,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildNavigationButtons(bool isDark) {
     return Container(
@@ -1542,7 +1749,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
         tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         iconColor: isDark ? Colors.white : Colors.black,
         collapsedIconColor: isDark ? Colors.grey[400] : Colors.grey[600],
-        shape: const Border(), // Remove default border
+        shape: const Border(),
+        // Remove default border
         title: Row(
           children: [
             Icon(
@@ -1563,7 +1771,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ),
           ],
         ),
-        trailing: trailing, // NEW
+        trailing: trailing,
+        // NEW
         children: children,
       ),
     );
@@ -1599,16 +1808,42 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   }
 
   Widget _buildCookingGuide(String cookingGuide, bool isDark) {
+    final primaryTextColor = isDark ? Colors.white : Colors.black;
+    final secondaryTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final cardBg = isDark ? Colors.grey[800] : Colors
+        .grey[100]; // Slightly different background
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      width: double.infinity,
-      child: SelectableText(
-        cookingGuide.trim(),
-        style: TextStyle(
-          color: isDark ? Colors.grey[300] : Colors.grey[700],
-          fontSize: 14,
-          height: 1.6,
-        ),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+      margin: const EdgeInsets.only(top: 10, bottom: 10),
+      // Add margin for separation
+      decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: isDark ? Colors.grey[700]! : Colors.grey[300]!)
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Chef\'s Tips for Meal Prep',
+            style: TextStyle(
+              color: primaryTextColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SelectableText(
+            cookingGuide.trim(),
+            style: TextStyle(
+              color: secondaryTextColor,
+              fontSize: 14,
+              height: 1.6,
+            ),
+          ),
+        ],
       ),
     );
   }

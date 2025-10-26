@@ -1,8 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+// Note: Keeping unused imports for context, though they are usually removed.
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:intl/intl.dart';
+// import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'dart:convert';
+// import 'dart:io';
+// import 'dart:typed_data';
+
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
+
+// Assuming AppColors has a definition similar to this:
+// class AppColors {
+//   static const Color greenPrimary = Color(0xFF4CAF50);
+// }
 
 class AIRecipeGenerator extends StatefulWidget {
   const AIRecipeGenerator({Key? key}) : super(key: key);
@@ -13,54 +27,42 @@ class AIRecipeGenerator extends StatefulWidget {
 
 class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   final PageController _pageController = PageController();
-  final _formKey = GlobalKey<FormState>(); // Not strictly used after text input removal, but kept.
+  final _formKey = GlobalKey<FormState>();
 
-  // Controllers - Only keep necessary inputs
+  // Controllers
   final _ingredientsController = TextEditingController();
   final _restrictionsController = TextEditingController();
-
-  // Removed: _servingsController, _timeController
+  final _cuisineController = TextEditingController();
 
   // State variables
   int _currentPage = 0;
   String _selectedCuisine = '';
   String _selectedMealType = '';
-  // Removed: _selectedDifficulty
   bool _isGenerating = false;
   Map<String, dynamic>? _generatedRecipe;
 
   // Options
-  final List<String> _cuisineOptions = [
-    'Any Cuisine',
+  final List<String> _displayCuisineOptions = [
     'Italian',
+    'Mexican',
     'Chinese',
     'Indian',
-    'Mexican',
-    'Mediterranean',
-    'American',
     'Thai',
     'Japanese',
-    'French',
-    'Korean',
-    'Greek',
-    'Spanish',
-    'Middle Eastern'
+    'Mediterranean',
+    'American',
   ];
 
   final List<String> _mealTypeOptions = [
+    'Any',
     'Breakfast',
     'Lunch',
     'Dinner',
     'Snack',
     'Dessert',
-    'Appetizer',
-    'Side Dish',
-    'Soup'
   ];
 
-  // Removed: _difficultyOptions (AI infers this)
-
-  // Total input steps is now 4
+  // Total input steps
   final int _totalInputSteps = 4;
 
   @override
@@ -68,11 +70,22 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     _ingredientsController.dispose();
     _restrictionsController.dispose();
     _pageController.dispose();
+    _cuisineController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
     if (_currentPage < _totalInputSteps) {
+      // Capture the cuisine value only when leaving the cuisine page
+      if (_currentPage == 0) { // Cuisine page is now Index 0
+        // Update both controller and state from selection (or text input if custom)
+        _selectedCuisine = _cuisineController.text.trim();
+      }
+      // Capture meal type value when leaving the meal type page
+      if (_currentPage == 3) { // Meal Type page is now Index 3
+        // If Meal Type selection is driven by _selectedMealType, no controller update needed here
+      }
+
       if (_validateCurrentPage()) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
@@ -93,16 +106,17 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     }
   }
 
+  // --- UPDATED VALIDATION LOGIC FOR NEW ORDER ---
   bool _validateCurrentPage() {
     switch (_currentPage) {
-      case 0: // Ingredients
-        return _ingredientsController.text.isNotEmpty;
-      case 1: // Cuisine
+      case 0: // Cuisine (NEW FIRST PAGE)
         return _selectedCuisine.isNotEmpty;
-      case 2: // Meal Type
-        return _selectedMealType.isNotEmpty;
-      case 3: // Restrictions (Last step before generate, always true if not mandatory)
+      case 1: // Ingredients (NEW SECOND PAGE)
+        return _ingredientsController.text.isNotEmpty;
+      case 2: // Restrictions (NEW THIRD PAGE)
         return true;
+      case 3: // Meal Type (NEW LAST INPUT PAGE)
+        return _selectedMealType.isNotEmpty;
       default:
         return true;
     }
@@ -118,9 +132,9 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   }
 
   Future<void> _generateRecipe() async {
-    // Validate final step before generating
+    // Final check before generating.
     if (!_validateCurrentPage()) {
-      _showValidationSnackBar('Please select a meal type.');
+      _showValidationSnackBar('Please complete all required steps.');
       return;
     }
 
@@ -129,8 +143,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     });
 
     try {
-      // Simulate AI inference for Servings, Difficulty, and Time
-      // For a real app, these parameters would be passed to the Gemini/AI service
+      // Simulate AI inference
       final inferredServings = 4;
       final inferredTime = '35'; // minutes
       final inferredDifficulty = 'Medium (30-60 min)';
@@ -142,9 +155,10 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         _isGenerating = false;
       });
 
-      _nextPage(); // Move to results page (Step 5)
+      _nextPage(); // Move to results page (Index 4)
     } catch (e) {
       setState(() {
+
         _isGenerating = false;
       });
 
@@ -159,44 +173,40 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     }
   }
 
-  // Updated to accept inferred parameters
   Map<String, dynamic> _createRecipe(int inferredServings, String inferredTime, String inferredDifficulty) {
     final ingredients = _ingredientsController.text.split(',').map((e) => e.trim()).toList();
 
-    // Use inferred/simulated values
     final servings = inferredServings;
     final cookingTime = inferredTime;
 
-    String recipeName = _generateRecipeName(ingredients, _selectedCuisine, _selectedMealType);
-    List<String> recipeIngredients = _generateRecipeIngredients(ingredients, servings);
-    List<String> instructions = _generateInstructions(ingredients, _selectedCuisine, _selectedMealType);
+    final cuisineText = _selectedCuisine;
 
-    // Nutrition and Tips logic are still here, but are NOT displayed in the UI below.
+    String recipeName = _generateRecipeName(ingredients, cuisineText, _selectedMealType);
+    List<String> recipeIngredients = _generateRecipeIngredients(ingredients, servings);
+    List<String> instructions = _generateInstructions(ingredients, cuisineText, _selectedMealType);
+
     final nutritionalInfo = _generateNutritionalInfo(ingredients, servings);
-    final tips = _generateTips(_selectedCuisine, _selectedMealType);
+    final tips = _generateTips(cuisineText, _selectedMealType);
 
     return {
       'name': recipeName,
-      'description': 'A delicious ${_selectedCuisine.toLowerCase()} ${_selectedMealType.toLowerCase()} recipe made with ${ingredients.take(3).join(', ')}.',
+      'description': 'A delicious ${cuisineText.toLowerCase()} ${_selectedMealType.toLowerCase()} recipe made with ${ingredients.take(3).join(', ')}.',
       'prepTime': '${(int.tryParse(cookingTime) ?? 30) ~/ 3} minutes',
       'cookTime': '$cookingTime minutes',
       'totalTime': '${(int.tryParse(cookingTime) ?? 30) + ((int.tryParse(cookingTime) ?? 30) ~/ 3)} minutes',
       'servings': servings,
-      'difficulty': inferredDifficulty, // Use inferred difficulty
-      'cuisine': _selectedCuisine,
+      'difficulty': inferredDifficulty,
+      'cuisine': cuisineText,
       'mealType': _selectedMealType,
       'ingredients': recipeIngredients,
       'instructions': instructions,
-      'nutritionalInfo': nutritionalInfo, // Kept for logic, not displayed
-      'tips': tips, // Kept for logic, not displayed
+      'nutritionalInfo': nutritionalInfo,
+      'tips': tips,
       'generatedOn': DateTime.now().toString().split(' ')[0],
     };
   }
 
-  // Remaining helper methods (_generateRecipeName, _generateRecipeIngredients, etc.)
-  // are retained as they are part of the core functionality, even if their
-  // complexity is simplified for this demo.
-
+  // --- Helper methods (kept as is for context) ---
   String _generateRecipeName(List<String> ingredients, String cuisine, String mealType) {
     String mainIngredient = ingredients.isNotEmpty ? ingredients[0] : 'Mixed';
 
@@ -279,13 +289,13 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
     instructions.add('Prepare all ingredients by washing, chopping, and measuring as needed.');
 
-    if (cuisine == 'Italian') {
+    if (cuisine.toLowerCase().contains('italian')) {
       instructions.add('Heat olive oil in a large pan over medium heat.');
       instructions.add('Sauté garlic and onions until fragrant and translucent.');
-    } else if (cuisine == 'Chinese') {
+    } else if (cuisine.toLowerCase().contains('chinese')) {
       instructions.add('Heat oil in a wok or large skillet over high heat.');
       instructions.add('Stir-fry ingredients quickly, starting with harder vegetables.');
-    } else if (cuisine == 'Indian') {
+    } else if (cuisine.toLowerCase().contains('indian')) {
       instructions.add('Heat oil in a heavy-bottomed pan and add whole spices.');
       instructions.add('Add onions and cook until golden brown.');
     } else {
@@ -327,7 +337,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
       }
     }
 
-    // Note: This function is kept, but the returned data is not displayed in the UI, as requested.
     return {
       'calories': '${baseCalories ~/ servings} kcal per serving',
       'protein': '${baseProtein ~/ servings}g',
@@ -345,18 +354,17 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
       'Use fresh ingredients when possible for the best flavor',
     ];
 
-    if (cuisine == 'Italian') {
+    if (cuisine.toLowerCase().contains('italian')) {
       tips.add('Use good quality olive oil for authentic Italian flavor');
       tips.add('Don\'t overcook pasta - it should be al dente');
-    } else if (cuisine == 'Chinese') {
+    } else if (cuisine.toLowerCase().contains('chinese')) {
       tips.add('Keep the heat high for proper stir-frying technique');
       tips.add('Have all ingredients ready before you start cooking');
-    } else if (cuisine == 'Indian') {
+    } else if (cuisine.toLowerCase().contains('indian')) {
       tips.add('Toast whole spices before grinding for maximum flavor');
       tips.add('Let the dish simmer to allow flavors to develop');
     }
 
-    // Note: This function is kept, but the returned data is not displayed in the UI, as requested.
     return tips;
   }
 
@@ -402,11 +410,12 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                     });
                   },
                   children: [
-                    _buildIngredientsPage(isDark), // Step 1
-                    _buildCuisinePage(isDark),    // Step 2
-                    _buildMealTypePage(isDark),   // Step 3
-                    _buildRestrictionsPage(isDark), // Step 4 (Last input step)
-                    _buildResultsPage(isDark),    // Step 5 (Results)
+                    // --- NEW PAGE ORDER ---
+                    _buildCuisinePage(isDark),    // Step 1 (Index 0)
+                    _buildIngredientsPage(isDark), // Step 2 (Index 1)
+                    _buildRestrictionsPage(isDark), // Step 3 (Index 2)
+                    _buildMealTypePage(isDark),   // Step 4 (Index 3)
+                    _buildResultsPage(isDark),    // Step 5 (Index 4 - Results)
                   ],
                 ),
               ),
@@ -423,6 +432,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, // Align to start for better look
         children: [
           Row(
             children: List.generate(totalSteps, (index) {
@@ -441,24 +451,24 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             }),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Step ${_currentPage + 1} of $totalSteps',
-            style: TextStyle(
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+          if (_currentPage < totalSteps) // totalSteps is 4, so this covers index 0 to 3
+            Text(
+              'Step ${_currentPage + 1} of $totalSteps',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  // Page 1: Ingredients
+  // Page 2: Ingredients (New Step 2)
   Widget _buildIngredientsPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.kitchen,
       title: 'What ingredients do you have?',
       subtitle: 'List the main ingredients you want to use, separated by commas',
       child: _buildTextField(
@@ -470,65 +480,85 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     );
   }
 
-  // Page 2: Cuisine
+  // Page 1: Cuisine (New Step 1) - Two Column Layout
   Widget _buildCuisinePage(bool isDark) {
+    // Calculate the width for two items per row, considering padding and spacing
+    final screenWidth = MediaQuery.of(context).size.width;
+    const double totalHorizontalSpacing = 24.0 * 2; // Left/Right padding
+    const double itemSpacing = 12.0; // Spacing between items
+    final itemWidth = (screenWidth - totalHorizontalSpacing - itemSpacing) / 2;
+
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.public,
-      title: 'Choose cuisine type',
-      subtitle: 'Select your preferred cuisine style',
-      child: SingleChildScrollView(
-        child: Column(
-          children: _cuisineOptions.map((cuisine) {
-            return _buildSelectionCard(
+      title: 'What Cuisine Type?',
+      subtitle: 'Select your preferred cuisine style.',
+      child: Wrap(
+        spacing: 12.0, // Horizontal space
+        runSpacing: 12.0, // Vertical space
+        alignment: WrapAlignment.start,
+        children: _displayCuisineOptions.map((cuisine) {
+          return SizedBox(
+            width: itemWidth,
+            child: _buildSelectionCard(
               title: cuisine,
               isSelected: _selectedCuisine == cuisine,
               onTap: () {
                 setState(() {
                   _selectedCuisine = cuisine;
+                  _cuisineController.text = cuisine;
                 });
               },
               isDark: isDark,
               icon: Icons.restaurant_menu,
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  // Page 3: Meal Type
-  Widget _buildMealTypePage(bool isDark) {
-    return _buildQuestionPage(
-      isDark: isDark,
-      icon: Icons.restaurant,
-      title: 'What meal type?',
-      subtitle: 'Choose the type of dish you want to make',
-      child: Column(
-        children: _mealTypeOptions.map((mealType) {
-          return _buildSelectionCard(
-            title: mealType,
-            isSelected: _selectedMealType == mealType,
-            onTap: () {
-              setState(() {
-                _selectedMealType = mealType;
-              });
-            },
-            isDark: isDark,
-            icon: Icons.dining,
+              useCompactStyle: true,
+            ),
           );
         }).toList(),
       ),
     );
   }
 
-  // Removed: _buildDifficultyPage, _buildServingsPage, _buildTimePage
+  // Page 4: Meal Type (New Step 4) - Two Column Layout
+  Widget _buildMealTypePage(bool isDark) {
+    // Calculate the width for two items per row, considering padding and spacing
+    final screenWidth = MediaQuery.of(context).size.width;
+    const double totalHorizontalSpacing = 24.0 * 2; // Left/Right padding
+    const double itemSpacing = 12.0; // Spacing between items
+    final itemWidth = (screenWidth - totalHorizontalSpacing - itemSpacing) / 2;
 
-  // Page 4: Restrictions (Moved to the last input step)
+    return _buildQuestionPage(
+      isDark: isDark,
+      title: 'What meal type?',
+      subtitle: 'Choose the type of dish you want to make.',
+      child: Wrap(
+        spacing: 12.0, // Horizontal space
+        runSpacing: 12.0, // Vertical space
+        alignment: WrapAlignment.start,
+        children: _mealTypeOptions.map((mealType) {
+          return SizedBox(
+            width: itemWidth,
+            child: _buildSelectionCard(
+              title: mealType,
+              isSelected: _selectedMealType == mealType,
+              onTap: () {
+                setState(() {
+                  _selectedMealType = mealType;
+                });
+              },
+              isDark: isDark,
+              icon: Icons.dining,
+              useCompactStyle: true,
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // Page 3: Restrictions (New Step 3)
   Widget _buildRestrictionsPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
-      icon: Icons.block,
       title: 'Any restrictions?',
       subtitle: 'Share any dietary restrictions or allergies (optional)',
       child: _buildTextField(
@@ -542,7 +572,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
   Widget _buildQuestionPage({
     required bool isDark,
-    required IconData icon,
     required String title,
     required String subtitle,
     required Widget child,
@@ -550,24 +579,13 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start, // ALIGN LEFT
         children: [
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              icon,
-              size: 40,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 24),
+
           Text(
             title,
+            textAlign: TextAlign.left, // ALIGN LEFT
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -575,9 +593,10 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
               height: 1.3,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
             subtitle,
+            textAlign: TextAlign.left, // ALIGN LEFT
             style: TextStyle(
               fontSize: 15,
               color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -598,51 +617,47 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     required VoidCallback onTap,
     required bool isDark,
     required IconData icon,
+    bool useCompactStyle = false,
   }) {
+    // --- STYLING FIX: Use black/white swap, ensure background is black/white ---
+    Color selectedColor = isDark ? Colors.white : Colors.black;
+    Color unselectedColor = isDark ? Colors.grey[900]! : Colors.grey[50]!;
+    Color selectedTextColor = isDark ? Colors.black : Colors.white;
+    Color unselectedTextColor = isDark ? Colors.white : Colors.black;
+    Color borderColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? Colors.white : Colors.black)
-              : (isDark ? Colors.grey[900] : Colors.grey[50]),
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? selectedColor : unselectedColor,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
+            color: isSelected ? selectedColor : borderColor,
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? (isDark ? Colors.black : Colors.white)
-                  : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              size: 22,
-            ),
-            const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? (isDark ? Colors.black : Colors.white)
-                      : (isDark ? Colors.white : Colors.black),
+                  color: isSelected ? selectedTextColor : unselectedTextColor,
                 ),
               ),
             ),
             if (isSelected)
               Icon(
-                Icons.check_circle,
-                color: isDark ? Colors.black : Colors.white,
-                size: 22,
+                Icons.check,
+                color: selectedTextColor,
+                size: 18,
               ),
           ],
         ),
@@ -657,13 +672,12 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             ? CircularProgressIndicator(
           valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
         )
-            : Container(), // Should not happen if _isGenerating is false
+            : Container(),
       );
     }
 
-    // AI inferred fields are now extracted here:
     final inferredServings = _generatedRecipe!['servings'];
-    final inferredDifficulty = _generatedRecipe!['difficulty'].toString().split(' ')[0]; // E.g., "Easy"
+    final inferredDifficulty = _generatedRecipe!['difficulty'].toString().split(' ')[0];
     final inferredCookTime = _generatedRecipe!['cookTime'];
 
     return SingleChildScrollView(
@@ -706,7 +720,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           ),
           const SizedBox(height: 32),
 
-          // Recipe Overview (Now using AI inferred values)
+          // Recipe Overview
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -890,9 +904,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
             ),
           ),
 
-          // Removed: Nutritional Information Section
-          // Removed: Cooking Tips Section
-
           const SizedBox(height: 32),
 
           // Action Buttons
@@ -902,7 +913,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                 child: OutlinedButton.icon(
                   onPressed: () => _shareRecipe(_generatedRecipe!),
                   icon: const Icon(Icons.share),
-                  label: const Text('Share'),
+                  label: const Text('Copy'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     side: BorderSide(
@@ -925,6 +936,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                       _generatedRecipe = null;
                       _ingredientsController.clear();
                       _restrictionsController.clear();
+                      _cuisineController.clear(); // <--- CLEARED CONTROLLER
                       _selectedCuisine = '';
                       _selectedMealType = '';
                     });
@@ -1113,7 +1125,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   }
 
   Widget _buildNutritionChip(String text, IconData icon, bool isDark) {
-    // This widget is no longer used in _buildResultsPage but kept for completeness
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
