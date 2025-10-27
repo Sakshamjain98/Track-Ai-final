@@ -85,6 +85,13 @@ Workout Preferences:
 - Duration per Workout: ${durationPerWorkout != null ? '$durationPerWorkout minutes' : 'Not specified'}
 - Preferred Time of Day: ${preferredTime ?? 'Any'}
 
+**CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE EXACTLY:**
+
+1. **DURATION REQUIREMENT**: You MUST create EXACTLY ${planDuration ?? '7'} days in the weeklySchedule array.
+2. **NO RANDOM DAYS**: Do NOT create random number of days. If user selected $planDuration, create $planDuration days.
+3. **DAY NUMBERING**: Number days sequentially from "Day 1" to "Day ${planDuration ?? '7'}".
+4. **NO DEVIATION**: Do not change the number of days requested under any circumstances.
+
 CRITICAL: You MUST respond with ONLY valid JSON. Do not include markdown, code blocks, or any text outside the JSON object.
 
 Provide the plan in this EXACT JSON format:
@@ -102,18 +109,8 @@ Provide the plan in this EXACT JSON format:
           "instruction": "Sets, reps, and rest info (e.g., 3 sets of 10-12 reps, 60s rest)"
         }
       ]
-    },
-    {
-      "day": "Day 2",
-      "activity": "Rest or Active Recovery",
-      "duration": "20 minutes",
-      "details": [
-         {
-          "name": "Light Stretching or Walking",
-          "instruction": "Focus on flexibility and recovery."
-        }
-      ]
     }
+    // Continue for ALL ${planDuration ?? '7'} days requested
   ],
   "generalTips": [
     "A specific, actionable tip for this plan.",
@@ -122,14 +119,7 @@ Provide the plan in this EXACT JSON format:
   ]
 }
 
-Key Requirements:
-1.  Adjust intensity based on the fitness level: '$fitnessLevel'.
-2.  For '$workoutType', prioritize exercises accordingly (bodyweight for home, machines/weights for gym).
-3.  Ensure exercises align with the '$fitnessGoals' and focus areas.
-4.  For longer plans (7+ days), intelligently include rest or active recovery days.
-5.  The 'instruction' field for each exercise must be a single, clear string.
-
-REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure JSON.
+**FINAL REMINDER**: Create EXACTLY ${planDuration ?? '7'} days. Output ONLY the JSON object. No markdown, no explanations, just pure JSON.
 ''';
 
       final content = [Content.text(prompt)];
@@ -171,22 +161,33 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
       return _generateFallbackPlan(fitnessGoals, fitnessLevel, workoutType, planDuration);
     }
   }
-
   static Map<String, dynamic> _generateFallbackPlan(
       String fitnessGoals,
       String fitnessLevel,
       String workoutType,
-      String? planDuration, // Allow null here for safety
+      String? planDuration,
       ) {
-    int daysCount = int.tryParse(planDuration?.split(' ').first ?? '7') ?? 7;
+    // Extract exact number of days from planDuration
+    int daysCount = 30; // Default
+    if (planDuration != null) {
+      final daysMatch = RegExp(r'(\d+)').firstMatch(planDuration);
+      if (daysMatch != null) {
+        daysCount = int.tryParse(daysMatch.group(1)!) ?? 7;
+      }
+    }
+
+    print('Fallback Plan: Generating EXACTLY $daysCount days for: $planDuration');
+
     List<Map<String, dynamic>> schedule = [];
 
+    // Create exactly the requested number of days
     for (int i = 1; i <= daysCount; i++) {
-      if (i % 4 == 0 && daysCount >= 7) {
+      // Simple pattern: every 4th day is rest, others are workout
+      if (i % 4 == 0) {
         schedule.add({
           'day': 'Day $i',
           'activity': 'Rest Day',
-          'duration': 'N/A',
+          'duration': 'Rest',
           'details': [{'name': 'Active Recovery', 'instruction': 'Light walk or stretching.'}],
         });
       } else {
@@ -196,7 +197,7 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
           'duration': '45 minutes',
           'details': [
             {'name': 'Jumping Jacks', 'instruction': '3 sets of 60 seconds'},
-            {'name': 'Push-ups', 'instruction': '3 sets of 10-15 reps (modify on knees if needed)'},
+            {'name': 'Push-ups', 'instruction': '3 sets of 10-15 reps'},
             {'name': 'Bodyweight Squats', 'instruction': '3 sets of 12-15 reps'},
             {'name': 'Plank', 'instruction': '3 sets of 30-60 seconds hold'},
             {'name': 'Lunges', 'instruction': '3 sets of 10 reps per leg'},
@@ -206,22 +207,22 @@ REMEMBER: Output ONLY the JSON object. No markdown, no explanations, just pure J
     }
 
     return {
-      'planTitle': '${planDuration ?? '7 Days'} $workoutType Plan ($fitnessLevel)',
-      'introduction': 'This is a foundational workout plan. Remember to always warm-up before and cool-down after each session. Listen to your body and focus on proper form.',
+      'planTitle': '$daysCount Day $workoutType Plan ($fitnessLevel)',
+      'introduction': 'This is a $daysCount-day foundational workout plan. Always warm-up before and cool-down after each session.',
       'weeklySchedule': schedule,
       'generalTips': [
         'Stay hydrated by drinking plenty of water throughout the day.',
         'Focus on proper form to prevent injuries.',
-        'Consistency is more important than intensity, especially when starting out.',
+        'Consistency is more important than intensity.',
       ],
       'isFallback': true,
-      // Add metadata to fallback plan as well
       'generatedAt': Timestamp.now(),
       'userId': _auth.currentUser?.uid,
       'fitnessGoals': fitnessGoals,
       'fitnessLevel': fitnessLevel,
       'workoutType': workoutType,
       'planDuration': planDuration,
+      'actualDaysGenerated': daysCount, // For verification
     };
   }
 

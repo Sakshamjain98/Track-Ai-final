@@ -320,7 +320,7 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
                     // Step 1: Age
                     _buildQuestionPage(
                         isDark: isDark,
-                        title: 'What is your age?',
+                        title: 'How old are you?',
                         subtitle: 'This helps personalize your analysis',
                         child: _buildTextField(
                             controller: _ageController,
@@ -605,7 +605,7 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
             height: 55,
             decoration: BoxDecoration(
               color: isSelected ? (isDark ? Colors.white : Colors.black) : Colors.transparent, // Only color the selected part
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
               child: Text(
@@ -696,11 +696,11 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
         fillColor: isDark ? Colors.grey[900] : Colors.grey[50],
         counterText: '',
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none
         ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(
                 color: isDark ? Colors.grey[800]! : Colors.grey[200]!
             )

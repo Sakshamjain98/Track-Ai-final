@@ -118,7 +118,6 @@ class _SmartgymkitState extends State<Smartgymkit> {
       default: return true;
     }
   }
-
   Future<void> _generatePlan() async {
     if (!_validateCurrentPage()) {
       _showValidationSnackBar();
@@ -144,6 +143,12 @@ class _SmartgymkitState extends State<Smartgymkit> {
       String preferredTimeKey = _selectedPreferredTime == 'Any Time' ? 'any' : _selectedPreferredTime.toLowerCase();
       final planDurationDays = int.tryParse(_selectedPlanDuration.split(' ').first);
 
+      // DEBUG: Print what's being sent to the AI
+      print('DEBUG - Plan Duration Details:');
+      print('Selected: $_selectedPlanDuration');
+      print('Extracted days: $planDurationDays');
+      print('Sending to AI: ${planDurationDays?.toString()}');
+
       final workoutPlan = await WorkoutPlannerService.generateWorkoutPlan(
         fitnessGoals: _fitnessGoalsController.text,
         fitnessLevel: _selectedFitnessLevel.toLowerCase(),
@@ -159,6 +164,12 @@ class _SmartgymkitState extends State<Smartgymkit> {
 
       if (workoutPlan != null) {
         setState(() => _results = workoutPlan);
+
+        // DEBUG: Check what was actually generated
+        final schedule = workoutPlan['weeklySchedule'] as List?;
+        print('DEBUG - Generated schedule length: ${schedule?.length}');
+        print('DEBUG - Expected length: $planDurationDays');
+
         _showSuccessSnackBar('Workout plan generated successfully!');
       } else {
         throw Exception('Failed to generate plan.');
@@ -954,28 +965,66 @@ class _SmartgymkitState extends State<Smartgymkit> {
       return Center(child: Text('Error loading results.', style: TextStyle(color: AppColors.textPrimary(isDark))));
     }
 
-    // --- Display Results Content (Unchanged) ---
+// --- Display Results Content ---
     final schedule = _results!['weeklySchedule'] as List?;
     final tips = _results!['generalTips'] as List?;
 
     return SingleChildScrollView(
-      // ... (rest of the results display logic) ...
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: Icon(lucide.LucideIcons.award, size: 48, color: AppColors.black)),
-          const SizedBox(height: 16),
-          Center(child: Text(_results!['planTitle'] ?? 'Your Workout Plan', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark), ))),
-          const SizedBox(height: 8),
-          Center(child: Text(_results!['introduction'] ?? 'Your personalized plan is ready!', style: TextStyle(fontSize: 16, color: AppColors.textSecondary(isDark), height: 1.5,))),
+          // BLACK BANNER - Title above duration at bottom left
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title above duration
+                Text(
+                  _results!['planTitle']?.toString().toUpperCase() ?? 'YOUR WORKOUT PLAN',
+                  style: const TextStyle(
+                    fontSize: 18, // Reduced from 22
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.0, // Reduced from 1.1
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Duration at bottom left in white pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _selectedPlanDuration,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 32),
+
+          // Responsive buttons
           Wrap(
             spacing: 16,
             runSpacing: 12,
             alignment: WrapAlignment.center,
             children: [
-              SizedBox(
-                width: 150,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 100, maxWidth: 150),
                 child: OutlinedButton.icon(
                   onPressed: _isSaving ? null : _savePlan,
                   icon: _isSaving
@@ -990,8 +1039,8 @@ class _SmartgymkitState extends State<Smartgymkit> {
                   ),
                 ),
               ),
-              SizedBox(
-                width: 150,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 100, maxWidth: 150),
                 child: ElevatedButton.icon(
                   onPressed: _resetFlow,
                   icon: const Icon(lucide.LucideIcons.refreshCw),
@@ -1020,31 +1069,21 @@ class _SmartgymkitState extends State<Smartgymkit> {
                 })
           else
             Text('No schedule provided.', style: TextStyle(color: AppColors.textSecondary(isDark))),
-          const SizedBox(height: 32),
-          Text('General Tips', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary(isDark))),
-          const SizedBox(height: 16),
-          if (tips != null && tips.isNotEmpty)
-            ...tips.map((tip) => ListTile(leading: Icon(Icons.check_circle_outline, color: Colors.green), title: Text(tip.toString(), style: TextStyle(color: AppColors.textSecondary(isDark)))))
-          else
-            Text('No tips provided.', style: TextStyle(color: AppColors.textSecondary(isDark)))
         ],
       ),
     );
   }
-
   Widget _buildCollapsibleDayTile(Map<String, dynamic> dayData, bool isDark) {
     final bool isRestDay = (dayData['activity'] ?? '').toLowerCase().contains('rest') || (dayData['details'] as List? ?? []).isEmpty;
     final exercises = dayData['details'] as List?;
+    final exerciseCount = exercises?.length ?? 0;
 
-    Color iconColor = isRestDay ? Colors.green : AppColors.black;
-    Color tileColor = isDark ? AppColors.cardBackground(isDark) : AppColors.white;
-    Color titleColor = AppColors.textPrimary(isDark);
-    Color subtitleColor = AppColors.textSecondary(isDark);
+    // Changed to grey background
+    Color backgroundColor = isDark ? Colors.grey[800]! : Colors.grey[100]!;
+    // Removed border color
 
-    IconData leadingIcon = isRestDay ? lucide.LucideIcons.bed : lucide.LucideIcons.dumbbell;
-    String subtitleText = isRestDay ? 'Recovery Day' : (dayData['activity'] ?? 'Full Workout');
-    final duration = dayData['duration'] != null ? ' | ${dayData['duration']}' : '';
-    subtitleText = '$subtitleText$duration';
+    String dayName = dayData['day'] ?? 'Day';
+    String activity = dayData['activity'] ?? 'Workout';
 
     final bool isTappable = !isRestDay || (exercises?.isNotEmpty ?? false);
 
@@ -1059,57 +1098,86 @@ class _SmartgymkitState extends State<Smartgymkit> {
       }
     }
 
-    Widget content = isTappable
-        ? Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: tileColor,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderColor(isDark), width: 1.0),
+        // Removed border property
       ),
-      child: ListTile(
-        onTap: navigateToDayDetails,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          dayData['day'] ?? 'Unknown Day',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: titleColor),
-        ),
-        subtitle: Text(
-          subtitleText,
-          style: TextStyle(color: subtitleColor, fontStyle: isRestDay ? FontStyle.italic : FontStyle.normal),
-        ),
-        leading: Icon(leadingIcon, color: iconColor),
-        trailing: isTappable ? Icon(Icons.arrow_forward_ios, color: subtitleColor, size: 16) : null,
-      ),
-    )
-        : Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.borderColor(isDark), width: 1.0),
-      ),
-      color: tileColor,
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(dayData['day'] ?? 'Unknown Day', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: titleColor)),
-        subtitle: Text(subtitleText, style: TextStyle(color: subtitleColor, fontStyle: FontStyle.italic)),
-        leading: Icon(leadingIcon, color: iconColor),
-        children: <Widget>[
-          Divider(height: 1, color: AppColors.borderColor(isDark)),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Ensure you focus on mobility, stretching, or light cardio to aid muscle recovery. Listen to your body!',
-              style: TextStyle(fontSize: 16, color: subtitleColor, height: 1.5),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isTappable ? navigateToDayDetails : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Day title - Big font
+                Text(
+                  dayName+":",
+                  style: TextStyle(
+                    fontSize: 18, // Big font
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black, // Dark color
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Exercise name and count in one line
+                Row(
+                  children: [
+                    // Exercise name
+                    Text(
+                      isRestDay ? 'Rest Day' : activity,
+                      style: TextStyle(
+                        fontSize: 14, // Small font
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Vertical divider
+                    Container(
+                      width: 1,
+                      height: 14,
+                      color: isDark ? Colors.grey[600] : Colors.grey[400],
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Exercise count
+                    Text(
+                      '$exerciseCount ${exerciseCount == 1 ? 'exercise' : 'exercises'}',
+                      style: TextStyle(
+                        fontSize: 14, // Small font
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Arrow icon for tappable days
+                    if (isTappable)
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: isDark ? Colors.white : Colors.black,
+                        size: 16,
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
-
-    return content;
   }
-
   void _showValidationSnackBar() {
     String message = '';
     switch (_currentPage) {
@@ -1146,7 +1214,6 @@ class Exercise {
 // -------------------------------------------------------------------------
 // New Page 1: Day Details (Shows list of exercises for a selected day)
 // -------------------------------------------------------------------------
-
 class DayDetailsPage extends StatelessWidget {
   final Map<String, dynamic> dayData;
   final bool isDark;
@@ -1163,222 +1230,554 @@ class DayDetailsPage extends StatelessWidget {
     final activity = dayData['activity'] ?? 'Details';
 
     final primaryColor = isDark ? Colors.white : Colors.black;
-    final secondaryColor = isDark ? Colors.grey[400] : Colors.grey[700];
+    final secondaryColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final backgroundColor = isDark ? Colors.black : Colors.white;
+    final cardColor = isDark ? Colors.grey[900] : Colors.grey[50];
 
     return Scaffold(
-      backgroundColor: AppColors.background(isDark),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background(isDark),
+        backgroundColor: backgroundColor,
         elevation: 0,
         iconTheme: IconThemeData(color: primaryColor),
-        title: Text(
-          dayName.toUpperCase(),
-          style: TextStyle(color: primaryColor, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
+        title: const Text(''), // Empty app bar title
+
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              activity,
-              style: TextStyle(color: secondaryColor, fontSize: 16),
+            // Day Title and Dumbbell Icon in same row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    dayName.toUpperCase(),
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontSize: 40,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.fitness_center,
+                  color: primaryColor,
+                  size: 80,
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            Text(
-              '${exercises.length} exercises',
-              style: TextStyle(color: primaryColor, fontSize: 18, fontWeight: FontWeight.w600),
+            const SizedBox(height: 2),
+
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Text(
+                activity,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  height: 1.1,
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 28),
+
+            // Exercise Count
+            Text(
+              '${exercises.length} ${exercises.length == 1 ? 'exercise' : 'exercises'}',
+              style: TextStyle(
+                color: primaryColor,
+                fontSize: 21,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Exercises List
             if (exercises.isNotEmpty)
-              ...exercises.map((exercise) => _buildExerciseTile(context, exercise, isDark)).toList()
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: exercises.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => _buildExerciseItem(
+                  context,
+                  exercises[index],
+                  isDark,
+                  primaryColor,
+                  secondaryColor!,
+                  cardColor!,
+                ),
+              )
             else
               Center(
-                child: Text('No detailed exercises available for this session.', style: TextStyle(color: secondaryColor)),
+                child: Text(
+                    'No detailed exercises available for this session.',
+                    style: TextStyle(color: secondaryColor)
+                ),
               )
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildExerciseTile(BuildContext context, Exercise exercise, bool isDark) {
-    final primaryColor = isDark ? Colors.white : Colors.black;
-    final subtitleColor = isDark ? Colors.grey[400] : Colors.grey[600];
-    final cardColor = isDark ? AppColors.cardBackground(isDark) : Colors.white;
+Widget _buildExerciseItem(
+    BuildContext context,
+    Exercise exercise,
+    bool isDark,
+    Color primaryColor,
+    Color secondaryColor,
+    Color cardColor,
+    ) {
+  // Get first letter for the avatar
+  final firstLetter = exercise.name.isNotEmpty ? exercise.name[0].toUpperCase() : '?';
 
-    // Get the first letter for the leading avatar
-    final firstLetter = exercise.name.isNotEmpty ? exercise.name[0] : '?';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: InkWell(
-        onTap: () {
-          // Navigate to the Exercise Details Page
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ExerciseDetailsPage(exercise: exercise, isDark: isDark),
+  return GestureDetector(
+    onTap: () {
+      // Navigate to Exercise Details Page
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ExerciseDetailsPage(exercise: exercise, isDark: isDark),
+        ),
+      );
+    },
+    child: Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Black Rounded Square with first letter
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(10),
             ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderColor(isDark), width: 1),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppColors.black,
-                child: Text(firstLetter, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      exercise.name,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      exercise.instruction,
-                      style: TextStyle(fontSize: 13, color: subtitleColor),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+            child: Center(
+              child: Text(
+                firstLetter,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: subtitleColor),
-            ],
+            ),
           ),
-        ),
+
+          const SizedBox(width: 16),
+
+          // Exercise Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exercise.name,
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                if (exercise.instruction.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    exercise.instruction,
+                    style: TextStyle(
+                      color: secondaryColor,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Chevron Icon
+          Icon(
+            Icons.chevron_right,
+            color: secondaryColor,
+            size: 20,
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
+
+
 // -------------------------------------------------------------------------
-// New Page 2: Exercise Details (Shows instructions, prep, execution)
+// Exercise Details Page
 // -------------------------------------------------------------------------
 
-class ExerciseDetailsPage extends StatelessWidget {
+
+
+
+
+// Placeholder for your Gemini Service (You MUST ensure your actual GeminiService
+// class has the generateExercisePreparationTips method as discussed previously)
+class GeminiService {
+  static Future<List<String>> generateExercisePreparationTips({
+    required String exerciseName,
+    required String context,
+  }) async {
+    // Simulate a network delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Return mock data based on a simple name check
+    if (exerciseName.toLowerCase().contains('squat')) {
+      return [
+        'Place the bar high across your upper back (traps) for stability.',
+        'Set your feet slightly wider than shoulder-width, toes pointed slightly out.',
+        'Take a deep breath and brace your core tightly before unracking the weight.',
+        'Keep your chest up and look slightly down throughout the movement.',
+      ];
+    } else {
+      return [
+        'Ensure the bench or equipment is adjusted for your body height.',
+        'Perform 1-2 sets of 10-15 light repetitions as a specific warm-up.',
+        'Check that all weights/pins are securely fastened before starting.',
+      ];
+    }
+  }
+}
+
+// ----------------------------------------------------------------------
+
+class ExerciseDetailsPage extends StatefulWidget {
   final Exercise exercise;
   final bool isDark;
 
   const ExerciseDetailsPage({Key? key, required this.exercise, required this.isDark}) : super(key: key);
 
+  @override
+  State<ExerciseDetailsPage> createState() => _ExerciseDetailsPageState();
+}
+
+class _ExerciseDetailsPageState extends State<ExerciseDetailsPage> {
+  List<String> _preparationTips = ['Loading preparation tips...'];
+  bool _isLoadingTips = true;
+  String _tipError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPreparationTips();
+  }
+
+  Future<void> _fetchPreparationTips() async {
+    setState(() {
+      _isLoadingTips = true;
+      _tipError = '';
+    });
+    try {
+      final tips = await GeminiService.generateExercisePreparationTips(
+        exerciseName: widget.exercise.name,
+        context: widget.exercise.instruction,
+      );
+
+      setState(() {
+        _preparationTips = tips.isNotEmpty
+            ? tips
+            : ['The AI did not generate specific preparation tips for this exercise.'];
+      });
+    } catch (e) {
+      setState(() {
+        _tipError = 'Failed to load tips: ${e.toString()}';
+        _preparationTips = [];
+      });
+    } finally {
+      setState(() {
+        _isLoadingTips = false;
+      });
+    }
+  }
+
   Widget _buildSection({
     required String title,
     required Widget content,
-    required bool isDark,
   }) {
-    final primaryColor = isDark ? Colors.white : Colors.black;
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: 32.0),
+      padding: const EdgeInsets.only(bottom: 20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            title.toUpperCase(),
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: primaryColor,
+              color: widget.isDark ? Colors.white : Colors.black,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           content,
         ],
       ),
     );
   }
 
-  Widget _buildPlaceholderContent(String text) {
-    return Column(
-      children: [
-        // Placeholder for an icon/animation (like the animated dumbbells in the image)
-        Icon(lucide.LucideIcons.dumbbell, size: 40, color: Colors.cyan),
-        const SizedBox(height: 12),
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[500], fontStyle: FontStyle.italic),
+  Widget _buildNumberedItem(String text, int number) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$number.',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: widget.isDark ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: widget.isDark ? Colors.white : Colors.black,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreparationContent() {
+    if (_isLoadingTips) {
+      return Center(
+        child: Column(
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  widget.isDark ? Colors.white : Colors.black),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Generating AI tips...',
+              style: TextStyle(
+                fontSize: 14,
+                color: widget.isDark ? Colors.white : Colors.black,
+              ),
+            ),
+          ],
         ),
-      ],
+      );
+    }
+
+    if (_tipError.isNotEmpty) {
+      return Column(
+        children: [
+          Icon(Icons.error_outline,
+              color: widget.isDark ? Colors.white : Colors.black,
+              size: 28),
+          const SizedBox(height: 8),
+          Text(
+            _tipError,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: widget.isDark ? Colors.white : Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _fetchPreparationTips,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: widget.isDark ? Colors.white : Colors.black,
+              foregroundColor: widget.isDark ? Colors.black : Colors.white,
+            ),
+            child: Text('Retry', style: TextStyle(fontSize: 14)),
+          ),
+        ],
+      );
+    }
+
+    // Show all preparation tips as paragraph only
+    return Text(
+      _preparationTips.join(' '),
+      style: TextStyle(
+        fontSize: 14,
+        color: widget.isDark ? Colors.white : Colors.black,
+        height: 1.4,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = isDark ? Colors.white : Colors.black;
-    final cardColor = isDark ? AppColors.cardBackground(isDark) : Colors.white;
-
     return Scaffold(
-      backgroundColor: AppColors.background(isDark),
+      backgroundColor: widget.isDark ? Colors.black : Colors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.background(isDark),
+        backgroundColor: widget.isDark ? Colors.black : Colors.white,
         elevation: 0,
-        iconTheme: IconThemeData(color: primaryColor),
+        iconTheme: IconThemeData(
+            color: widget.isDark ? Colors.white : Colors.black),
         title: Text(
-          exercise.name,
-          style: TextStyle(color: primaryColor, fontSize: 20, fontWeight: FontWeight.bold),
+          widget.exercise.name,
+          style: TextStyle(
+            fontSize: 16,
+            color: widget.isDark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Instructions Section
+            // Exercise Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: widget.isDark ? Colors.white : Colors.black,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.exercise.name.isNotEmpty ? widget.exercise.name[0].toUpperCase() : '?',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: widget.isDark ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.exercise.name,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: widget.isDark ? Colors.white : Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '3 Sets x 3 reps',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: widget.isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Instructions Section with Grey Background
             _buildSection(
               title: 'Instructions',
-              isDark: isDark,
               content: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderColor(isDark), width: 1),
+                  color: widget.isDark ? Colors.grey[900] : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  exercise.instruction,
-                  style: TextStyle(fontSize: 16, color: primaryColor, fontWeight: FontWeight.w500),
+                  widget.exercise.instruction.isNotEmpty
+                      ? widget.exercise.instruction
+                      : 'No specific instructions available for this exercise.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: widget.isDark ? Colors.white : Colors.black,
+                    height: 1.4,
+                  ),
                 ),
               ),
             ),
 
-            // Preparation Section (Placeholder)
+            // Preparation Section - Now paragraph only
             _buildSection(
               title: 'Preparation',
-              isDark: isDark,
-              content: _buildPlaceholderContent(
-                'Detailed instructions, form tips, and video examples for this exercise are coming soon!',
-              ),
+              content: _buildPreparationContent(),
             ),
 
-            // Execution Section (Placeholder)
+            // Execution Section - Only one point
             _buildSection(
               title: 'Execution',
-              isDark: isDark,
-              content: _buildPlaceholderContent(
-                'Detailed instructions, form tips, and video examples for this exercise are coming soon!',
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildNumberedItem(
+                    'Exhale on Exertion: Exhaling during the hard part (lifting/pushing) helps stabilize your core and generates more power.',
+                    1,
+                  ),
+                  _buildNumberedItem(
+                    'Inhale on Return: Inhaling during the easy part (lowering/returning to start) prepares your body for the next rep.Inhale on Return: Inhaling during the easy part (lowering/returning to start) prepares your body for the next rep.',
+                    2,
+                  ),
+                ],
               ),
             ),
 
-            // Key Tips Section (Placeholder)
+            // General Tips Section - Added back with three points
             _buildSection(
-              title: 'Key Tips',
-              isDark: isDark,
-              content: _buildPlaceholderContent(
-                'Detailed instructions, form tips, and video examples for this exercise are coming soon!',
+              title: 'General Tips',
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildNumberedItem(
+                    'Warm-up before each workout with light cardio and dynamic stretching.',
+                    1,
+                  ),
+                  _buildNumberedItem(
+                    'Cool-down after each workout with static stretching, holding each stretch for 20-30 seconds.',
+                    2,
+                  ),
+                  _buildNumberedItem(
+                    'Stay hydrated by drinking plenty of water throughout the day and listen to your body.',
+                    3,
+                  ),
+                ],
               ),
             ),
           ],

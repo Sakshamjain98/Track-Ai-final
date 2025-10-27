@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -110,13 +112,16 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
   bool _validateCurrentPage() {
     switch (_currentPage) {
       case 0: // Cuisine (NEW FIRST PAGE)
-        return _selectedCuisine.isNotEmpty;
-      case 1: // Ingredients (NEW SECOND PAGE)
-        return _ingredientsController.text.isNotEmpty;
-      case 2: // Restrictions (NEW THIRD PAGE)
-        return true;
-      case 3: // Meal Type (NEW LAST INPUT PAGE)
         return _selectedMealType.isNotEmpty;
+
+      case 1: // Ingredients (NEW SECOND PAGE)
+        return _selectedCuisine.isNotEmpty;
+
+      case 2: // Restrictions (NEW THIRD PAGE)
+        return _ingredientsController.text.isNotEmpty;
+
+      case 3: // Meal Type (NEW LAST INPUT PAGE)
+        return true;
       default:
         return true;
     }
@@ -130,7 +135,6 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
       ),
     );
   }
-
   Future<void> _generateRecipe() async {
     // Final check before generating.
     if (!_validateCurrentPage()) {
@@ -143,10 +147,19 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
     });
 
     try {
-      // Simulate AI inference
-      final inferredServings = 4;
-      final inferredTime = '35'; // minutes
-      final inferredDifficulty = 'Medium (30-60 min)';
+      // DYNAMIC INFERENCE BASED ON USER INPUT
+      final ingredients = _ingredientsController.text.split(',').length;
+      final cuisine = _selectedCuisine.toLowerCase();
+      final mealType = _selectedMealType.toLowerCase();
+
+      // Dynamic servings based on ingredients count
+      final inferredServings = _calculateServings(ingredients, mealType);
+
+      // Dynamic cooking time based on cuisine and meal type
+      final inferredTime = _calculateCookingTime(cuisine, mealType, ingredients);
+
+      // Dynamic difficulty based on cooking time
+      final inferredDifficulty = _calculateDifficulty(inferredTime);
 
       await Future.delayed(const Duration(seconds: 3));
 
@@ -155,10 +168,9 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         _isGenerating = false;
       });
 
-      _nextPage(); // Move to results page (Index 4)
+      _nextPage();
     } catch (e) {
       setState(() {
-
         _isGenerating = false;
       });
 
@@ -171,6 +183,48 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         );
       }
     }
+  }
+
+// Add these helper methods to calculate dynamic values:
+  int _calculateServings(int ingredientCount, String mealType) {
+    int baseServings = 2;
+
+    // More ingredients = more servings
+    if (ingredientCount > 5) baseServings = 4;
+    if (ingredientCount > 8) baseServings = 6;
+
+    // Adjust based on meal type
+    if (mealType == 'dinner') baseServings += 1;
+    if (mealType == 'snack') baseServings = max(2, baseServings - 1);
+
+    return baseServings;
+  }
+
+  String _calculateCookingTime(String cuisine, String mealType, int ingredientCount) {
+    int baseTime = 20;
+
+    // Cuisine-based adjustments
+    if (cuisine.contains('indian') || cuisine.contains('italian')) baseTime += 15;
+    if (cuisine.contains('chinese') || cuisine.contains('thai')) baseTime += 10;
+
+    // Meal type adjustments
+    if (mealType == 'dinner') baseTime += 10;
+    if (mealType == 'breakfast') baseTime -= 5;
+    if (mealType == 'snack') baseTime -= 10;
+
+    // Ingredient count adjustments
+    baseTime += (ingredientCount * 2);
+
+    return baseTime.toString();
+  }
+
+  String _calculateDifficulty(String cookingTime) {
+    int time = int.tryParse(cookingTime) ?? 30;
+
+    if (time < 20) return 'Easy (Under 20 min)';
+    if (time <= 40) return 'Medium (20-40 min)';
+    if (time <= 60) return 'Hard (40-60 min)';
+    return 'Expert (60+ min)';
   }
 
   Map<String, dynamic> _createRecipe(int inferredServings, String inferredTime, String inferredDifficulty) {
@@ -399,7 +453,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           ),
           body: Column(
             children: [
-              _buildProgressIndicator(isDark),
+
               Expanded(
                 child: PageView(
                   controller: _pageController,
@@ -411,10 +465,11 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
                   },
                   children: [
                     // --- NEW PAGE ORDER ---
+                    _buildMealTypePage(isDark),
                     _buildCuisinePage(isDark),    // Step 1 (Index 0)
                     _buildIngredientsPage(isDark), // Step 2 (Index 1)
                     _buildRestrictionsPage(isDark), // Step 3 (Index 2)
-                    _buildMealTypePage(isDark),   // Step 4 (Index 3)
+                      // Step 4 (Index 3)
                     _buildResultsPage(isDark),    // Step 5 (Index 4 - Results)
                   ],
                 ),
@@ -429,29 +484,35 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
   Widget _buildProgressIndicator(bool isDark) {
     int totalSteps = _totalInputSteps;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, // Align to start for better look
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: List.generate(totalSteps, (index) {
-              return Expanded(
-                child: Container(
-                  height: 3,
-                  margin: EdgeInsets.only(right: index < totalSteps - 1 ? 6 : 0),
-                  decoration: BoxDecoration(
-                    color: index <= _currentPage
-                        ? (isDark ? Colors.white : Colors.black)
-                        : (isDark ? Colors.grey[800] : Colors.grey[300]),
-                    borderRadius: BorderRadius.circular(2),
+          // ✅ Only show dots when NOT on result page
+          if (_currentPage < totalSteps)
+            Row(
+              children: List.generate(totalSteps, (index) {
+                return Expanded(
+                  child: Container(
+                    height: 3,
+                    margin: EdgeInsets.only(right: index < totalSteps - 1 ? 6 : 0),
+                    decoration: BoxDecoration(
+                      color: index <= _currentPage
+                          ? (isDark ? Colors.white : Colors.black)
+                          : (isDark ? Colors.grey[800] : Colors.grey[300]),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 10),
-          if (_currentPage < totalSteps) // totalSteps is 4, so this covers index 0 to 3
+                );
+              }),
+            ),
+
+          if (_currentPage < totalSteps) const SizedBox(height: 10),
+
+          // Step text only before result page
+          if (_currentPage < totalSteps)
             Text(
               'Step ${_currentPage + 1} of $totalSteps',
               style: TextStyle(
@@ -464,6 +525,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
       ),
     );
   }
+
 
   // Page 2: Ingredients (New Step 2)
   Widget _buildIngredientsPage(bool isDark) {
@@ -686,40 +748,40 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
         crossAxisAlignment: CrossAxisAlignment.center
         ,
         children: [
+
           Container(
-            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.grey[100],
+              color: Colors.black,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              Icons.auto_awesome,
-              size: 40,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _generatedRecipe!['name'],
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _generatedRecipe!['description'],
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              height: 1.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  _generatedRecipe!['name'],
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _generatedRecipe!['description'],
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white70,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 32),
-
           // Recipe Overview
           Container(
             width: double.infinity,
@@ -778,12 +840,16 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           const SizedBox(height: 24),
 
           // Ingredients Section
-          Text(
-            'Ingredients',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+          Align(
+            alignment: Alignment.centerLeft,
+
+            child: Text(
+              'Ingredients',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -838,12 +904,16 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
           const SizedBox(height: 24),
 
           // Instructions Section
-          Text(
-            'Instructions',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+          Align(
+            alignment: Alignment.centerLeft,
+
+            child: Text(
+              'Instructions',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1008,7 +1078,7 @@ class _AIRecipeGeneratorState extends State<AIRecipeGenerator> {
 
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentPage == _totalInputSteps - 1
+              onPressed: _currentPage == _totalInputSteps -1
                   ? (_isGenerating ? null : _generateRecipe)
                   : _nextPage,
               style: ElevatedButton.styleFrom(

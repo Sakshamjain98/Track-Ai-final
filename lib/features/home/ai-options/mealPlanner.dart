@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 import 'package:provider/provider.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 
@@ -9,7 +11,6 @@ import 'dart:async';
 import '../../settings/service/geminiservice.dart';
 // If AppColors is not in core/constants, this might break. Assuming it is.
 import 'package:trackai/core/constants/appcolors.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 
 class AIMealPlanner extends StatefulWidget {
   const AIMealPlanner({Key? key}) : super(key: key);
@@ -71,7 +72,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     '30 Days'
   ];
   final List<String> _dietOptions = [
-    'Any / No Specific Diet',
+    'No Specific Diet',
     'Vegetarian',
     'Non-Vegetarian',
     'Vegan',
@@ -119,7 +120,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ),
           ],
         ),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.black,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
@@ -145,7 +146,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ),
           ],
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.black,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
@@ -170,7 +171,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ),
           ],
         ),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: Colors.black,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         margin: const EdgeInsets.all(16),
@@ -216,37 +217,50 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     }
   }
 
-  // --- UPDATED VALIDATION ---
-  // --- Inside _AIRecipeGeneratorState._validateCurrentPage ---
-  // --- VALIDATION LOGIC ---
   bool _validateCurrentPage() {
     switch (_currentPage) {
       case 0: // Gender
         return _selectedGender.isNotEmpty;
+
       case 1: // Age
+      // Check for valid positive integer
         return _ageController.text.isNotEmpty && int.tryParse(_ageController.text) != null && int.parse(_ageController.text) > 0;
 
       case 2: // Weight
-        if (_weightController.text.isEmpty || double.tryParse(_weightController.text) == null || double.parse(_weightController.text) <= 0) return false;
-        return true;
+        final weightValue = double.tryParse(_weightController.text);
+        // Check if value is valid (not null and greater than zero)
+        return weightValue != null && weightValue > 0;
 
-      case 3: // Height (Corrected Logic)
+      case 3: // Height (Fixed Logic)
         if (_selectedHeightUnit.isEmpty) return false;
+
         if (_selectedHeightUnit == 'cm') {
-          if (_heightController.text.isEmpty || double.tryParse(_heightController.text) == null || double.parse(_heightController.text) <= 0) return false;
+          final heightCmValue = double.tryParse(_heightController.text);
+          // Check if value is valid (not null and greater than zero)
+          return heightCmValue != null && heightCmValue > 0;
+
         } else if (_selectedHeightUnit == 'ft/in') {
           final feet = int.tryParse(_feetController.text);
           final inches = double.tryParse(_inchesController.text);
-          if (feet == null || feet < 0 || inches == null || inches < 0 || inches >= 12) return false;
+
+          // Feet must be non-negative integer. Inches must be non-negative and less than 12.
+          // We only require feet to be positive if inches is zero, otherwise any non-negative combination is fine.
+          final bool areFeetValid = feet != null && feet >= 0;
+          final bool areInchesValid = inches != null && inches >= 0 && inches < 12;
+
+          // Ensure at least one value is positive to prevent 0ft 0in
+          final bool isNonZero = (feet ?? 0) > 0 || (inches ?? 0) > 0;
+
+          return areFeetValid && areInchesValid && isNonZero;
         }
-        return true;
+        return false; // Should not be reached if unit is selected
 
       case 4: // Goal
         return _selectedGoal.isNotEmpty;
 
       case 5: // Calories
-        if (_caloriesController.text.isEmpty || int.tryParse(_caloriesController.text) == null || int.parse(_caloriesController.text) <= 0) return false;
-        return true;
+      // Check for valid positive integer
+        return _caloriesController.text.isNotEmpty && int.tryParse(_caloriesController.text) != null && int.parse(_caloriesController.text) > 0;
 
       case 6: // Days
         return _selectedDays.isNotEmpty;
@@ -254,18 +268,16 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       case 7: // Diet Type
         return _selectedDietType.isNotEmpty;
 
-      case 8: // Allergies
-      case 9: // Health Conditions
+      case 8: // Allergies (Always true as selection is optional, text input is optional)
+      case 9: // Health Conditions (Always true as input is optional)
         return true;
 
       default:
         return true;
     }
   }
-  // --- NEW: Dart implementation of the JS meal plan parser (FIXED CALORIE PARSING) ---
-  // --- NEW: Dart implementation of the JS meal plan parser (REFINED CALORIE FIX) ---
+
   // --- FIXED: Improved meal plan parser with better calorie extraction ---
-  // --- FIXED: Parser that extracts calories from meal names ---
   Map<String, dynamic> _parseMealPlanString(String planString) {
     final Map<String, dynamic> parsedPlan = {};
     final lines = planString.split('\n').map((l) => l.trim()).where((l) =>
@@ -418,8 +430,9 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   }
 
   // --- UPDATED: _generateMealPlan (Calls GeminiService AND Parser)
-  // ---
   Future<void> _generateMealPlan() async {
+    _nextPage();
+
     setState(() {
       _isGenerating = true;
     });
@@ -547,9 +560,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     }
   }
 
-  // --- END NEW: Save Plan Method ---
-
-
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
@@ -580,7 +590,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           ),
           body: Column(
             children: [
-              _buildProgressIndicator(isDark),
+              if (_currentPage < _currentPage) _buildProgressIndicator(isDark), // <--- MODIFIED
               Expanded(
                 child: PageView(
                   controller: _pageController,
@@ -591,17 +601,17 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                     });
                   },
                   children: [
-                    _buildGenderPage(isDark), // NEW Index 0: Gender
-                    _buildAgePage(isDark),    // NEW Index 1: Age
-                    _buildWeightPage(isDark), // 2
-                    _buildHeightPage(isDark), // 3
-                    _buildGoalPage(isDark),   // 4
-                    _buildCaloriesPage(isDark), // 5
-                    _buildDaysPage(isDark),   // 6
-                    _buildDietTypePage(isDark), // 7
-                    _buildAllergiesPage(isDark), // 8
-                    _buildHealthConditionsPage(isDark), // 9
-                    _buildResultsPage(isDark), // 10
+                    _buildGenderPage(isDark),          // Index 0: Gender
+                    _buildAgePage(isDark),             // Index 1: Age
+                    _buildWeightPage(isDark),          // Index 2: Weight
+                    _buildHeightPage(isDark),          // Index 3: Height
+                    _buildGoalPage(isDark),            // Index 4: Goal
+                    _buildCaloriesPage(isDark),        // Index 5: Calories (Required)
+                    _buildDaysPage(isDark),            // Index 6: Days (Required)
+                    _buildDietTypePage(isDark),        // Index 7: Diet Type (Required)
+                    _buildAllergiesPage(isDark),       // Index 8: Allergies
+                    _buildHealthConditionsPage(isDark), // Index 9: Health Conditions
+                    _buildResultsPage(isDark),
                   ],
                 ),
               ),
@@ -617,38 +627,79 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: List.generate(_totalSteps, (index) {
-              return Expanded(
-                child: Container(
-                  height: 3,
-                  margin: EdgeInsets.only(
-                      right: index < _totalSteps - 1 ? 6 : 0),
-                  decoration: BoxDecoration(
-                    color: index <= _currentPage
-                        ? (isDark ? Colors.white : Colors.black)
-                        : (isDark ? Colors.grey[800] : Colors.grey[300]),
-                    borderRadius: BorderRadius.circular(2),
+          if (_currentPage < _totalSteps)
+            Row(
+              children: List.generate(_totalSteps, (index) {
+                return Expanded(
+                  child: Container(
+                    height: 3,
+                    margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 6 : 0),
+                    decoration: BoxDecoration(
+                      color: index <= _currentPage
+                          ? (isDark ? Colors.white : Colors.black)
+                          : (isDark ? Colors.grey[800] : Colors.grey[300]),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Step ${_currentPage + 1} of $_totalSteps',
-            style: TextStyle(
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+                );
+              }),
             ),
-          ),
+          const SizedBox(height: 10),
+          if (_currentPage < _totalSteps)
+            Text(
+              'Step ${_currentPage + 1} of $_totalSteps',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
         ],
       ),
     );
   }
 
+  Widget _buildLoadingScreen(bool isDark) {
+    final Color primaryTextColor = isDark ? Colors.white : Colors.black;
+    final Color secondaryTextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final Color spinnerColor = isDark ? Colors.white : Colors.black;
+
+    return Container(
+      color: isDark ? Colors.black : Colors.white,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SpinKitFadingCube(
+              color: spinnerColor,
+              size: 50.0,
+            ),
+            const SizedBox(height: 31),
+            Text(
+              'Track AI is making your customized \n meal plan...',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This may take a moment based on your selections.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: secondaryTextColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildQuestionPage({
     required bool isDark,
@@ -940,11 +991,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-
-
-
-  // --- Inside _AIRecipeGeneratorState class ---
-// Page 3: Height (Unified Input UI)
+  // Page 3: Height (Unified Input UI)
   Widget _buildHeightPage(bool isDark) {
     final Color primaryTextColor = isDark ? Colors.white : Colors.black;
 
@@ -1036,8 +1083,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   }
 
   // Page 4: Goal (Optional)
-  // --- Inside _AIRecipeGeneratorState class ---
-// Page 4: Goal (Optional)
   Widget _buildGoalPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
@@ -1052,6 +1097,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       ),
     );
   }
+
   // Page 5: Calories (Required)
   Widget _buildCaloriesPage(bool isDark) {
     return _buildQuestionPage(
@@ -1067,8 +1113,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-  // --- Inside _AIRecipeGeneratorState class ---
-// Page 6: Days (Required)
+  // Page 6: Days (Required)
   Widget _buildDaysPage(bool isDark) {
     return _buildQuestionPage(
       isDark: isDark,
@@ -1083,6 +1128,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       ),
     );
   }
+
   // Page 7: Diet Type (Required)
   Widget _buildDietTypePage(bool isDark) {
     return _buildQuestionPage(
@@ -1098,6 +1144,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
       ),
     );
   }
+
   // Page 8: Allergies (Optional)
   Widget _buildAllergiesPage(bool isDark) {
     return _buildQuestionPage(
@@ -1160,11 +1207,11 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-
-  // ---
   // --- UPDATED: _buildResultsPage
-  // ---
   Widget _buildResultsPage(bool isDark) {
+    if (_isGenerating) {
+      return _buildLoadingScreen(isDark);
+    }
     if (_mealPlan == null) {
       return Center(
         child: _isGenerating
@@ -1183,42 +1230,46 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
         'No cooking guide generated.';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24,20,24,24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- 1. Header ---
+          // --- 1. Header in Black Box ---
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.grey[100],
+              color: Colors.black,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.black),
             ),
-            child: Icon(
-              Icons.restaurant,
-              size: 40,
-              color: isDark ? Colors.white : Colors.black,
+
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Meal Plan',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Your personalized ${summary['totalDays']}-day meal plan is ready!',
+                  textAlign: TextAlign.start,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Your Meal Plan',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Your personalized ${summary['totalDays']}-day meal plan is ready!',
-            style: TextStyle(
-              fontSize: 15,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 32),
 
           // --- 2. Action Buttons (Save/New Plan) ---
           Wrap(
@@ -1227,15 +1278,15 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             alignment: WrapAlignment.center,
             children: [
               SizedBox(
-                width: 150,
+                width: 100,
                 child: OutlinedButton.icon(
                   onPressed: _isSaving ? null : _savePlan,
-                  // Use new saving method
                   icon: _isSaving
-                      ? const SizedBox(width: 20,
+                      ? const SizedBox(
+                      width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.green))
+                          strokeWidth: 2, color: Colors.black))
                       : const Icon(lucide.LucideIcons.save),
                   label: Text(_isSaving ? 'Saving...' : 'Save Plan'),
                   style: OutlinedButton.styleFrom(
@@ -1249,10 +1300,9 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                 ),
               ),
               SizedBox(
-                width: 150,
+                width: 100,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    // Reset logic (same as at the bottom)
                     setState(() {
                       _currentPage = 0;
                       _mealPlan = null;
@@ -1272,8 +1322,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                       _selectedDays = '';
                       _selectedDietType = '';
                     });
-                    _pageController.animateToPage(
-                        0, duration: const Duration(milliseconds: 300),
+                    _pageController.animateToPage(0,
+                        duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut);
                   },
                   icon: const Icon(Icons.refresh),
@@ -1292,7 +1342,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           ),
           const SizedBox(height: 32),
 
-          // --- 3. Plan Summary ---
+          // --- 3. Plan Summary with Black Border ---
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -1300,7 +1350,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
               color: isDark ? Colors.grey[900] : Colors.grey[50],
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                color: Colors.black,
+                width: 2,
               ),
             ),
             child: Column(
@@ -1326,7 +1377,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           ),
           const SizedBox(height: 24),
 
-          // --- 4. Daily Meal Plans (Collapsible) ---
+          // --- 4. Daily Meal Plans (Clickable Cards) ---
           Text(
             'Daily Meal Plans',
             style: TextStyle(
@@ -1347,7 +1398,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                 'Plan Generation Failed';
 
             if (isPlaceholder) {
-              // --- Fallback: Render the single raw string ---
               return Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(18),
@@ -1365,7 +1415,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.redAccent,
+                        color: Colors.black,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1373,7 +1423,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
                       dayMeals['breakfast']['recipe'],
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? Colors.red[200] : Colors.red[700],
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
                         height: 1.5,
                       ),
                     ),
@@ -1382,53 +1432,73 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
               );
             }
 
-            // --- Success: Render collapsible day tile ---
-            final int totalCalories = dayMeals['totalCalories'] as int? ??
-                0; // Use robust total calories
+            // --- Success: Render clickable day card ---
+            final int totalCalories = dayMeals['totalCalories'] as int? ?? 0;
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _buildExpansionTile(
-                isDark: isDark,
-                icon: Icons.calendar_today_outlined,
-                title: dayName,
-                // FIX: Use totalCalories (which is now robust)
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white : Colors.black,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$totalCalories kcal',
-                    style: TextStyle(
-                      color: isDark ? Colors.black : Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DayDetailsPage(
+                      dayData: {
+                        'day': dayName,
+                        'meals': dayMeals,
+                        'totalCalories': totalCalories,
+                      },
+                      isDark: isDark,
                     ),
+                  ),
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[900] : Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
                   ),
                 ),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Column(
-                      children: ['breakfast', 'lunch', 'dinner', 'snacks'].map((
-                          mealType) {
-                        if (!dayMeals.containsKey(mealType)) {
-                          return const SizedBox.shrink();
-                        }
-                        final meal = dayMeals[mealType] as Map<String, dynamic>;
-
-                        return _buildMealCard(
-                            isDark: isDark,
-                            mealType: mealType,
-                            meal: meal
-                        );
-                      }).toList(),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.restaurant,
+                      color: isDark ? Colors.white : Colors.black,
+                      size: 24,
                     ),
-                  )
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dayName,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$totalCalories kcal',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      size: 16,
+                    ),
+                  ],
+                ),
               ),
             );
           }).toList()),
@@ -1460,9 +1530,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-  // --- SHARED WIDGETS (Unchanged) ---
-
-
+  // --- UPDATED: _buildNavigationButtons ---
   Widget _buildNavigationButtons(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -1479,7 +1547,7 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           if (_currentPage > 0)
             Expanded(
               child: OutlinedButton(
-                onPressed: _previousPage,
+                onPressed: _isGenerating ? null : _previousPage, // Disable during generation
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   side: BorderSide(
@@ -1504,8 +1572,8 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
           Expanded(
             child: ElevatedButton(
               onPressed: _currentPage == _totalSteps - 1
-                  ? (_isGenerating ? null : _generateMealPlan)
-                  : _nextPage,
+                  ? (_isGenerating ? null : _generateMealPlan) // Disable if already generating
+                  : (_isGenerating ? null : _nextPage), // Disable navigation during generation
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDark ? Colors.white : Colors.black,
                 foregroundColor: isDark ? Colors.black : Colors.white,
@@ -1651,9 +1719,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     }
   }
 
-  // ---
-  // --- NEW: Refactored Meal Card Widget
-  // ---
   Widget _buildMealCard({
     required bool isDark,
     required String mealType,
@@ -1727,9 +1792,6 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     );
   }
 
-  // ---
-  // --- UPDATED: _buildExpansionTile (to accept a trailing widget)
-  // ---
   Widget _buildExpansionTile({
     required bool isDark,
     required IconData icon,
@@ -1810,13 +1872,11 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
   Widget _buildCookingGuide(String cookingGuide, bool isDark) {
     final primaryTextColor = isDark ? Colors.white : Colors.black;
     final secondaryTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
-    final cardBg = isDark ? Colors.grey[800] : Colors
-        .grey[100]; // Slightly different background
+    final cardBg = isDark ? Colors.grey[800] : Colors.grey[100];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
       margin: const EdgeInsets.only(top: 10, bottom: 10),
-      // Add margin for separation
       decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(12),
@@ -1844,6 +1904,157 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// --- UPDATED: Simple Day Details Page with Black & White Theme ---
+class DayDetailsPage extends StatelessWidget {
+  final Map<String, dynamic> dayData;
+  final bool isDark;
+
+  const DayDetailsPage({Key? key, required this.dayData, required this.isDark}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final dayName = dayData['day'] ?? 'Day';
+    final dayMeals = dayData['meals'] as Map<String, dynamic>;
+    final totalCalories = dayData['totalCalories'] as int? ?? 0;
+
+    final textColor = isDark ? Colors.white : Colors.black;
+    final backgroundColor = isDark ? Colors.black : Colors.white;
+    final cardColor = Colors.grey[100];
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        title: Text(
+          '',
+          style: TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Day Header
+            Text(
+              dayName,
+              style: TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            Text(
+              'Total calories : $totalCalories ',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Meals List
+            ...['breakfast', 'lunch', 'dinner', 'snacks'].map((mealType) {
+              if (!dayMeals.containsKey(mealType)) {
+                return const SizedBox.shrink();
+              }
+              final meal = dayMeals[mealType] as Map<String, dynamic>;
+              final mealName = meal['name'] ?? 'Meal';
+              final calories = meal['calories'] as int? ?? 0;
+              final recipe = meal['recipe'] ?? '';
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Meal Type Header (outside the grey box)
+                  Text(
+                    mealType.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 20, // 2x bigger
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Grey Box with meal details
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Meal Name with Calories (with bullet point)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '• ',
+                              style: TextStyle(
+                                fontSize: 40,
+                                color: textColor,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '(approx. $calories calories): $mealName',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: textColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Recipe (with bullet point)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '• ',
+                              style: TextStyle(
+                                fontSize: 40,
+                                color: textColor,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                'Recipe: $recipe',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: textColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              );
+            }).toList(),
+          ],
+        ),
       ),
     );
   }

@@ -173,8 +173,8 @@ class _ResultsPageState extends State<ResultsPage> {
         focus.add("BMI\nProblem: Your BMI of ${bmi.toStringAsFixed(
             1)} is in the underweight range (Ideal: 18.5-24.9).\nSolution: Consider increasing your intake of nutrient-dense foods and consult with a healthcare professional.");
       } else {
-        good.add("BMI\nValue: Your BMI is ${bmi.toStringAsFixed(
-            1)}.\nRecommendation: Maintain your current healthy lifestyle.");
+        good.add("BMI\n Your BMI is ${bmi.toStringAsFixed(
+            1)}.Maintain your current healthy lifestyle.");
       }
 
       // Body Fat Analysis
@@ -192,9 +192,9 @@ class _ResultsPageState extends State<ResultsPage> {
                 .toStringAsFixed(
                 1)}% is below the typical healthy range.\nSolution: Ensure you are consuming enough healthy fats and overall calories.");
       } else {
-        good.add("Body Fat Percentage\nValue: Your body fat percentage is ${bf
+        good.add("Body Fat Percentage\n Your body fat percentage is ${bf
             .toStringAsFixed(
-            1)}%.\nRecommendation: Continue to monitor your composition and maintain your routine.");
+            1)}%. Continue to monitor your composition and maintain your routine.");
       }
 
       // Visceral Fat Analysis
@@ -207,36 +207,36 @@ class _ResultsPageState extends State<ResultsPage> {
             .toStringAsFixed(
             0)} is very low.\nSolution: Ensure adequate intake of essential fats.");
       } else {
-        good.add("Visceral Fat Level\nValue: Your visceral fat level is ${vfl
+        good.add("Visceral Fat Level\nYour visceral fat level is ${vfl
             .toStringAsFixed(
-            0)}.\nRecommendation: Focus on consistency in diet and exercise.");
+            0)}.Focus on consistency in diet and exercise.");
       }
 
       // Metabolic Age Analysis
       if (metabolicAge != null) {
         good.add(
-            "Metabolic Age\nValue: Your estimated metabolic age is $metabolicAge years.\nRecommendation: If this is higher than your actual age, prioritize healthy lifestyle choices.");
+            "Metabolic Age\n Your estimated metabolic age is $metabolicAge years. If this is higher than your actual age, prioritize healthy lifestyle choices.");
       }
 
       // Skeletal Muscle Mass
       if (smm != null) good.add(
-          "Skeletal Muscle Mass\nValue: Your skeletal muscle mass is ${smm
+          "Skeletal Muscle Mass\nYour skeletal muscle mass is ${smm
               .toStringAsFixed(
-              1)} kg.\nRecommendation: Focus on consistent resistance training and adequate protein intake to maintain or increase this.");
+              1)} kg. Focus on consistent resistance training and adequate protein intake to maintain or increase this.");
 
       // BMR
-      if (bmr != null) good.add("BMR\nValue: Your BMR is ${bmr
-          .round()} kcal/day.\nRecommendation: Ensure your caloric intake aligns with your activity level and weight goals.");
+      if (bmr != null) good.add("BMR\n Your BMR is ${bmr
+          .round()} kcal/day. Ensure your caloric intake aligns with your activity level and weight goals.");
 
       // Muscle Mass
       if (muscleMass != null) good.add(
-          "Muscle Mass\nValue: Your muscle mass is ${muscleMass.toStringAsFixed(
-              1)} kg.\nRecommendation: Consistent resistance training and adequate protein intake help maintain or increase this.");
+          "Muscle Mass\nYour muscle mass is ${muscleMass.toStringAsFixed(
+              1)} kg. Consistent resistance training and adequate protein intake help maintain or increase this.");
 
       // Lean Mass
       if (leanMass != null) good.add(
-          "Lean Mass\nValue: Your lean mass is ${leanMass.toStringAsFixed(
-              1)} kg.\nRecommendation: Maintaining or increasing lean mass through adequate protein and resistance training contributes positively.");
+          "Lean Mass\nYour lean mass is ${leanMass.toStringAsFixed(
+              1)} kg. Maintaining or increasing lean mass through adequate protein and resistance training contributes positively.");
 
       // Body Water Percentage
       if (bodyWater != null) {
@@ -256,22 +256,22 @@ class _ResultsPageState extends State<ResultsPage> {
                   0)}%).\nSolution: Consult a healthcare provider if concerned about fluid retention, and review sodium intake.");
         } else {
           good.add(
-              "Body Water Percentage\nValue: Your body water percentage is ${bodyWater
+              "Body Water Percentage\nYour body water percentage is ${bodyWater
                   .toStringAsFixed(
-                  0)}%.\nRecommendation: Stay adequately hydrated.");
+                  0)}%.Stay adequately hydrated.");
         }
       }
 
       // Bone Mass
       if (boneMass != null) good.add(
-          "Bone Mass\nValue: Your bone mass is ${boneMass.toStringAsFixed(
-              1)} kg.\nRecommendation: Maintain it through weight-bearing exercises and a diet rich in calcium and vitamin D.");
+          "Bone Mass\nYour bone mass is ${boneMass.toStringAsFixed(
+              1)} kg. Maintain it through weight-bearing exercises and a diet rich in calcium and vitamin D.");
 
       // Protein Mass
       if (proteinMass != null) good.add(
-          "Protein Mass\nValue: Your protein mass is ${proteinMass
+          "Protein Mass\nYour protein mass is ${proteinMass
               .toStringAsFixed(
-              1)} kg.\nRecommendation: Ensure adequate protein intake for muscle repair and overall health.");
+              1)} kg. Ensure adequate protein intake for muscle repair and overall health.");
 
       // Overall Score
       if (score != null) {
@@ -280,7 +280,7 @@ class _ResultsPageState extends State<ResultsPage> {
               "Body Composition Score\nProblem: Your overall score is $score/100, indicating room for improvement in overall composition.\nSolution: Address the most critical metrics listed above (BMI, Body Fat, Visceral Fat) to boost your score.");
         else
           good.add(
-              "Body Composition Score\nValue: Your score is $score/100.\nRecommendation: Continue monitoring your metrics and focusing on areas of strength.");
+              "Body Composition Score\nYour score is $score/100.Continue monitoring your metrics and focusing on areas of strength.");
       }
     } catch (e) {
       print("Error generating recommendations from AI metrics: $e");
@@ -523,6 +523,7 @@ class _ResultsPageState extends State<ResultsPage> {
                     Colors.orangeAccent,
                     isDark
                 ),
+                SizedBox(height: 15),
                 // What's Going Well (Local Logic)
                 _buildRecommendationCard(
                     "What's Going Well",
@@ -751,365 +752,328 @@ class _ResultsPageState extends State<ResultsPage> {
     );
   }
 
-// --- _buildRecommendationCard (Enhanced UI, better separation & colors) ---
-  Widget _buildRecommendationCard(
-      String title,
+// --- _buildRecommendationCard (Updated with exact structure) ---
+  Widget _buildRecommendationCard(String title,
       String content,
       IconData icon,
       Color color,
-      bool isDark,
-      ) {
+      bool isDark,) {
+    final bool isOverall = title == 'Overall Summary';
+    final bool isFocusArea = title == 'Areas for Focus';
+    final bool isGoodArea = title == "What's Going Well";
+
     // Parse sections
     final List<String> items = content
         .split('\n\n')
-        .where((s) => s.trim().isNotEmpty)
+        .where((s) =>
+    s
+        .trim()
+        .isNotEmpty)
         .toList();
 
-    // Neutral palette (material-like) — softer, more modern
-    final Color surface = Colors.white;                          // card bg
-    final Color onSurface = const Color(0xFF0F172A);             // near-black text
-    final Color onSurfaceMuted = const Color(0xFF475569);        // body text
-    final Color divider = const Color(0xFFE2E8F0);               // lines
-    final Color rail = const Color(0xFFCBD5E1);                  // left rail
-
-    // Accents for categories (accessible on white)
-    final Color focusAccent = const Color(0xFFB45309);           // amber-700
-    final Color focusChipBg = const Color(0xFFFEF3C7);           // amber-100
-    final Color goodAccent = const Color(0xFF047857);            // emerald-700
-    final Color goodChipBg = const Color(0xFFD1FAE5);            // emerald-100
-    final Color overallHeaderBg = const Color(0xFFF8FAFC);       // slate-50
-    final Color sectionTitle = const Color(0xFF111827);          // slate-900
-
-    final bool isOverall = title == 'Overall Summary';
-    final bool isFocusArea = title == 'Areas for Focus';
-
-    // Card border and header tint
-    final Color cardBorder = isOverall
-        ? divider
-        : (isFocusArea ? const Color(0xFFF59E0B) : const Color(0xFF34D399)); // amber-500 / emerald-400
-    final Color headerBg = isOverall
-        ? overallHeaderBg
-        : (isFocusArea ? const Color(0xFFFFFBEB) : const Color(0xFFECFDF5));  // amber-50 / emerald-50
-    final Color accent = isFocusArea ? focusAccent : goodAccent;
-    final Color chipBgDefault = isFocusArea ? focusChipBg : goodChipBg;
-
-    // Numeric highlighter
-    TextSpan _highlightNumerics(String text, Color baseColor) {
-      final reg = RegExp(r'(-?\d{1,3}(?:,\d{3})*(?:\.\d+)?%?|\d{1,2}-\d{1,2})');
-      final spans = <TextSpan>[];
-      int last = 0;
-      for (final m in reg.allMatches(text)) {
-        if (m.start > last) {
-          spans.add(TextSpan(
-            text: text.substring(last, m.start),
-            style: TextStyle(color: baseColor, fontSize: 13.5, height: 1.55),
-          ));
-        }
-        spans.add(TextSpan(
-          text: m.group(0),
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w700,
-            fontSize: 13.5,
-            height: 1.55,
+    // For "Areas for Focus" and "What's Going Well" - display with new design
+    if (isFocusArea || isGoodArea) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon and title
+          Row(
+            children: [
+              // Icon for the section
+              Icon(
+                isFocusArea ? Icons.error_outline : Icons.check_circle,
+                size: 24,
+                color: isFocusArea ? Colors.orange : Colors.green,
+              ),
+              const SizedBox(width: 8),
+              // Section title
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
           ),
-        ));
-        last = m.end;
-      }
-      if (last < text.length) {
-        spans.add(TextSpan(
-          text: text.substring(last),
-          style: TextStyle(color: baseColor, fontSize: 13.5, height: 1.55),
-        ));
-      }
-      return TextSpan(children: spans);
+          const SizedBox(height: 16),
+
+          // Content with individual light-bordered boxes
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Enhanced content items with very light borders
+              ...items
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final parts = item.split('\n');
+                final metricTitle = parts.isNotEmpty ? parts.first.replaceAll(
+                    ':', '').trim() : '';
+                final details = parts.length > 1 ? parts.sublist(1) : <String>[
+                ];
+
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.grey[300]!, // Very light border
+                      width: 1, // Very thin border
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[100], // Grey 100 background
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Metric Title with colored icon
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Yellow triangle alert for focus areas, green tick for good areas
+                          Icon(
+                            isFocusArea ? Icons.warning_amber : Icons
+                                .check_circle,
+                            size: 20,
+                            color: isFocusArea ? Colors.orange : Colors.green,
+                          ),
+                          const SizedBox(width: 12),
+                          // Black heading
+                          Expanded(
+                            child: Text(
+                              metricTitle,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Details with number highlighting
+                      if (isFocusArea)
+                        ..._buildFocusAreaDetails(details)
+                      else
+                        ..._buildGoodAreaDetails(details),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ],
+      );
     }
 
-    // Label style config
-    Map<String, (Color, Color)> labelStyleOf(bool isFocus) => {
-      'Problem': (isFocus ? const Color(0xFFB91C1C) : const Color(0xFF7F1D1D), const Color(0xFFFEF2F2)),      // red-700 on red-50
-      'Solution': (goodAccent, goodChipBg),
-      'Recommendation': (const Color(0xFF1D4ED8), const Color(0xFFDBEAFE)),                                    // blue-700 / blue-100
-      'Value': (sectionTitle, const Color(0xFFF1F5F9)),                                                         // slate-900 / slate-100
-    };
-
+    // Original styling for "Overall Summary" - keep as is
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cardBorder, width: isOverall ? 1 : 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: isDark ? Colors.grey[900] : Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
           Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: isOverall ? 12 : 14,
-            ),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: headerBg,
+              color: isDark ? Colors.grey[800] : Colors.grey[200],
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
             ),
             child: Row(
               children: [
-                // subtle left icon in circular bg
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: divider),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    isOverall
-                        ? lucide.LucideIcons.brainCircuit
-                        : (isFocusArea
-                        ? lucide.LucideIcons.target
-                        : lucide.LucideIcons.circleCheck),
-                    size: 16,
-                    color: accent,
-                  ),
-                ),
-                const SizedBox(width: 10),
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      color: sectionTitle,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15.5,
-                      letterSpacing: -0.1,
-                    ),
-                  ),
-                ),
-                // small status chip
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: divider),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    isOverall ? 'Summary' : (isFocusArea ? 'Focus' : 'Good'),
-                    style: TextStyle(
-                      color: accent,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11.5,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
-          // Content area with left rail for stronger separation
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left rail
-              Container(
-                width: 3,
-                height: 1,
-                margin: const EdgeInsets.only(left: 0),
-                color: Colors.transparent,
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              content,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+                height: 1.5,
               ),
-              Container(
-                width: 3,
-                margin: const EdgeInsets.only(left: 0),
-                decoration: BoxDecoration(
-                  color: rail,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(12),
-                  ),
-                ),
-              ),
-
-              // Main column
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (isOverall)
-                        Text(
-                          content.replaceAll('\n', ' '),
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: onSurfaceMuted,
-                            height: 1.6,
-                          ),
-                          softWrap: true,
-                        )
-                      else
-                        ...items.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final item = entry.value;
-                          final parts = item.split('\n');
-                          final metricTitle = parts.isNotEmpty
-                              ? parts.first.replaceAll(':', '').trim()
-                              : '';
-                          final details =
-                          parts.length > 1 ? parts.sublist(1) : <String>[];
-
-                          return Container(
-                            margin: EdgeInsets.only(
-                              bottom: index < items.length - 1 ? 14 : 0,
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
-                            decoration: BoxDecoration(
-                              color: surface,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: divider, width: 1),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Title row
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: (isFocusArea
-                                              ? focusChipBg
-                                              : goodChipBg)
-                                              .withOpacity(0.7),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(
-                                          isFocusArea
-                                              ? lucide.LucideIcons.triangleAlert
-                                              : lucide.LucideIcons.check,
-                                          size: 16,
-                                          color: accent,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          metricTitle,
-                                          style: TextStyle(
-                                            color: onSurface,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 15,
-                                            letterSpacing: -0.1,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-
-                                // Details: stacked chips + paragraph
-                                ...details.map((detail) {
-                                  final isProblem = detail.startsWith('Problem:');
-                                  final isSolution = detail.startsWith('Solution:');
-                                  final isRecommendation =
-                                  detail.startsWith('Recommendation:');
-                                  final isValue = detail.startsWith('Value:');
-
-                                  String label = '';
-                                  if (isProblem) label = 'Problem';
-                                  if (isSolution) label = 'Solution';
-                                  if (isRecommendation) label = 'Recommendation';
-                                  if (isValue) label = 'Value';
-
-                                  final styles = labelStyleOf(isFocusArea)[label] ??
-                                      (onSurfaceMuted, chipBgDefault);
-                                  final Color labelColor = styles.$1;
-                                  final Color labelBg = styles.$2;
-
-                                  final String detailText = detail.contains(':')
-                                      ? detail.substring(detail.indexOf(':') + 1).trim()
-                                      : detail.trim();
-
-                                  if (detailText.isEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  return Padding(
-                                    padding:
-                                    const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: labelBg,
-                                            borderRadius:
-                                            BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            label,
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w800,
-                                              color: labelColor,
-                                              letterSpacing: 0.2,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text.rich(
-                                          _highlightNumerics(
-                                              detailText, onSurfaceMuted),
-                                          softWrap: true,
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-
-                                // soft internal divider to separate long content blocks
-                                if (!isFocusArea && index < items.length - 1)
-                                  Padding(
-                                    padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                    child: Divider(
-                                      color: divider,
-                                      thickness: 1,
-                                      height: 12,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
+// Helper method to build focus area details with inline Problem/Solution sections
+  List<Widget> _buildFocusAreaDetails(List<String> details) {
+    final List<Widget> widgets = [];
+
+    for (final detail in details) {
+      if (detail
+          .trim()
+          .isEmpty) continue;
+
+      final bool isProblem = detail.toLowerCase().contains('problem');
+      final bool isSolution = detail.toLowerCase().contains('solution');
+
+      if (isProblem || isSolution) {
+        // Remove "Problem:" or "Solution:" prefix and get the actual text
+        final String detailText = detail.contains(':')
+            ? detail.substring(detail.indexOf(':') + 1).trim()
+            : detail.trim();
+
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  // Problem/Solution heading inline with specific colors
+                  TextSpan(
+                    text: isProblem ? 'Problem: ' : 'Solution: ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isProblem ? Colors.orange : Colors.green,
+                    ),
+                  ),
+                  // Content with highlighted numbers - yellow for problem, green for solution
+                  ..._createTextSpansWithHighlightedNumbers(
+                    detailText,
+                    highlightColor: isProblem ? Colors.orange : Colors.green,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      } else {
+        // Fallback for any other text
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildTextWithHighlightedNumbers(
+              detail,
+              highlightColor: Colors.cyan,
+            ),
+          ),
+        );
+      }
+    }
+
+    return widgets;
+  }
+
+// Helper method to build good area details (paragraph style)
+  List<Widget> _buildGoodAreaDetails(List<String> details) {
+    // Combine all details into one paragraph
+    final String paragraphText = details.join(' ');
+
+    return [
+      _buildTextWithHighlightedNumbers(
+        paragraphText,
+        highlightColor: Colors.cyan, // All numbers in cyan for good areas
+      ),
+    ];
+  }
+
+// Helper method to build text with highlighted numbers
+  Widget _buildTextWithHighlightedNumbers(String text,
+      {required Color highlightColor}) {
+    return RichText(
+      text: TextSpan(
+        children: _createTextSpansWithHighlightedNumbers(
+            text, highlightColor: highlightColor),
+      ),
+    );
+  }
+
+// Helper method to create text spans with highlighted numbers
+  List<TextSpan> _createTextSpansWithHighlightedNumbers(String text,
+      {required Color highlightColor}) {
+    final RegExp numberReg = RegExp(r'(\d+\.?\d*%?|\d{1,2}-\d{1,2})');
+    final matches = numberReg.allMatches(text).toList();
+
+    if (matches.isEmpty) {
+      return [
+        TextSpan(
+          text: text,
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.5,
+            color: Colors.black,
+          ),
+        ),
+      ];
+    }
+
+    final List<TextSpan> spans = [];
+    int last = 0;
+
+    for (final match in matches) {
+      if (match.start > last) {
+        spans.add(TextSpan(
+          text: text.substring(last, match.start),
+          style: TextStyle(
+            fontSize: 14,
+            height: 1.5,
+            color: Colors.black,
+          ),
+        ));
+      }
+
+      final matchedText = match.group(0)!;
+      spans.add(TextSpan(
+        text: matchedText,
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: highlightColor,
+          fontWeight: FontWeight.w600,
+          backgroundColor: highlightColor.withOpacity(0.1),
+        ),
+      ));
+
+      last = match.end;
+    }
+
+    if (last < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(last),
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: Colors.black,
+        ),
+      ));
+    }
+
+    return spans;
+  }
 }

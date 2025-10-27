@@ -981,6 +981,129 @@ Return ONLY a valid JSON object with the following structure:
       return null; // JSON parsing failed
     }
   }
+  static Future<List<String>> generateExercisePreparationTips({
+    required String exerciseName,
+    required String context,
+  }) async {
+    if (_apiKey.isEmpty) {
+      throw Exception('Gemini API key not found in .env file');
+    }
+
+    final prompt = _createPreparationTipsPrompt(
+      exerciseName: exerciseName,
+      context: context,
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+            '$_baseUrl/models/gemini-2.0-flash:generateContent?key=$_apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt}
+              ]
+            }
+          ],
+          'generationConfig': {
+            'temperature': 0.3, // Low temperature for factual tips
+            'maxOutputTokens': 512,
+            'responseMimeType': 'application/json',
+          },
+        }),
+      );
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final data = jsonDecode(response.body);
+
+        if (data['candidates'] == null &&
+            data['promptFeedback']?['blockReason'] != null) {
+          throw Exception(
+              "Request blocked due to safety settings. Please try again.");
+        }
+
+        final content = data['candidates']?[0]?['content']?['parts']?[0]?['text'];
+
+        if (content != null) {
+          final parsed = _parsePreparationTipsResponse(content);
+          if (parsed != null) {
+            return parsed; // Success: returns List<String>
+          } else {
+            throw Exception(
+                "AI returned tips in an unexpected format. Please try again.");
+          }
+        }
+      } else {
+        String errorMessage =
+            'Failed to connect to the AI service (Code: ${response.statusCode}).';
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData['error']?['message'] ?? errorMessage;
+        } catch (_) { /* Ignore parsing error */ }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      // Return a basic fallback if API fails
+      print('Exercise tips generation failed: $e');
+      return [
+        'Ensure you have the correct equipment and space clear of obstructions.',
+        'Perform a few light warm-up repetitions before starting your working sets.',
+        'Focus on a smooth, controlled setup before initiating the movement.',
+      ];
+    }
+    // Return empty list on failure
+    return [];
+  }
+
+  /// Helper method to create the preparation tips prompt.
+  static String _createPreparationTipsPrompt({
+    required String exerciseName,
+    required String context,
+  }) {
+    return '''
+You are an expert strength and conditioning coach. Your task is to provide 3-5 concise, specific preparation tips for the given exercise.
+Preparation tips should cover setup, equipment checks, and specific pre-movement actions.
+Do NOT include general advice like "stay hydrated" or "listen to your body." Focus only on the preparation.
+
+Exercise: "$exerciseName"
+Additional Context (Instruction): "$context"
+
+CRITICAL: You MUST respond with ONLY a valid JSON object with this exact schema:
+{
+  "preparationTips": ["[string]", "[string]", "[string]"]
+}
+Do not include markdown backticks (```json) or any text outside the JSON object.
+''';
+  }
+
+  /// Helper method to parse the preparation tips response.
+  static List<String>? _parsePreparationTipsResponse(String content) {
+    try {
+      String cleanContent = content.trim();
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.substring(7);
+      }
+      if (cleanContent.endsWith('```')) {
+        cleanContent = cleanContent.substring(0, cleanContent.length - 3);
+      }
+
+      final decoded = jsonDecode(cleanContent) as Map<String, dynamic>;
+
+      if (decoded.containsKey('preparationTips') &&
+          decoded['preparationTips'] is List) {
+        // Ensure the list is List<String>
+        return List<String>.from(decoded['preparationTips']);
+      } else {
+        print("Parsed JSON missing required 'preparationTips' key or is not a list.");
+        return null;
+      }
+    } catch (e) {
+      print('Error parsing Gemini preparation tips response: $e');
+      return null;
+    }
+  }
 
 
 }

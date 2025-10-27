@@ -286,7 +286,6 @@ class _AiWorkoutPlannerPageState extends State<AiWorkoutPlannerPage> {
   }
 }
 
-// --- Dummy Page for New Plan Creation (Required for flow) ---
 class DummyNewWorkoutPlanPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -304,17 +303,34 @@ class DummyNewWorkoutPlanPage extends StatelessWidget {
                   'introduction': 'Welcome to your 21-day full body transformation plan! This program is designed to help you achieve your weight loss goals while building strength and endurance. Remember to warm up before each workout with 5 minutes of light cardio and dynamic stretching, and cool down afterwards with 5 minutes of static stretching. Focus on proper form to prevent injuries and listen to your body – rest when you need to!',
                   'weeklySchedule': [
                     {'day': 'Day 1', 'activity': 'Full Body Strength', 'duration': '45 minutes'},
-                    {'day': 'Day 2', 'activity': 'Upper body', 'duration': '45 minutes'},
-                    {'day': 'Day 3', 'activity': 'Rest Day', 'duration': 'N/A'},
-                    {'day': 'Day 4', 'activity': 'Lower Body Focus', 'duration': '60 minutes'},
+                    {'day': 'Day 2', 'activity': 'Upper Body', 'duration': '45 minutes'},
+                    {'day': 'Day 3', 'activity': 'Lower Body', 'duration': '60 minutes'},
+                    {'day': 'Day 4', 'activity': 'Rest Day', 'duration': 'N/A'},
                     {'day': 'Day 5', 'activity': 'Full Body Endurance', 'duration': '45 minutes'},
-                    {'day': 'Day 6', 'activity': 'Rest Day', 'duration': 'N/A'},
-                    {'day': 'Day 7', 'activity': 'Active Recovery', 'duration': '30 minutes'},
+                    {'day': 'Day 6', 'activity': 'Active Recovery', 'duration': '30 minutes'},
+                    {'day': 'Day 7', 'activity': 'Upper Body', 'duration': '45 minutes'},
+                    // Add more days to demonstrate the 21-day plan
+                    {'day': 'Day 8', 'activity': 'Lower Body', 'duration': '60 minutes'},
+                    {'day': 'Day 9', 'activity': 'Rest Day', 'duration': 'N/A'},
+                    {'day': 'Day 10', 'activity': 'Full Body Strength', 'duration': '45 minutes'},
+                    {'day': 'Day 11', 'activity': 'Upper Body', 'duration': '45 minutes'},
+                    {'day': 'Day 12', 'activity': 'Rest Day', 'duration': 'N/A'},
+                    {'day': 'Day 13', 'activity': 'Lower Body Focus', 'duration': '60 minutes'},
+                    {'day': 'Day 14', 'activity': 'Full Body Endurance', 'duration': '45 minutes'},
+                    {'day': 'Day 15', 'activity': 'Rest Day', 'duration': 'N/A'},
+                    {'day': 'Day 16', 'activity': 'Active Recovery', 'duration': '30 minutes'},
+                    {'day': 'Day 17', 'activity': 'Full Body Strength', 'duration': '45 minutes'},
+                    {'day': 'Day 18', 'activity': 'Upper Body', 'duration': '45 minutes'},
+                    {'day': 'Day 19', 'activity': 'Lower Body', 'duration': '60 minutes'},
+                    {'day': 'Day 20', 'activity': 'Rest Day', 'duration': 'N/A'},
+                    {'day': 'Day 21', 'activity': 'Full Body Endurance', 'duration': '45 minutes'},
                   ],
-                  'generalTips': ['Tip 1', 'Tip 2']
+                  'generalTips': ['Focus on hydration.', 'Prioritize sleep.', 'Maintain consistency.']
                 }
             );
             Navigator.pop(context, dummyPlan);
+            // After popping the result back to the history page, push the results page
+            // The history page will handle the saving logic via _addPlan.
             Navigator.push(context, MaterialPageRoute(builder: (_) => WorkoutResultsPage(planData: dummyPlan.data)));
           },
           child: const Text('Simulate Generate New Plan (21 Days)'),
