@@ -1104,6 +1104,169 @@ Do not include markdown backticks (```json) or any text outside the JSON object.
       return null;
     }
   }
+  static Future<Map<String, dynamic>> generateRecipe({
+    required Map<String, dynamic> userInput,
+  }) async {
+    if (_apiKey.isEmpty) {
+      throw Exception('Gemini API key not configured');
+    }
 
+    try {
+      final prompt = _createRecipePrompt(userInput);
 
+      final response = await http.post(
+        Uri.parse('$_baseUrl/models/gemini-2.0-flash:generateContent?key=$_apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt}
+              ]
+            }
+          ],
+          'generationConfig': {
+            'temperature': 0.7,
+            'maxOutputTokens': 2048,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200 && response.body.isNotEmpty) {
+        final data = jsonDecode(response.body);
+
+        if (data['candidates'] == null && data['promptFeedback']?['blockReason'] != null) {
+          throw Exception("Request blocked due to safety settings.");
+        }
+
+        final content = data['candidates']?[0]?['content']?['parts']?[0]?['text'];
+
+        if (content != null) {
+          return _parseRecipeResponse(content, userInput);
+        } else {
+          throw Exception("No content received from AI.");
+        }
+      } else {
+        throw Exception('Failed to connect to AI service: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Recipe generation failed: ${e.toString()}');
+    }
+  }
+
+  static String _createRecipePrompt(Map<String, dynamic> userInput) {
+    final ingredients = userInput['ingredients'];
+    final cuisine = userInput['cuisine'];
+    final mealType = userInput['mealType'];
+    final restrictions = userInput['restrictions'];
+
+    return '''
+You are a professional chef and nutritionist. Create a detailed recipe based on the following user preferences:
+
+Available Ingredients: $ingredients
+Cuisine Style: $cuisine
+Meal Type: $mealType
+Dietary Restrictions: ${restrictions.isEmpty ? 'None' : restrictions}
+
+Please provide a complete recipe with:
+1. An appealing recipe name
+2. Brief description
+3. Detailed ingredients list with quantities
+4. Step-by-step cooking instructions
+5. Estimated cooking time
+6. Serving size
+7. Difficulty level
+8. Nutritional information (calories, protein, carbs, fat per serving)
+
+Format the response as a JSON object with the following structure:
+{
+  "name": "Recipe Name",
+  "description": "Brief description",
+  "prepTime": "X minutes",
+  "cookTime": "Y minutes", 
+  "totalTime": "Z minutes",
+  "servings": number,
+  "difficulty": "Easy/Medium/Hard",
+  "cuisine": "$cuisine",
+  "mealType": "$mealType",
+  "ingredients": ["ingredient 1 with quantity", "ingredient 2 with quantity"],
+  "instructions": ["step 1", "step 2", "step 3"],
+  "nutritionalInfo": {
+    "calories": "X kcal per serving",
+    "protein": "Xg",
+    "carbs": "Xg", 
+    "fat": "Xg"
+  },
+  "tips": ["tip 1", "tip 2"]
 }
+
+Make the recipe creative, practical, and suitable for the specified cuisine and meal type.
+''';
+  }
+
+  static Map<String, dynamic> _parseRecipeResponse(String content, Map<String, dynamic> userInput) {
+    try {
+      String cleanContent = content.trim();
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.substring(7);
+      }
+      if (cleanContent.endsWith('```')) {
+        cleanContent = cleanContent.substring(0, cleanContent.length - 3);
+      }
+
+      final Map<String, dynamic> recipe = jsonDecode(cleanContent);
+
+      // Add metadata
+      recipe['generatedOn'] = DateTime.now().toString().split(' ')[0];
+      recipe['userInput'] = userInput;
+
+      return recipe;
+    } catch (e) {
+      // Fallback: Create a basic recipe if parsing fails
+      return _createFallbackRecipe(userInput);
+    }
+  }
+
+  static Map<String, dynamic> _createFallbackRecipe(Map<String, dynamic> userInput) {
+    final ingredients = userInput['ingredients'].toString().split(',').take(3).join(', ');
+
+    return {
+      'name': 'Custom ${userInput['cuisine']} ${userInput['mealType']}',
+      'description': 'A delicious recipe created with $ingredients',
+      'prepTime': '15 minutes',
+      'cookTime': '25 minutes',
+      'totalTime': '40 minutes',
+      'servings': 2,
+      'difficulty': 'Medium',
+      'cuisine': userInput['cuisine'],
+      'mealType': userInput['mealType'],
+      'ingredients': [
+        '${userInput['ingredients']} (as needed)',
+        '2 tbsp olive oil',
+        'Salt and pepper to taste',
+        '1 tsp herbs and spices'
+      ],
+      'instructions': [
+        'Prepare all ingredients by washing and chopping as needed.',
+        'Heat oil in a pan over medium heat.',
+        'Cook the main ingredients until tender.',
+        'Season with salt, pepper, and spices.',
+        'Serve hot and enjoy your homemade meal!'
+      ],
+      'nutritionalInfo': {
+        'calories': '350-450 kcal per serving',
+        'protein': '15-25g',
+        'carbs': '30-40g',
+        'fat': '10-15g'
+      },
+      'tips': [
+        'Adjust seasoning according to your taste',
+        'Use fresh ingredients for best flavor',
+        'Prep all ingredients before starting to cook'
+      ],
+      'generatedOn': DateTime.now().toString().split(' ')[0],
+      'userInput': userInput
+    };
+  }
+}
+
