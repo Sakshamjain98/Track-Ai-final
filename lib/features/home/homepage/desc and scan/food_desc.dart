@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -25,6 +26,9 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
 
   final ImagePicker _picker = ImagePicker();
   final Gemini _gemini = Gemini();
+
+  // AI Data Structure
+  Map<String, dynamic>? _aiData;
 
   @override
   void initState() {
@@ -56,6 +60,24 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     super.dispose();
   }
 
+  BoxDecoration _getCardDecoration() {
+    return BoxDecoration(
+      color: Colors.grey[100],
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: Colors.grey[300]!,
+        width: 1.0,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -70,6 +92,7 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
           _selectedImage = File(image.path);
           _analysisResult = null;
           _isNotFood = false;
+          _aiData = null;
         });
 
         HapticFeedback.lightImpact();
@@ -90,19 +113,38 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     try {
       final result = await _gemini.describeFoodFromImage(_selectedImage!);
 
-      // Check if it's not food
-      final isNotFood = result.contains('NOT FOOD DETECTED');
+      try {
+        final jsonData = json.decode(result);
+        final isNotFood = jsonData['isFood'] == false;
 
-      setState(() {
-        _analysisResult = result;
-        _isAnalyzing = false;
-        _isNotFood = isNotFood;
-      });
+        setState(() {
+          _analysisResult = result;
+          _isAnalyzing = false;
+          _isNotFood = isNotFood;
+        });
 
-      _fadeController.forward();
-      _slideController.forward();
+        if (!isNotFood) {
+          _parseAIResponse(result);
+        } else {
+          setState(() {
+            _aiData = null;
+            _analysisResult = 'NOT FOOD DETECTED\n\nError Message:\n${jsonData['errorMessage']}';
+          });
+        }
 
-      HapticFeedback.mediumImpact();
+        _fadeController.forward();
+        _slideController.forward();
+        HapticFeedback.mediumImpact();
+      } catch (parseError) {
+        setState(() {
+          _analysisResult = result;
+          _isAnalyzing = false;
+          _isNotFood = false;
+        });
+        _parseTextResponse(result);
+        _fadeController.forward();
+        _slideController.forward();
+      }
     } catch (e) {
       setState(() {
         _isAnalyzing = false;
@@ -110,12 +152,164 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       _showErrorSnackBar('Analysis failed: $e');
     }
   }
+  void _parseAIResponse(String response) {
+    try {
+      final jsonData = json.decode(response);
+
+      if (jsonData['isFood'] == false) {
+        setState(() {
+          _isNotFood = true;
+          _analysisResult = 'NOT FOOD DETECTED\n\nError Message:\n${jsonData['errorMessage']}';
+          _aiData = null;
+        });
+        return;
+      }
+
+      setState(() {
+        _aiData = {
+          'healthScore': jsonData['healthScore'] ?? 5,
+          'healthDescription': _cleanText(jsonData['healthDescription'] ?? 'No health description available'),
+          'description': _cleanText(jsonData['description'] ?? 'No description available'),
+          'ingredients': List<String>.from(jsonData['ingredients'] ?? ['No ingredients listed'])
+              .map((ingredient) => _cleanText(ingredient))
+              .toList(),
+          'origin': _cleanText(jsonData['origin'] ?? 'Unknown'),
+          'whoShouldEat': jsonData['whoShouldEat'] ?? 'General population',
+          'whoShouldAvoid': jsonData['whoShouldAvoid'] ?? 'No specific restrictions',
+          'quickNote': jsonData['quickNote'] ?? 'No additional notes',
+        };
+        _isNotFood = false;
+      });
+    } catch (e) {
+      print('Error parsing AI response: $e');
+      _parseTextResponse(response);
+    }
+  }
+  String _cleanText(String text) {
+    // Remove quotation marks and brackets from ingredients
+    text = text
+        .replaceAll('"', '')
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+    // FIX: Move the dash to the start of the character class to remove the range ambiguity.
+        .replaceAll(RegExp(r'^[-:\s]+'), '') // Remove leading dashes, colons, whitespace
+        .replaceAll(RegExp(r'[-:\s]+$'), ''); // Remove trailing dashes, colons, whitespace
+
+    // Limit description to approximately 6-7 lines
+    if (text.length > 300) { // Approximate character limit for 6-7 lines
+      // Ensure we don't end the substring on a partial word before adding '...'
+      int safeLength = text.substring(0, 300).lastIndexOf(' ');
+      if (safeLength > 0) {
+        text = text.substring(0, safeLength) + '...';
+      } else {
+        text = text.substring(0, 300) + '...';
+      }
+    }
+
+    return text;
+  }
+  void _parseTextResponse(String response) {
+    try {
+      Map<String, dynamic> parsedData = {};
+
+      final healthScoreMatch = RegExp(r'Health Score[:\s]*(\d+)').firstMatch(response);
+      parsedData['healthScore'] = healthScoreMatch != null
+          ? int.parse(healthScoreMatch.group(1)!)
+          : 5;
+
+      parsedData['healthDescription'] = _cleanText(_extractSection(response,
+          ['Health Description', 'Health Score Description'],
+          'This food item has been analyzed for nutritional value.'));
+
+      parsedData['description'] = _cleanText(_extractSection(response,
+          ['Description', 'Food Description'],
+          'Food item description not available.'));
+
+      parsedData['ingredients'] = _extractIngredients(response)
+          .map((ingredient) => _cleanText(ingredient))
+          .toList();
+
+      parsedData['origin'] = _cleanText(_extractSection(response,
+          ['Origin', 'Country of Origin'],
+          'Origin information not available.'));
+
+      parsedData['whoShouldEat'] = _extractSection(response,
+          ['Who Should Eat', 'Who Should Prefer', 'Recommended For', 'Good For'],
+          'Suitable for most individuals.');
+
+      parsedData['whoShouldAvoid'] = _extractSection(response,
+          ['Who Should Avoid', 'Not Recommended For', 'Avoid If'],
+          'Consult with healthcare provider if you have specific dietary restrictions.');
+
+      parsedData['quickNote'] = _extractSection(response,
+          ['Quick Note', 'Fun Fact', 'Did You Know'],
+          'Nutritional information based on standard serving size.');
+
+      setState(() {
+        _aiData = parsedData;
+        _isNotFood = false;
+      });
+    } catch (e) {
+      print('Error in text parsing: $e');
+      setState(() {
+        _aiData = null;
+      });
+    }
+  }
+
+  String _extractSection(String text, List<String> headers, String defaultValue) {
+    for (String header in headers) {
+      final regex = RegExp(
+        '$header[:\\s]*([^\n]+(?:\n(?![A-Z][^:]*:)[^\n]+)*)',
+        caseSensitive: false,
+        multiLine: true,
+      );
+
+      final match = regex.firstMatch(text);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!.trim();
+      }
+    }
+    return defaultValue;
+  }
+
+  List<String> _extractIngredients(String text) {
+    List<String> ingredients = [];
+
+    final ingredientsMatch = RegExp(
+      r'Ingredients?[:\s]*\n((?:[-•*]\s*.+\n?)+)',
+      caseSensitive: false,
+      multiLine: true,
+    ).firstMatch(text);
+
+    if (ingredientsMatch != null) {
+      final ingredientsText = ingredientsMatch.group(1)!;
+      final bulletPoints = RegExp(r'[-•*]\s*(.+)').allMatches(ingredientsText);
+      ingredients = bulletPoints.map((m) => m.group(1)!.trim()).toList();
+    } else {
+      final commaSeparated = RegExp(
+        r'Ingredients?[:\s]*([^\n]+)',
+        caseSensitive: false,
+      ).firstMatch(text);
+
+      if (commaSeparated != null) {
+        ingredients = commaSeparated
+            .group(1)!
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+    }
+
+    return ingredients.isEmpty ? ['Information not available'] : ingredients;
+  }
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.errorColor,
+        backgroundColor: Colors.red[700],
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -127,289 +321,10 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       _selectedImage = null;
       _analysisResult = null;
       _isNotFood = false;
+      _aiData = null;
     });
     _slideController.reset();
     _fadeController.reset();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: AppColors.background(isDark),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(isDark)),
-        ),
-        title: Text(
-          'Describe Food',
-          style: TextStyle(
-            color: AppColors.textPrimary(isDark),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          if (_selectedImage != null || _analysisResult != null)
-            IconButton(
-              onPressed: _resetAnalysis,
-              icon: Icon(Icons.refresh, color: AppColors.darkPrimary),
-              tooltip: 'Start Over',
-            ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: AppColors.backgroundLinearGradient(isDark),
-        ),
-        child: _selectedImage == null
-            ? _buildImageSelector(isDark)
-            : _buildAnalysisView(isDark),
-      ),
-    );
-  }
-
-  Widget _buildImageSelector(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.darkPrimary.withOpacity(0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.darkPrimary.withOpacity(0.3),
-                  width: 2,
-                ),
-              ),
-              child: Icon(
-                Icons.restaurant_menu,
-                size: 60,
-                color: AppColors.darkPrimary,
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Describe Your Food',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(isDark),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Take a photo or select from gallery to get detailed food description and insights',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: AppColors.textSecondary(isDark),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 48),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildActionButton(
-                  icon: Icons.camera_alt,
-                  label: 'Camera',
-                  onPressed: () => _pickImage(ImageSource.camera),
-                  isDark: isDark,
-                ),
-                _buildActionButton(
-                  icon: Icons.photo_library,
-                  label: 'Gallery',
-                  onPressed: () => _pickImage(ImageSource.gallery),
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required bool isDark,
-    double? width,
-  }) {
-    return Container(
-      width: width ?? 120,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 24),
-        label: Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.darkPrimary,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 2,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnalysisView(bool isDark) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image Container
-          Container(
-            width: double.infinity,
-            height: 200,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(_selectedImage!, fit: BoxFit.cover),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Analysis Results
-          if (_isAnalyzing) ...[
-            _buildLoadingWidget(isDark),
-          ] else if (_analysisResult != null) ...[
-            SlideTransition(
-              position: _slideAnimation,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: _isNotFood
-                    ? _buildNotFoodWidget(isDark)
-                    : _buildFormattedAnalysis(_analysisResult!, isDark),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingWidget(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.darkPrimary),
-            strokeWidth: 3,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Analyzing your food...',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textPrimary(isDark),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'This may take a few seconds',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary(isDark),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotFoodWidget(bool isDark) {
-    final errorMessage = _extractErrorMessage(_analysisResult!);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.warning_amber_rounded,
-              size: 48,
-              color: Colors.orange,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Not Food Detected',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            errorMessage,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary(isDark),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _buildActionButton(
-            icon: Icons.camera_alt,
-            label: 'Try Again',
-            onPressed: _resetAnalysis,
-            isDark: isDark,
-            width: double.infinity,
-          ),
-        ],
-      ),
-    );
   }
 
   String _extractErrorMessage(String analysis) {
@@ -424,416 +339,68 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     return 'I can only analyze food items. Please upload an image of food for analysis.';
   }
 
-  Widget _buildFormattedAnalysis(String analysis, bool isDark) {
-    final sections = _parseAnalysis(analysis);
+  Widget _buildHealthScoreSection() {
+    if (_aiData == null) return const SizedBox();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Food Name and Health Score
-        if (sections['name'] != null || sections['healthScore'] != null)
-          _buildHeaderSection(sections, isDark),
-
-        const SizedBox(height: 16),
-
-        // Description
-        if (sections['description'] != null && sections['description']!.isNotEmpty)
-          _buildDescriptionSection(sections['description']!, isDark),
-
-        const SizedBox(height: 16),
-
-        // Ingredients
-        if (sections['ingredients'] != null && sections['ingredients']!.isNotEmpty)
-          _buildIngredientsSection(sections['ingredients']!, isDark),
-
-        const SizedBox(height: 16),
-
-        // Origin
-        if (sections['origin'] != null && sections['origin']!.isNotEmpty)
-          _buildOriginSection(sections['origin']!, isDark),
-
-        const SizedBox(height: 16),
-
-        // Who Should Prefer This
-        if (sections['whoShouldEat'] != null && sections['whoShouldEat']!.isNotEmpty)
-          _buildWhoShouldPreferSection(sections['whoShouldEat']!, isDark),
-
-        const SizedBox(height: 16),
-
-        // Who Should Avoid This
-        if (sections['whoShouldAvoid'] != null && sections['whoShouldAvoid']!.isNotEmpty)
-          _buildWhoShouldAvoidSection(sections['whoShouldAvoid']!, isDark),
-
-        const SizedBox(height: 16),
-
-        // Allergen Information
-        if (sections['allergens'] != null && sections['allergens']!.isNotEmpty)
-          _buildAllergenSection(sections['allergens']!, isDark),
-
-        const SizedBox(height: 16),
-
-        // Quick Note
-        if (sections['quickNote'] != null && sections['quickNote']!.isNotEmpty)
-          _buildQuickNoteSection(sections['quickNote']!, isDark),
-
-        const SizedBox(height: 24), // Extra space at bottom
-      ],
-    );
-  }
-
-  Map<String, String> _parseAnalysis(String analysis) {
-    final Map<String, String> sections = {};
-    
-    // Debug print to see the raw analysis
-    print('Raw analysis: $analysis');
-
-    // Split the analysis into lines for easier parsing
-    final lines = analysis.split('\n');
-    
-    // Simple line-by-line parsing
-    String currentSection = '';
-    StringBuffer currentContent = StringBuffer();
-    
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
-      
-      // Check if this line is a section header
-      if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
-        // Save previous section if it exists
-        if (currentSection.isNotEmpty && currentContent.toString().trim().isNotEmpty) {
-          sections[currentSection] = currentContent.toString().trim();
-        }
-        
-        // Start new section
-        final sectionTitle = line.replaceAll('*', '').trim();
-        currentContent.clear();
-        
-        // Map section titles to keys
-        if (sectionTitle.contains('Health Score')) {
-          currentSection = 'healthScore';
-        } else if (sectionTitle.contains('Description')) {
-          currentSection = 'description';
-        } else if (sectionTitle.contains('Primary Ingredients')) {
-          currentSection = 'ingredients';
-        } else if (sectionTitle.contains('Origin')) {
-          currentSection = 'origin';
-        } else if (sectionTitle.contains('Who Should Prefer')) {
-          currentSection = 'whoShouldEat';
-        } else if (sectionTitle.contains('Who Should Avoid')) {
-          currentSection = 'whoShouldAvoid';
-        } else if (sectionTitle.contains('Allergen')) {
-          currentSection = 'allergens';
-        } else if (sectionTitle.contains('Quick Note')) {
-          currentSection = 'quickNote';
-        } else if (!sectionTitle.contains('Health Score') && sections['name'] == null) {
-          // First non-health score section is likely the food name
-          sections['name'] = sectionTitle;
-          currentSection = '';
-        }
-      } else if (currentSection.isNotEmpty) {
-        // Add content to current section
-        if (line.isNotEmpty) {
-          if (currentContent.isNotEmpty) {
-            currentContent.writeln();
-          }
-          currentContent.write(line);
-        }
-      } else if (currentSection == 'healthScore' && line.contains('/10')) {
-        // Extract health score
-        final scoreMatch = RegExp(r'(\d+/10)').firstMatch(line);
-        if (scoreMatch != null) {
-          sections['healthScore'] = scoreMatch.group(1) ?? '';
-        }
-      }
-    }
-    
-    // Don't forget the last section
-    if (currentSection.isNotEmpty && currentContent.toString().trim().isNotEmpty) {
-      sections[currentSection] = currentContent.toString().trim();
-    }
-    
-    // Special handling for health score if not found yet
-    if (sections['healthScore'] == null) {
-      for (final line in lines) {
-        if (line.contains('/10')) {
-          final scoreMatch = RegExp(r'(\d+/10)').firstMatch(line);
-          if (scoreMatch != null) {
-            sections['healthScore'] = scoreMatch.group(1) ?? '';
-            break;
-          }
-        }
-      }
-    }
-
-    // Debug print to see parsed sections
-    print('Parsed sections: $sections');
-
-    return sections;
-  }
-
-  Widget _buildHeaderSection(Map<String, String> sections, bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.restaurant, color: AppColors.darkPrimary, size: 24),
+              Icon(Icons.favorite, color: Colors.red[400], size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Identified as',
+              const Text(
+                'Health Score',
                 style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary(isDark),
-                  fontWeight: FontWeight.w500,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            sections['name'] ?? 'Unknown Food',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDescriptionSection(String description, bool isDark) {
-    return _buildInfoCard(
-      title: 'Description',
-      icon: Icons.description,
-      content: description,
-      isDark: isDark,
-    );
-  }
-
-  Widget _buildIngredientsSection(String ingredients, bool isDark) {
-    final ingredientList = ingredients
-        .split('*')
-        .where((item) => item.trim().isNotEmpty)
-        .map((item) => item.trim())
-        .toList();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.eco, color: AppColors.darkPrimary, size: 20),
-              const SizedBox(width: 8),
+              const Spacer(),
               Text(
-                'Primary Ingredients',
-                style: TextStyle(
+                '${_aiData!['healthScore']}/10',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(isDark),
+                  color: Colors.black,
                 ),
               ),
+              const SizedBox(height: 8),
             ],
+
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ingredientList
-                .map(
-                  (ingredient) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkPrimary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.darkPrimary.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      ingredient,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textPrimary(isDark),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  width: MediaQuery.of(context).size.width * (_aiData!['healthScore'] / 10),
+                  decoration: BoxDecoration(
+                    color: Colors.green[400],
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                )
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOriginSection(String origin, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.public, color: AppColors.darkPrimary, size: 20),
-          const SizedBox(width: 12),
-          Text(
-            'Origin',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary(isDark),
+                ),
+              ],
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
+
           Text(
-            origin.trim(),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWhoShouldPreferSection(String content, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.green.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.thumb_up, color: Colors.green, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Who Should Prefer This',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[700],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildBulletPoints(content, isDark, Colors.green),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWhoShouldAvoidSection(String content, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.orange.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.warning, color: Colors.orange[700], size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Who Should Avoid This',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange[700],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildBulletPoints(content, isDark, Colors.orange),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAllergenSection(String content, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.red.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.local_hospital, color: Colors.red[700], size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Allergen Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red[700],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            content.trim(),
-            style: TextStyle(
+            _aiData!['healthDescription'],
+            style: const TextStyle(
               fontSize: 14,
-              color: AppColors.textPrimary(isDark),
+              color: Colors.black,
               height: 1.4,
             ),
           ),
@@ -842,99 +409,518 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     );
   }
 
-  Widget _buildBulletPoints(String content, bool isDark, MaterialColor color) {
-    // Split by bullet points (•) or newlines
-    List<String> points = content
-        .split(RegExp(r'[•\n]'))
-        .where((point) => point.trim().isNotEmpty)
-        .map((point) => point.trim())
-        .toList();
+  Widget _buildDescriptionSection() {
+    if (_aiData == null) return const SizedBox();
 
-    // If no bullet points found, try splitting by periods followed by capital letters
-    if (points.length <= 1) {
-      points = content
-          .split(RegExp(r'\.(?=\s*[A-Z])'))
-          .where((point) => point.trim().isNotEmpty)
-          .map((point) => point.trim())
-          .toList();
-    }
+    return Container(
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.description, color: Colors.cyan[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Description',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _aiData!['description'],
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Ensure we have at least some points
-    if (points.isEmpty) {
-      points = [content.trim()];
-    }
+  Widget _buildIngredientsSection() {
+    if (_aiData == null) return const SizedBox();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: points
-          .map(
-            (point) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 6, right: 8),
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: color[600],
-                      shape: BoxShape.circle,
+    final ingredients = List<String>.from(_aiData!['ingredients'] ?? []);
+    final displayedIngredients = ingredients.take(6).toList();
+
+    return Container(
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.shopping_basket, color: Colors.green[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Primary Ingredients',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: displayedIngredients.map((ingredient) =>
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontSize: 14, color: Colors.black)),
+                        Expanded(
+                          child: Text(
+                            ingredient,
+                            style: const TextStyle(fontSize: 14, color: Colors.black, height: 1.4),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      point.trim(),
+                  )
+              ).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOriginSection() {
+    if (_aiData == null) return const SizedBox();
+
+    return Container(
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.location_on, color: Colors.blue[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Origin',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _aiData!['origin'],
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationsSection() {
+    if (_aiData == null) return const SizedBox();
+
+    return Container(
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.recommend, color: Colors.orange[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Recommendations',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green[600], size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Who should eat this?',
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.textPrimary(isDark),
-                        height: 1.4,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 28),
+                  child: Text(
+                    _aiData!['whoShouldEat'],
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.warning, color: Colors.red[600], size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Who should avoid?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 28),
+                  child: Text(
+                    _aiData!['whoShouldAvoid'],
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickNoteSection() {
+    if (_aiData == null) return const SizedBox();
+
+    return Container(
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb, color: Colors.cyan[600], size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Quick Note',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+            ),
+            child: Text(
+              _aiData!['quickNote'],
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+        ),
+        title: const Text(
+          'Describe Food',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          if (_selectedImage != null || _analysisResult != null)
+            IconButton(
+              onPressed: _resetAnalysis,
+              icon: const Icon(Icons.refresh, color: Colors.black),
+              tooltip: 'Start Over',
+            ),
+        ],
+      ),
+      body: _selectedImage == null
+          ? _buildImageSelector()
+          : _buildAnalysisView(),
+    );
+  }
+
+  Widget _buildImageSelector() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              decoration: _getCardDecoration(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.restaurant_menu,
+                    size: 48,
+                    color: Colors.black,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Describe Your Food',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Take a photo or select from gallery to get detailed food description and insights',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
                     ),
                   ),
                 ],
               ),
             ),
-          )
-          .toList(),
+            const SizedBox(height: 32),
+            Container(
+              decoration: _getCardDecoration(),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _showImageSourceDialog(),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.add_photo_alternate, size: 40, color: Colors.black),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Select Image',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Camera or Gallery',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildQuickNoteSection(String note, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.darkPrimary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Future<void> _showImageSourceDialog() async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: const Text(
+            'Select Image Source',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.lightbulb, color: AppColors.darkPrimary, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Quick Note',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(isDark),
-                ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.black),
+                title: const Text('Camera', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.black),
+                title: const Text('Gallery', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
               ),
             ],
           ),
-          const SizedBox(height: 12),
+        );
+      },
+    );
+  }
+
+  Widget _buildAnalysisView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            height: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(_selectedImage!, fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (_isAnalyzing) ...[
+            _buildLoadingWidget(),
+          ] else if (_analysisResult != null) ...[
+            if (_isNotFood)
+              _buildNotFoodWidget()
+            else if (_aiData != null)
+              _buildAIResults()
+            else
+              _buildFormattedAnalysis(_analysisResult!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: _getCardDecoration(),
+      child: Column(
+        children: [
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Analyzing your food...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
-            note.trim(),
+            'This may take a few seconds',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textPrimary(isDark),
-              height: 1.5,
+              color: Colors.grey[700],
             ),
           ),
         ],
@@ -942,49 +928,97 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     );
   }
 
-  Widget _buildInfoCard({
-    required String title,
-    required IconData icon,
-    required String content,
-    required bool isDark,
-  }) {
+  Widget _buildNotFoodWidget() {
+    final errorMessage = _extractErrorMessage(_analysisResult!);
+
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground(isDark),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.darkPrimary.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: _getCardDecoration(),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: AppColors.darkPrimary, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(isDark),
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              size: 48,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Not Food Detected',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
-            content.trim(),
+            errorMessage,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textPrimary(isDark),
+              color: Colors.grey[700],
               height: 1.5,
             ),
           ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _resetAnalysis,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Try Again'),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAIResults() {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          children: [
+            _buildHealthScoreSection(),
+            _buildDescriptionSection(),
+            _buildIngredientsSection(),
+            _buildOriginSection(),
+            _buildRecommendationsSection(),
+            _buildQuickNoteSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormattedAnalysis(String analysis) {
+    return Container(
+      decoration: _getCardDecoration(),
+      padding: const EdgeInsets.all(16),
+      child: Text(
+        analysis,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Colors.black,
+          height: 1.4,
+        ),
       ),
     );
   }

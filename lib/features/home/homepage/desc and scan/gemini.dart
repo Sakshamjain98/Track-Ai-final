@@ -1,57 +1,55 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Gemini {
   static const String baseUrl = "https://generativelanguage.googleapis.com/v1/models/";
 
-
   final apiKey = dotenv.env['GEMINI_API_KEY'];
+
   Future<String> analyzeNutritionFromImage(File imageFile) async {
     try {
       final imageBytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(imageBytes);
+
       final prompt = """
-      Analyze this food image and provide detailed nutrition information in the following EXACT format:
-      **[Food Name]**
-      **Health Score**
-      **[X/10]**
-      [Brief health assessment explaining the score, mentioning key nutritional aspects and why this score was given]
-      **Description**
-      [Detailed description of the food, its preparation method, visual characteristics, and typical serving context]
-      **Nutritional Breakdown (per serving)**
-      • Calories: [X] kcal
-      • Protein: [X]g
-      • Carbohydrates: [X]g
-      • Fat: [X]g
-      • Fiber: [X]g
-      • Sugar: [X]g
-      • Sodium: [X]mg
-      **Primary Ingredients**
-      * [ingredient 1]
-      * [ingredient 2]
-      * [ingredient 3]
-      * [ingredient 4]
-      * [ingredient 5]
-      **Origin**
-      [Country/Region of origin]
-      **Who Should Prefer This**
-      • [Specific group 1] - [detailed reason why this group benefits]
-      • [Specific group 2] - [detailed reason why this group benefits]
-      • [Specific group 3] - [detailed reason why this group benefits]
-      • [Specific group 4] - [detailed reason why this group benefits]
-      **Who Should Avoid This**
-      • [Specific group 1] - [detailed reason why this group should avoid]
-      • [Specific group 2] - [detailed reason why this group should avoid]
-      • [Specific group 3] - [detailed reason why this group should avoid]
-      • [Specific group 4] - [detailed reason why this group should avoid]
-      **Allergen Information**
-      [List common allergens present: gluten, dairy, nuts, shellfish, soy, etc. If none, state "No major allergens detected"]
-      **Quick Note**
-      [Interesting nutritional fact or health tip related to this food, preferably with a scientific reference]
-      Please provide accurate estimates based on standard nutritional data and maintain the exact formatting shown above.
+Analyze this food image and provide detailed nutrition information.
+
+IMPORTANT: You MUST respond with ONLY a valid JSON object, no additional text or markdown formatting.
+
+Return the information in this EXACT JSON format:
+{
+  "foodName": "name of the food",
+  "healthScore": 8,
+  "healthDescription": "detailed health assessment",
+  "description": "comprehensive description",
+  "nutritionalBreakdown": {
+    "calories": 500,
+    "protein": 25,
+    "carbohydrates": 60,
+    "fat": 15,
+    "fiber": 8,
+    "sugar": 10,
+    "sodium": 500
+  },
+  "ingredients": ["ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5"],
+  "origin": "country/region",
+  "whoShouldPrefer": [
+    {"group": "Athletes", "reason": "provides quick energy"},
+    {"group": "Growing children", "reason": "nutrients for development"},
+    {"group": "Active individuals", "reason": "sustained energy"},
+    {"group": "Health enthusiasts", "reason": "balanced nutrition"}
+  ],
+  "whoShouldAvoid": [
+    {"group": "Diabetics", "reason": "high carbohydrate content"},
+    {"group": "Low-sodium diets", "reason": "high sodium levels"},
+    {"group": "Weight loss", "reason": "high calorie density"},
+    {"group": "Specific allergies", "reason": "contains allergens"}
+  ],
+  "allergenInfo": "list of allergens or 'No major allergens detected'",
+  "quickNote": "interesting fact or health tip"
+}
       """;
 
       return await _callGeminiVision(prompt, base64Image);
@@ -64,42 +62,35 @@ class Gemini {
     try {
       final imageBytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(imageBytes);
+
       final prompt = """
-      First, carefully examine this image to determine if it contains food items. 
-      If the image does NOT contain food (like objects, people, scenery, etc.), respond with:
-      **NOT FOOD DETECTED**
-      **Error Message**
-      I can only analyze food items. The image you provided appears to contain [describe what you see instead]. Please upload an image of food for analysis.
-      If the image DOES contain food, analyze it and provide a detailed description in the following EXACT format:
-      **[Food Name]**
-      **Health Score**
-      **[X/10]**
-      [Brief health assessment explaining the score - mention key nutritional benefits/concerns, cooking method impact, and overall healthiness. Keep this concise but informative.]
-      **Description**
-      [Provide a comprehensive description covering: visual appearance, cooking method, texture, likely flavors, cultural context, and typical serving occasions. Make this engaging and informative, as if you're a food enthusiast.]
-      **Primary Ingredients**
-      * [ingredient 1]
-      * [ingredient 2]
-      * [ingredient 3]
-      * [ingredient 4]
-      * [ingredient 5]
-      **Origin**
-      [Country/Region of origin]
-      **Who Should Prefer This**
-      • Athletes and active individuals - provides quick energy from carbohydrates and essential nutrients
-      • Growing children - offers nutrients important for development and growth
-      • People seeking comfort food - satisfying and filling meal option
-      • [Specific group based on the food] - [specific reason for this particular food]
-      **Who Should Avoid This**
-      • People with diabetes - high carbohydrate content may spike blood sugar levels
-      • Those on low-sodium diets - often contains high sodium from seasonings or sauces
-      • Individuals trying to lose weight - high calorie density may hinder weight loss goals
-      • People with [specific condition based on food] - [specific reason for this particular food]
-      **Allergen Information**
-      [List common allergens present: gluten, dairy, nuts, shellfish, soy, etc. If none, state "No major allergens detected"]
-      **Quick Note**
-      [Share an interesting nutritional fact, cultural insight, or health tip related to this food. If possible, reference scientific studies or nutritional research.]
-      """;
+First, carefully examine this image to determine if it contains food items.
+
+IMPORTANT: You MUST respond with ONLY a valid JSON object, no additional text, markdown, or code blocks.
+
+If the image does NOT contain food (like objects, people, scenery, etc.), respond with:
+{
+  "isFood": false,
+  "errorMessage": "I can only analyze food items. The image you provided appears to contain [describe what you see]. Please upload an image of food for analysis."
+}
+
+If the image DOES contain food, respond with this EXACT JSON structure:
+{
+  "isFood": true,
+  "foodName": "name of the food",
+  "healthScore": 8,
+  "healthDescription": "Brief health assessment explaining the score - mention key nutritional benefits/concerns",
+  "description": "Short description of appearance, texture, and flavors. MAX 6-7 lines.",
+  "ingredients": ["ingredient1", "ingredient2", "ingredient3", "ingredient4", "ingredient5"],
+  "origin": "Brief origin information. MAX 3 lines.",
+  "whoShouldEat": "Detailed explanation of who should prefer this food.",
+  "whoShouldAvoid": "Detailed explanation of who should avoid this food.",
+  "allergenInfo": "List common allergens present or 'No major allergens detected'",
+  "quickNote": "Brief interesting fact or health tip."
+}
+
+Remember: Respond with ONLY the JSON object, nothing else.
+""";
 
       return await _callGeminiVision(prompt, base64Image);
     } catch (e) {
@@ -108,14 +99,18 @@ class Gemini {
   }
 
   Future<String> _callGeminiVision(String prompt, String base64Image) async {
-    final url = Uri.parse(baseUrl + "gemini-2.5-flash:generateContent?key=$apiKey");
+    final url = Uri.parse(baseUrl + "gemini-2.0-flash:generateContent?key=$apiKey");
+
     final requestBody = {
       'contents': [
         {
           'parts': [
             {'text': prompt},
             {
-              'inline_data': {'mime_type': 'image/jpeg', 'data': base64Image},
+              'inline_data': {
+                'mime_type': 'image/jpeg',
+                'data': base64Image
+              },
             },
           ],
         },
@@ -124,7 +119,7 @@ class Gemini {
         'temperature': 0.2,
         'topK': 40,
         'topP': 0.95,
-        'maxOutputTokens': 4096,
+        'maxOutputTokens': 8192,
       },
       'safetySettings': [
         {
@@ -155,25 +150,34 @@ class Gemini {
 
       if (response.statusCode == 200 && response.body.isNotEmpty) {
         final responseData = json.decode(response.body);
+
         if (responseData['candidates'] != null &&
             responseData['candidates'].isNotEmpty &&
             responseData['candidates'][0]['content'] != null &&
             responseData['candidates'][0]['content']['parts'] != null &&
             responseData['candidates'][0]['content']['parts'].isNotEmpty) {
-          return responseData['candidates'][0]['content']['parts'][0]['text'] ??
+
+          String textResponse = responseData['candidates'][0]['content']['parts'][0]['text'] ??
               'No response generated';
-        } else {
-          throw Exception('Invalid response format from Gemini API');
+
+          // Clean up response - remove markdown code blocks if present
+          textResponse = textResponse
+              .replaceAll('```', '') // Corrected line 165: removed unclosed parenthesis
+              .replaceAll('```', '') // Corrected line 167: removed unclosed parenthesis
+              .trim();
+
+              return textResponse;
+              } else {
+              throw Exception('Invalid response format from Gemini API');
+              }
+          } else if (response.body.isEmpty) {
+            throw Exception('Empty response from Gemini API. Check network and endpoint.');
+          } else {
+          final errorData = response.body.isNotEmpty ? json.decode(response.body) : {};
+          final errorMessage = errorData['error']?['message'] ?? 'Unknown error';
+          throw Exception('API Error (${response.statusCode}): $errorMessage');
         }
-      } else if (response.body.isEmpty) {
-        throw Exception('Empty response from Gemini API. Check network and endpoint.');
-      } else {
-        final errorData = response.body.isNotEmpty ? json.decode(response.body) : {};
-        throw Exception(
-          'API Error (${response.statusCode}): ${errorData['error']?['message'] ?? 'Unknown error'}',
-        );
-      }
-    } catch (e) {
+      } catch (e) {
       if (e is http.ClientException) {
         throw Exception('Network error: Please check your internet connection');
       }
