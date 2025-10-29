@@ -253,9 +253,9 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: kBackgroundColor,
+          backgroundColor: kBackgroundColor, // Use app's light background
           surfaceTintColor: kBackgroundColor,
-          title: const Text('Add Ingredient', style: TextStyle(color: kTextColor)),
+          title: const Text('Add Ingredient', style: TextStyle(color: kTextColor)), // Use app's text color
           content: Form(
             key: _formKey,
             child: Column(
@@ -263,15 +263,19 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               children: [
                 TextFormField(
                   controller: _ingredientNameController,
-                  style: const TextStyle(color: kTextColor),
+                  style: const TextStyle(color: kTextColor), // Use app's text color
                   decoration: InputDecoration(
                     labelText: 'Ingredient Name',
                     labelStyle: const TextStyle(color: kTextSecondaryColor),
                     filled: true,
-                    fillColor: kCardColor,
+                    fillColor: kCardColorDarker, // Use light card color
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder( // Added for consistency
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: kAccentColor),
                     ),
                   ),
                   validator: (value) =>
@@ -280,15 +284,19 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _ingredientWeightController,
-                  style: const TextStyle(color: kTextColor),
+                  style: const TextStyle(color: kTextColor), // Use app's text color
                   decoration: InputDecoration(
                     labelText: 'Weight (g)',
                     labelStyle: const TextStyle(color: kTextSecondaryColor),
                     filled: true,
-                    fillColor: kCardColor,
+                    fillColor: kCardColorDarker, // Use light card color
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder( // Added for consistency
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: kAccentColor),
                     ),
                   ),
                   keyboardType: TextInputType.number,
@@ -307,7 +315,10 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               child: const Text('Cancel', style: TextStyle(color: kTextSecondaryColor)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: kAccentColor),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kAccentColor, // Use app's accent color (black)
+                foregroundColor: Colors.white, // Text on black must be white
+              ),
               onPressed: _addIngredient,
               child: const Text('Add', style: TextStyle(color: Colors.white)),
             ),
@@ -316,7 +327,6 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       },
     );
   }
-
   void _addIngredient() {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -999,65 +1009,99 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
     final int weight = (ingredient['weight_g'] as num? ?? 0).toInt();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.only(bottom: 12.0),
+      decoration: _getCardDecoration(), // Use the app's existing light card style
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ingredient icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: kCardColorDarker,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.eco, color: kSuccessColor, size: 20),
-          ),
-          const SizedBox(width: 12),
-
-          // Ingredient name and weight
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: kTextColor,
+          // --- Top Row: Title and Delete Button ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.apple, color: kSuccessColor, size: 20), // Use app's theme color
+                  const SizedBox(width: 8),
+                  Text(
+                    'Ingredient #${index + 1}',
+                    style: const TextStyle(
+                      color: kTextColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${weight}g',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: kTextSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
+                ],
+              ),
+              IconButton(
+                icon: Icon(Icons.delete, color: kDangerColor, size: 20), // Use app's theme color
+                onPressed: () => _removeIngredient(index),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
+          const SizedBox(height: 16),
 
-          // Delete button
-          IconButton(
-            onPressed: () => _removeIngredient(index),
-            icon: Icon(Icons.delete_outline, color: kDangerColor),
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(),
+          // --- Bottom Row: Name and Weight Fields ---
+          Row(
+            children: [
+              // --- Name Field ---
+              Expanded(
+                flex: 3, // Give name more space
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Name',
+                      style: TextStyle(color: kTextSecondaryColor, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    // This container mimics the disabled text field style
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: kCardColorDarker, // Use light theme inner field color
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        name,
+                        style: const TextStyle(color: kTextColor, fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // --- Weight Field ---
+              Expanded(
+                flex: 2, // Give weight less space
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Weight (g)',
+                      style: TextStyle(color: kTextSecondaryColor, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: kCardColorDarker, // Use light theme inner field color
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Text(
+                        weight.toString(),
+                        style: const TextStyle(color: kTextColor, fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
