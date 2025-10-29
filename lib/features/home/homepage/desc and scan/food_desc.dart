@@ -207,10 +207,15 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
           ),
 
           // ✅ FIX 3: Parse ingredients array properly
-          'ingredients': (jsonData['ingredients'] as List<dynamic>?)
-              ?.map((ingredient) => _cleanText(ingredient.toString()))
-              .toList() ??
-              ['No ingredients listed'],
+        'ingredients': (jsonData['ingredients'] as List<dynamic>?)
+            ?.map((ingredient) {
+        if (ingredient is Map && ingredient.containsKey('name')) {
+        return _cleanText(ingredient['name'].toString()); // Clean the name string
+        }
+        return _cleanText(ingredient.toString());
+        })
+            .toList() ??
+        ['No ingredients listed'],
 
           'origin': _cleanText(
             _cleanInternalPrefixes(jsonData['origin'] ?? 'Unknown'),

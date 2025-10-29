@@ -1141,7 +1141,6 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
           : _buildAnalysisView(),
     );
   }
-
   Widget _buildImageSelector() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1155,6 +1154,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               child: Container(
                 color: Colors.black,
                 child: Center(
+                  // NOTE: Replace this placeholder with your CameraPreview widget
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1190,27 +1190,51 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
             Expanded(
               flex: isTablet ? 4 : 3,
               child: Container(
-                color: kBackgroundColor,
+                color: kBackgroundColor, // Use your defined background color
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: isTablet ? 48.0 : 24.0,
+                    // Adjusted padding slightly
+                    horizontal: isTablet ? 32.0 : 16.0,
                     vertical: isTablet ? 24.0 : 16.0,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildHorizontalActionButton(
-                        icon: Icons.qr_code_scanner,
-                        title: 'Scan Food',
-                        onTap: () => _pickImage(ImageSource.camera),
-                        isTablet: isTablet,
+                      // Scan Food Button - Wrapped in Expanded
+                      Expanded(
+                        child: _buildHorizontalActionButton(
+                          icon: Icons.qr_code_scanner,
+                          title: 'Scan Food',
+                          onTap: () => _pickImage(ImageSource.camera),
+                          isTablet: isTablet,
+                          color: Colors.black, // Explicitly set color
+                        ),
                       ),
-                      SizedBox(width: isTablet ? 32 : 20),
-                      _buildHorizontalActionButton(
-                        icon: Icons.image_search,
-                        title: 'Gallery',
-                        onTap: () => _pickImage(ImageSource.gallery),
-                        isTablet: isTablet,
+
+                      SizedBox(width: isTablet ? 24 : 12), // Adjusted spacing
+
+                      Expanded(
+                        child: _buildHorizontalActionButton(
+                          icon: Icons.document_scanner_outlined,
+                          title: 'Scan Label',
+                          // Assuming _pickImage is simplified and doesn't need type
+                          onTap: () => _pickImage(ImageSource.camera),
+                          isTablet: isTablet,
+                          color: Colors.black, // Explicitly set color
+                        ),
+                      ),
+
+                      SizedBox(width: isTablet ? 24 : 12), // Adjusted spacing
+
+                      // Gallery Button - Wrapped in Expanded
+                      Expanded(
+                        child: _buildHorizontalActionButton(
+                          icon: Icons.image_search, // Consistent icon
+                          title: 'Gallery',
+                          onTap: () => _pickImage(ImageSource.gallery),
+                          isTablet: isTablet,
+                          color: Colors.black, // Explicitly set color
+                        ),
                       ),
                     ],
                   ),
@@ -1222,45 +1246,52 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       },
     );
   }
-
   Widget _buildHorizontalActionButton({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
-    required bool isTablet,
+    required bool isTablet, // Keep for potential size adjustments
+    Color color = Colors.black // Default color
   }) {
-    return Expanded(
-      child: Material(
-        color: kCardColor,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Container(
-            height: isTablet ? 140 : 100,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: kAccentColor, size: isTablet ? 40 : 30),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: isTablet ? 16 : 14,
-                    fontWeight: FontWeight.w600,
-                    color: kTextColor,
-                  ),
-                ),
-              ],
+        onTap: onTap,
+        child: Container(
+          height: 100,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.grey[300]!,
+              width: 1,
             ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: isTablet ? 36 : 28),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: isTablet ? 15 : 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-
   Widget _buildAnalysisView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
