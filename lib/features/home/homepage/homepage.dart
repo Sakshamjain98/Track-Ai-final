@@ -15,6 +15,7 @@ import 'package:trackai/features/admin/services/announcement_notification_servic
 import 'package:trackai/core/routes/routes.dart';
 
 import '../../../library/presentation/library_screen.dart';
+import 'desc and scan/nutrition_scanner.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -213,7 +214,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (mounted) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => const ImageAnalysisScreen(analysisType: 'scan'),
+          builder: (context) => NutritionScannerScreen(),
         ),
       );
     }
