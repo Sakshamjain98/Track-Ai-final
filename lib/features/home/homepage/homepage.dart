@@ -20,6 +20,7 @@ import 'package:trackai/core/routes/routes.dart';
 import '../../../library/presentation/library_screen.dart';
 import 'desc and scan/LabelAnalysisScreen.dart';
 import 'desc and scan/nutrition_scanner.dart';
+import 'log/daily_log_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -81,6 +82,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    context.read<DailyLogProvider>().checkDailyReset();
     _pages = [
       const Homescreen(),
       const Trackerscreen(),

@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
+import 'package:trackai/core/routes/routes.dart';
 import 'package:trackai/features/home/homepage/desc%20and%20scan/gemini.dart';
+import 'package:provider/provider.dart';
+import '../log/daily_log_provider.dart';
+import '../log/food_log_entry.dart';
 
 // --- Updated Color Scheme ---
 const Color kBackgroundColor = Colors.white;
@@ -51,11 +55,8 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
   final _ingredientWeightController = TextEditingController();
 
   @override
-  @override
   void initState() {
     super.initState();
-
-    // --- 1. Initialize controllers first ---
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -74,8 +75,6 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
-
-    // --- 2. Add this logic to check for the passed image ---
     if (widget.imageFile != null) {
       setState(() {
         _selectedImage = widget.imageFile;
@@ -496,7 +495,42 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                // TODO: Add log meal logic
+                // --- START OF NEW LOGIC ---
+                if (_nutritionData == null) return;
+
+                // 1. Get the provider
+                final logProvider = context.read<DailyLogProvider>();
+                final breakdown = _nutritionData!['nutritionalBreakdown'] ?? {};
+
+                // 2. Create the log entry
+                final entry = FoodLogEntry(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: _nutritionData!['foodName'] ?? 'Scanned Food',
+                  calories: breakdown['calories'] ?? 0,
+                  protein: (breakdown['protein_g'] ?? 0).toInt(),
+                  carbs: (breakdown['carbohydrates_g'] ?? 0).toInt(),
+                  fat: (breakdown['fat_g'] ?? 0).toInt(),
+                  fiber: (breakdown['fiber_g'] ?? 0).toInt(),
+                  timestamp: DateTime.now(),
+                  // --- ADD THESE ---
+                  healthScore: (_nutritionData!['healthScore'] as num?)?.toInt(), // Safely cast and convert
+                  healthDescription: _nutritionData!['healthDescription'] as String?, // Safely cast
+                  // ---------------
+                    imagePath: _selectedImage?.path, // Get the path from the selected image
+
+                );
+                // 3. Add to the log
+                logProvider.addEntry(entry);
+
+                // 4. Show success and go back
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${entry.name} logged!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                Navigator.pop(context);
+                // --- END OF NEW LOGIC ---
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.cyan,
@@ -1144,14 +1178,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          if (_selectedImage != null || _nutritionData != null)
-            IconButton(
-              onPressed: _resetAnalysis,
-              icon: const Icon(Icons.refresh, color: kTextColor),
-              tooltip: 'Start Over',
-            ),
-        ],
+
       ),
       body: _selectedImage == null && _showCameraInterface
           ? _buildImageSelector()
@@ -1478,7 +1505,11 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _resetAnalysis,
+              onPressed: (){
+
+                  Navigator.pushNamed(context, AppRoutes.home);
+
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: kAccentColor,
                 foregroundColor: Colors.white,

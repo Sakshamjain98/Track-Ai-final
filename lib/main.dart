@@ -13,6 +13,7 @@ import 'package:trackai/core/services/auth_services.dart';
 import 'package:trackai/core/services/streak_service.dart';
 import 'package:trackai/features/home/ai-options/service/filedownload.dart';
 import 'package:trackai/features/onboarding/plan.dart';
+import 'features/home/homepage/log/daily_log_provider.dart';
 import 'firebase_options.dart';
 import 'package:trackai/core/wrappers/authwrapper.dart';
 
@@ -55,6 +56,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
+        ChangeNotifierProvider(create: (_) => DailyLogProvider()),
       ],
       child: const MyApp(),
     ),

@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/routes/routes.dart';
@@ -6,7 +9,18 @@ import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/core/services/streak_service.dart';
 import 'package:trackai/features/settings/service/goalservice.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
-
+import 'package:intl/intl.dart';
+import '../homepage/log/daily_log_provider.dart';
+import '../homepage/log/food_log_entry.dart';
+const Color kBackgroundColor = Colors.white;
+const Color kCardColor = Color(0xFFF8F9FA);
+const Color kCardColorDarker = Color(0xFFE9ECEF);
+const Color kTextColor = Color(0xFF212529);
+const Color kTextSecondaryColor = Color(0xFF6C757D);
+const Color kAccentColor = Color(0xFF131212);
+const Color kSuccessColor = Color(0xFF28A745);
+const Color kWarningColor = Color(0xFFFFC107);
+const Color kDangerColor = Color(0xFFDC3545);
 class Homescreen extends StatefulWidget {
   const Homescreen({super.key});
 
@@ -150,45 +164,55 @@ class _HomescreenState extends State<Homescreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final weekDates = _getWeekDates(_currentDate);
 
     return Scaffold(
-      backgroundColor: Color(0xFFF8F8F8),
+      backgroundColor: const Color(0xFFF8F8F8),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.04,
             vertical: screenHeight * 0.02,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Week Calendar with dashed circles
-              _buildWeekCalendar(screenWidth, screenHeight, weekDates),
-              SizedBox(height: screenHeight * 0.03),
+          // ✅ Wrap the child of SingleChildScrollView
+          child: Consumer<DailyLogProvider>(
+            builder: (context, logProvider, child) {
+              // Now all your widgets can access 'logProvider.consumedTotals'
+              // and 'logProvider.entries'
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Week Calendar (no change needed)
+                  _buildWeekCalendar(screenWidth, screenHeight, weekDates),
+                  SizedBox(height: screenHeight * 0.03),
 
-              // Main Content
-              _buildMainContentPage(),
+                  _buildMainContentPage(logProvider), // <-- FIX: Pass provider
 
-              SizedBox(height: screenHeight * 0.03),
+                  SizedBox(height: screenHeight * 0.03),
 
-              // AI Lab with equal height cards
-              _buildFullAILabSection(),
-              SizedBox(height: screenHeight * 0.03),
+                  _buildRecentlyEaten(logProvider, screenWidth, screenHeight),
 
-              // Wellness Tips
-              _buildWellnessTipsSection(),
-              SizedBox(height: screenHeight * 0.04),
-            ],
-          ),
-        ),
-      ),
-    );
+                  SizedBox(height: screenHeight * 0.03),
+
+                  // AI Lab (no change needed)
+                  _buildFullAILabSection(),
+                  SizedBox(height: screenHeight * 0.03),
+
+                  // Wellness Tips (no change needed)
+                  _buildWellnessTipsSection(),
+                  SizedBox(height: screenHeight * 0.04),
+                ],
+              );
+            }, //
+          ),   // ✅ FIX: Added closing parenthesis for Consumer
+        ),     // ✅ FIX: Added closing parenthesis for SingleChildScrollView
+      ),       // ✅ FIX: Added closing parenthesis for SafeArea
+    );         // ✅ FIX: Added closing parenthesis and semicolon for Scaffold
   }
-
   // NEW: Week Calendar with ALL dashed circles and today highlighted
   Widget _buildWeekCalendar(
       double screenWidth,
@@ -250,8 +274,8 @@ class _HomescreenState extends State<Homescreen> {
     );
   }
 
-  // Main Content Page
-  Widget _buildMainContentPage() {
+// Main Content Page
+  Widget _buildMainContentPage(DailyLogProvider logProvider) { // <-- UPDATED
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
@@ -259,7 +283,7 @@ class _HomescreenState extends State<Homescreen> {
       return Container(
         padding: EdgeInsets.all(screenWidth * 0.1),
         decoration: _getCardDecoration(),
-        child: Center(child: CircularProgressIndicator()),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -269,18 +293,62 @@ class _HomescreenState extends State<Homescreen> {
         decoration: _getCardDecoration(),
         child: Column(
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red),
-            SizedBox(height: 16),
-            Text('Set Your Daily Targets', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            SizedBox(height: 8),
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text('Set Your Daily Targets',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.adjustGoals),
-              child: Text('Set Goals'),
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.adjustGoals),
+              child: const Text('Set Goals'),
             ),
           ],
         ),
       );
     }
+
+    // --- START: NEW CALCULATION LOGIC ---
+    // Get Firebase Goals
+    final goalCalories = (_goalsData!['calories'] ?? 0).toDouble();
+    final goalProtein = (_goalsData!['protein'] ?? 0).toDouble();
+    final goalCarbs = (_goalsData!['carbs'] ?? 0).toDouble();
+    final goalFat = (_goalsData!['fat'] ?? 0).toDouble();
+    final goalFiber = (_goalsData!['fiber'] ?? 0).toDouble();
+
+    // Get Consumed Totals from Provider
+    final consumedCalories =
+    (logProvider.consumedTotals['calories'] ?? 0).toDouble();
+    final consumedProtein =
+    (logProvider.consumedTotals['protein'] ?? 0).toDouble();
+    final consumedCarbs =
+    (logProvider.consumedTotals['carbs'] ?? 0).toDouble();
+    final consumedFat = (logProvider.consumedTotals['fat'] ?? 0).toDouble();
+    final consumedFiber = (logProvider.consumedTotals['fiber'] ?? 0).toDouble();
+
+    // Calculate "Left" (and prevent negative numbers)
+    final caloriesLeft =
+    (goalCalories - consumedCalories).clamp(0, goalCalories);
+    final proteinLeft = (goalProtein - consumedProtein).clamp(0, goalProtein);
+    final carbsLeft = (goalCarbs - consumedCarbs).clamp(0, goalCarbs);
+    final fatLeft = (goalFat - consumedFat).clamp(0, goalFat);
+    final fiberLeft = (goalFiber - consumedFiber).clamp(0, goalFiber);
+
+    // Calculate Progress (0.0 to 1.0), handle division by zero
+    final caloriesProgress = goalCalories == 0
+        ? 0.0
+        : (consumedCalories / goalCalories).clamp(0.0, 1.0);
+    final proteinProgress = goalProtein == 0
+        ? 0.0
+        : (consumedProtein / goalProtein).clamp(0.0, 1.0);
+    final carbsProgress = goalCarbs == 0
+        ? 0.0
+        : (consumedCarbs / goalCarbs).clamp(0.0, 1.0);
+    final fatProgress =
+    goalFat == 0 ? 0.0 : (consumedFat / goalFat).clamp(0.0, 1.0);
+    final fiberProgress =
+    goalFiber == 0 ? 0.0 : (consumedFiber / goalFiber).clamp(0.0, 1.0);
+    // --- END: NEW CALCULATION LOGIC ---
 
     return Column(
       children: [
@@ -295,7 +363,7 @@ class _HomescreenState extends State<Homescreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${_goalsData!['calories'] ?? 0}',
+                    '${caloriesLeft.toInt()}', // <-- UPDATED
                     style: TextStyle(
                       color: Colors.black87,
                       fontSize: screenWidth * 0.13,
@@ -312,28 +380,11 @@ class _HomescreenState extends State<Homescreen> {
                 ],
               ),
               // UPDATED ICON CONTAINER
-              Container(
-                width: screenWidth * 0.25,
-                height: screenWidth * 0.25,
-                padding: EdgeInsets.all(8.0), // This is the grey border thickness
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey[300]!,
-                ),
-                child: Container(
-                  padding: EdgeInsets.all(3.0), // This is the white border/gap thickness
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      lucide.LucideIcons.flame,
-                      size: screenWidth * 0.09, // Adjusted icon size
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
+              _buildProgressRing( // <-- UPDATED
+                progress: caloriesProgress,
+                size: screenWidth * 0.25,
+                icon: lucide.LucideIcons.flame,
+                color: Colors.cyan, // Your theme's calorie color
               ),
             ],
           ),
@@ -352,7 +403,7 @@ class _HomescreenState extends State<Homescreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${_goalsData!['protein'] ?? 0}g',
+                      '${proteinLeft.toInt()}g', // <-- UPDATED
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: screenWidth * 0.055,
@@ -370,29 +421,11 @@ class _HomescreenState extends State<Homescreen> {
                     ),
                     SizedBox(height: screenHeight * 0.015),
                     // UPDATED ICON CONTAINER
-                    Container(
-                      width: screenWidth * 0.15,
-                      height: screenWidth * 0.15,
-                      padding: EdgeInsets.all(5.0), // This is the grey border thickness
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.grey[300]!,
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(3.0), // This is the white border/gap thickness
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            lucide.LucideIcons.zap,
-                            color: Colors.amber,
-                            size: screenWidth * 0.06, // Adjusted icon size
-                            fill: 1.0,
-                          ),
-                        ),
-                      ),
+                    _buildProgressRing( // <-- UPDATED
+                      progress: proteinProgress,
+                      size: screenWidth * 0.15,
+                      icon: lucide.LucideIcons.zap,
+                      color: Colors.amber,
                     ),
                   ],
                 ),
@@ -407,7 +440,7 @@ class _HomescreenState extends State<Homescreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${_goalsData!['carbs'] ?? 0}g',
+                      '${carbsLeft.toInt()}g', // <-- UPDATED
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: screenWidth * 0.055,
@@ -425,29 +458,11 @@ class _HomescreenState extends State<Homescreen> {
                     ),
                     SizedBox(height: screenHeight * 0.015),
                     // UPDATED ICON CONTAINER
-                    Container(
-                      width: screenWidth * 0.15,
-                      height: screenWidth * 0.15,
-                      padding: EdgeInsets.all(5.0), // This is the grey border thickness
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.grey[300]!,
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(3.0), // This is the white border/gap thickness
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            lucide.LucideIcons.wheat,
-                            color: Colors.green,
-                            size: screenWidth * 0.06, // Adjusted icon size
-                            fill: 1.0,
-                          ),
-                        ),
-                      ),
+                    _buildProgressRing( // <-- UPDATED
+                      progress: carbsProgress,
+                      size: screenWidth * 0.15,
+                      icon: lucide.LucideIcons.wheat,
+                      color: Colors.green,
                     ),
                   ],
                 ),
@@ -462,7 +477,7 @@ class _HomescreenState extends State<Homescreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${_goalsData!['fat'] ?? 0}g',
+                      '${fatLeft.toInt()}g', // <-- UPDATED
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: screenWidth * 0.055,
@@ -480,29 +495,11 @@ class _HomescreenState extends State<Homescreen> {
                     ),
                     SizedBox(height: screenHeight * 0.015),
                     // UPDATED ICON CONTAINER
-                    Container(
-                      width: screenWidth * 0.15,
-                      height: screenWidth * 0.15,
-                      padding: EdgeInsets.all(5.0), // This is the grey border thickness
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.grey[300]!,
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.all(3.0), // This is the white border/gap thickness
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            lucide.LucideIcons.droplet,
-                            color: Colors.blue,
-                            size: screenWidth * 0.06, // Adjusted icon size
-                            fill: 1.0,
-                          ),
-                        ),
-                      ),
+                    _buildProgressRing( // <-- UPDATED
+                      progress: fatProgress,
+                      size: screenWidth * 0.15,
+                      icon: lucide.LucideIcons.droplet,
+                      color: Colors.blue,
                     ),
                   ],
                 ),
@@ -513,15 +510,17 @@ class _HomescreenState extends State<Homescreen> {
 
         // Fiber Section
         SizedBox(height: screenHeight * 0.025),
-        _buildFiberSection(),
-      ],
+        // UPDATED Call
+        _buildFiberSection(fiberLeft.toInt(), fiberProgress, fiberLeft <= 0),      ],
     );
   }
-
-  // Fiber Widget
-  Widget _buildFiberSection() {
+// Fiber Widget
+  Widget _buildFiberSection(
+      int fiberLeft,          // <-- Added
+      double fiberProgress,   // <-- Added
+      bool isTargetComplete,  // <-- Added
+      ) {
     final sw = MediaQuery.of(context).size.width;
-    final sh = MediaQuery.of(context).size.height;
     return Container(
       padding: EdgeInsets.all(sw * 0.04),
       decoration: _getCardDecoration(),
@@ -540,58 +539,221 @@ class _HomescreenState extends State<Homescreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              Row(
-                children: [
-                  Text(
-                    "${_goalsData?['fiber'] ?? 0}",
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: sw * 0.08,
-                      fontWeight: FontWeight.bold,
+              // --- UPDATED LOGIC ---
+              if (isTargetComplete)
+                Row(
+                  children: [
+                    Icon(Icons.check_circle,
+                        color: Colors.green, size: sw * 0.06),
+                    SizedBox(width: sw * 0.02),
+                    Text(
+                      "Target Complete!",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: sw * 0.05,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: sw * 0.008),
-                  Text(
-                    "g",
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: sw * 0.03,
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      "$fiberLeft", // <-- UPDATED to use the argument
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: sw * 0.08,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    SizedBox(width: sw * 0.008),
+                    Text(
+                      "g",
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: sw * 0.03,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              // --- END UPDATED LOGIC ---
             ],
           ),
-          // UPDATED ICON CONTAINER
-          Container(
-            width: sw * 0.15,
-            height: sw * 0.15,
-            padding: EdgeInsets.all(5.0), // This is the grey border thickness
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey[300]!,
-            ),
-            child: Container(
-              padding: EdgeInsets.all(3.0), // This is the white border/gap thickness
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
-              child: Center(
-                child: Icon(
-                  lucide.LucideIcons.leaf,
-                  size: sw * 0.06, // Adjusted icon size
-                  color: Colors.green,
-                  fill: 1.0,
-                ),
-              ),
+          // --- UPDATED ICON CONTAINER TO USE PROGRESS RING ---
+          _buildProgressRing(
+            progress: fiberProgress, // <-- UPDATED
+            size: sw * 0.15,
+            icon: lucide.LucideIcons.leaf,
+            color: Colors.orange, // Fiber color (adjust if needed)
+          ),
+        ],
+      ),
+    );
+  }
+// In _HomescreenState
+  Widget _buildRecentlyEaten(DailyLogProvider logProvider, double sw, double sh) {
+    if (logProvider.entries.isEmpty) {
+      // Don't show anything if the log is empty
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Recently Eaten",
+          style: TextStyle(color: Colors.black, fontSize: sw * 0.045, fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: sh * 0.02),
+        Container(
+          decoration: _getCardDecoration(),
+          child: ListView.builder(
+            itemCount: logProvider.entries.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemBuilder: (context, index) {
+              final entry = logProvider.entries[index];
+              return _buildLogEntryCard(entry, sw, sh, index == logProvider.entries.length - 1);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+  Widget _buildProgressRing({
+    required double progress,
+    required double size,
+    required IconData icon,
+    required Color color,
+  }) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background ring
+          CircularProgressIndicator(
+            value: 1.0, // Full circle
+            strokeWidth: size * 0.1, // Responsive stroke
+            backgroundColor: Colors.grey[300],
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[300]!),
+          ),
+          // Foreground progress ring
+          CircularProgressIndicator(
+            value: progress,
+            strokeWidth: size * 0.1,
+            backgroundColor: Colors.transparent,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            strokeCap: StrokeCap.round, // Makes the ends rounded
+          ),
+          // Icon in the center
+          Center(
+            child: Icon(
+              icon,
+              // Icon color changes when target is hit
+              color: progress > 0.99 ? color : color,
+              size: size * 0.5, // Responsive icon
             ),
           ),
         ],
       ),
     );
   }
+  // ---
+  Widget _buildLogEntryCard(FoodLogEntry entry, double sw, double sh, bool isLast) {
+    // --- WRAP with GestureDetector ---
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact(); // Add feedback on tap
+        _showMealDetailsDialog(entry); // Call the details dialog
+      },
+      // Make sure the tap hits the whole area
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: EdgeInsets.all(sw * 0.04),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : Border(
+            bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.name,
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontSize: sw * 0.04,
+                        fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  DateFormat('hh:mm a').format(entry.timestamp), // e.g., 05:43 PM
+                  style: TextStyle(color: Colors.grey[600], fontSize: sw * 0.03),
+                ),
+              ],
+            ),
+            SizedBox(height: sh * 0.01),
+            Row(
+              children: [
+                Icon(lucide.LucideIcons.flame, color: Colors.cyan, size: sw * 0.045),
+                SizedBox(width: sw * 0.01),
+                Text(
+                  '${entry.calories} calories',
+                  style: TextStyle(color: Colors.black54, fontSize: sw * 0.035),
+                ),
+              ],
+            ),
+            SizedBox(height: sh * 0.015),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                _buildMacroIcon(lucide.LucideIcons.zap, Colors.amber,
+                    '${entry.protein}g', sw),
+                SizedBox(width: sw * 0.04),
+                _buildMacroIcon(lucide.LucideIcons.wheat, Colors.green,
+                    '${entry.carbs}g', sw),
+                SizedBox(width: sw * 0.04),
+                _buildMacroIcon(lucide.LucideIcons.droplet, Colors.blue,
+                    '${entry.fat}g', sw),
+                SizedBox(width: sw * 0.04),
+                _buildMacroIcon(lucide.LucideIcons.leaf, Colors.orange,
+                    '${entry.fiber}g', sw),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    // --- END OF GestureDetector WRAP ---
+  }
 
+// Helper for the small macro icons in the log card
+  Widget _buildMacroIcon(IconData icon, Color color, String text, double sw) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: sw * 0.035),
+        SizedBox(width: sw * 0.01),
+        Text(
+          text,
+          style: TextStyle(color: Colors.black54, fontSize: sw * 0.035),
+        ),
+      ],
+    );
+  }
   // AI Lab Section with FIXED EQUAL HEIGHT CARDS
   Widget _buildFullAILabSection() {
     final sw = MediaQuery.of(context).size.width;
@@ -696,7 +858,315 @@ class _HomescreenState extends State<Homescreen> {
       ),
     );
   }
+// --- ADD THIS HELPER WIDGET ---
+// (Adapted from nutrition_scanner.dart)
+  Widget _buildNutrientCard(
+      String title,
+      String value,
+      String unit,
+      IconData icon,
+      Color iconColor,
+      ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: kCardColorDarker,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: kTextColor,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: kTextColor,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  unit,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: kTextSecondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  void _showMealDetailsDialog(FoodLogEntry entry) {
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            top: sh * 0.1,
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: sh * 0.8),
+            padding: EdgeInsets.all(sw * 0.05),
+            decoration: BoxDecoration(
+              // --- USE LIGHT THEME CONSISTENTLY ---
+              color: Colors.grey[100], // Changed to light grey
+              // -----------------------------------
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header (Adjusted for light theme)
+                  Row(
+                    children: [
+                      Icon(Icons.restaurant_menu, color: Colors.grey[700], size: sw * 0.06), // Darker icon
+                      SizedBox(width: sw * 0.02),
+                      Text(
+                        'Meal Details',
+                        style: TextStyle(
+                          fontSize: sw * 0.055,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87, // Darker text
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: sh * 0.01),
+                  // Food Name (Adjusted for light theme)
+                  Text(
+                    entry.name,
+                    style: TextStyle(
+                      fontSize: sw * 0.04,
+                      color: Colors.black54, // Secondary text color
+                    ),
+                  ),
+                  SizedBox(height: sh * 0.03),
+                  if (entry.imagePath != null) ...[
+                    Center( // Center the image
+                      child: ClipRRect( // Add rounded corners
+                        borderRadius: BorderRadius.circular(12.0),
+                        child: Image.file(
+                          File(entry.imagePath!), // Create a File object from the path
+                          height: sh * 0.2,       // Set a fixed height
+                          width: double.infinity, // Take full width
+                          fit: BoxFit.cover,      // Cover the area
+                          // Add error handling for missing files
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: sh * 0.2,
+                              color: Colors.grey[300],
+                              child: const Center(child: Text('Image not found')),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: sh * 0.03), // Add space after the image
+                  ],
+                  // --- END IMAGE DISPLAY ---
+                  // Calories Display
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(lucide.LucideIcons.flame, color: Colors.cyan, size: sw * 0.07),
+                        SizedBox(height: sh * 0.01),
+                        Text(
+                          '${entry.calories}',
+                          style: TextStyle(
+                            fontSize: sw * 0.12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                        Text(
+                          'kcal',
+                          style: TextStyle(
+                            fontSize: sw * 0.04,
+                            color: Colors.grey[600], // Adjusted color
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: sh * 0.03),
+
+                  // Macro Grid
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildNutrientCard( // Ensure this uses light theme styles
+                          'Protein', '${entry.protein}','g', lucide.LucideIcons.zap, Colors.amber,
+                        ),
+                      ),
+                      SizedBox(width: sw * 0.03),
+                      Expanded(
+                        child: _buildNutrientCard( // Ensure this uses light theme styles
+                          'Carbs', '${entry.carbs}','g', lucide.LucideIcons.wheat, Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: sh * 0.02),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildNutrientCard( // Ensure this uses light theme styles
+                          'Fat', '${entry.fat}', 'g', lucide.LucideIcons.droplet, Colors.blue,
+                        ),
+                      ),
+                      SizedBox(width: sw * 0.03),
+                      Expanded(
+                        child: _buildNutrientCard( // Ensure this uses light theme styles
+                          'Fiber', '${entry.fiber}', 'g', lucide.LucideIcons.leaf, Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: sh * 0.03), // Space before health score
+
+                  // --- ADD CONDITIONAL HEALTH SCORE CARD ---
+                  if (entry.healthScore != null) ...[
+                    Container(
+                      padding: EdgeInsets.all(sw * 0.04),
+                      decoration: BoxDecoration( // Inner card decoration
+                        color: const Color(0xFFE9ECEF), // Slightly darker bg
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                  children: [
+                                    Icon(Icons.favorite, color: Colors.red[400], size: sw * 0.05),
+                                    SizedBox(width: sw * 0.02),
+                                    Text(
+                                      'Health Score',
+                                      style: TextStyle(
+                                        fontSize: sw * 0.045,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ]
+                              ),
+                              Text(
+                                '${entry.healthScore}/10',
+                                style: TextStyle(
+                                  fontSize: sw * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: sh * 0.015),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: (entry.healthScore ?? 0) / 10.0,
+                              backgroundColor: Colors.grey[300],
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  _getHealthScoreColor(entry.healthScore ?? 0)),
+                              minHeight: 10,
+                            ),
+                          ),
+                          if (entry.healthDescription != null && entry.healthDescription!.isNotEmpty) ...[
+                            SizedBox(height: sh * 0.015),
+                            Text(
+                              entry.healthDescription!,
+                              style: TextStyle(
+                                fontSize: sw * 0.035,
+                                color: Colors.black54, // Secondary text
+                                height: 1.4,
+                              ),
+                            ),
+                          ]
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: sh * 0.04), // Space after health score
+                  ],
+                  // --- END HEALTH SCORE CARD ---
+
+                  // Close Button (Adjusted for light theme)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: Colors.white), // White icon on black button
+                      label: const Text(
+                          'Close',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold) // White text
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black87, // Dark button for contrast
+                        padding: EdgeInsets.symmetric(vertical: sh * 0.018),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: sh * 0.02), // Bottom padding
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  // Add this helper inside _HomescreenState
+  Color _getHealthScoreColor(int score) {
+    // Using the colors defined in nutrition_scanner.dart
+    const Color kSuccessColor = Color(0xFF28A745);
+    const Color kWarningColor = Color(0xFFFFC107);
+    const Color kDangerColor = Color(0xFFDC3545);
+
+    if (score >= 8) return kSuccessColor;
+    if (score >= 5) return kWarningColor;
+    return kDangerColor;
+  }
+// --- END OF METHOD ---
   Widget _comingSoonCard(String title, String desc, IconData icon, double height, double sw, double sh) {
     return GestureDetector(
       onTap: () => _showSnackBar('Feature coming soon!'),

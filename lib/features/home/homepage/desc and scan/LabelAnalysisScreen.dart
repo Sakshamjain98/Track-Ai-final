@@ -7,6 +7,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 // Make sure these import paths are correct for your project
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/features/home/homepage/desc%20and%20scan/gemini.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/routes/routes.dart';
+import '../log/daily_log_provider.dart';
+import '../log/food_log_entry.dart';
 
 // A constant for the teal color
 const Color kPrimaryTeal = Color(0xFF4DD0E1);
@@ -197,14 +201,8 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: _resetAnalysis,
-            // ✅ CHANGED: Light theme icon
-            icon: const Icon(Icons.document_scanner_outlined, color: Colors.black),
-            tooltip: 'Scan New Label',
-          ),
-        ],
+
+
       ),
       body: _showCameraInterface
           ? _buildImageSelector()
@@ -371,105 +369,103 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
 
   // ✅ UPDATED: Light theme loading widget
   Widget _buildLoadingWidget() {
-    return Center(
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(32),
-        decoration: _getCardDecoration(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-              strokeWidth: 3,
+    // Center widget removed
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(32),
+      decoration: _getCardDecoration(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Keep column tight
+        children: [
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+            strokeWidth: 3,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Analyzing your label...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Analyzing your label...',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black,
-                fontWeight: FontWeight.w500,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This may take a few seconds',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'This may take a few seconds',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-
   // ✅ UPDATED: Light theme error widget
   Widget _buildErrorWidget() {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        margin: const EdgeInsets.all(16),
-        decoration: _getCardDecoration(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.warning_amber_rounded,
-                size: 48,
-                color: Colors.orange,
-              ),
+    // Center widget removed
+    return Container(
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(16),
+      decoration: _getCardDecoration(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min, // Keep column tight
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Not a Valid Label',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              size: 48,
+              color: Colors.orange,
             ),
-            const SizedBox(height: 12),
-            Text(
-              _errorMessage ?? 'No valid nutrition label detected.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                height: 1.5,
-              ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Not a Valid Label',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _resetAnalysis,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _errorMessage ?? 'No valid nutrition label detected.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.home); // Navigate home
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('Try Again'),
               ),
+              child: const Text('Try Again'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-
   // --- NEW LABEL RESULTS UI (Matches Screenshots) ---
 
   Widget _buildLabelResults() {
@@ -515,7 +511,40 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () { /* TODO: Add logging logic */ },
+              onPressed: () {
+                // --- START OF NEW LOGIC ---
+                if (_labelData == null) return;
+
+                // 1. Get the provider
+                final logProvider = context.read<DailyLogProvider>();
+                final nutrients = _labelData!['nutrientBreakdown'] ?? {};
+
+                // 2. Create the log entry
+                final entry = FoodLogEntry(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: _labelData!['productName'] ?? 'Scanned Label',
+                  calories: _labelData!['calories'] ?? 0,
+                  protein: (nutrients['protein'] ?? 0).toInt(),
+                  carbs: (nutrients['carbohydrates'] ?? 0).toInt(),
+                  fat: (nutrients['fat'] ?? 0).toInt(),
+                  fiber: (nutrients['fiber'] ?? 0).toInt(),
+                  timestamp: DateTime.now(),
+                  imagePath: _selectedImage?.path, // Get the path from the selected image
+                );
+
+                // 3. Add to the log
+                logProvider.addEntry(entry);
+
+                // 4. Show success and go back
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${entry.name} logged!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                Navigator.pop(context);
+                // --- END OF NEW LOGIC ---
+              },
               icon: const Icon(Icons.add_circle_outline, color: Colors.white),
               label: const Text(
                   'Log 1 Serving',
@@ -791,53 +820,106 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
   }
 
   Widget _buildOtherNutrients(List<dynamic>? vitamins, List<dynamic>? minerals) {
-    vitamins = vitamins ?? ['N/A'];
-    minerals = minerals ?? ['N/A'];
+    vitamins = vitamins ?? []; // Default to empty list
+    minerals = minerals ?? []; // Default to empty list
 
+    List<Widget> nutrientWidgets = [];
+
+    // Add vitamins if they exist
+    if (vitamins.isNotEmpty) {
+      nutrientWidgets.add(
+        const Text(
+          'Vitamins',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+      nutrientWidgets.add(const SizedBox(height: 8));
+      nutrientWidgets.addAll(
+        vitamins.map((v) => _buildNutrientListItem(v.toString())).toList(),
+      );
+    }
+
+    // Add minerals if they exist
+    if (minerals.isNotEmpty) {
+      // Add space between the two lists
+      if (nutrientWidgets.isNotEmpty) {
+        nutrientWidgets.add(const SizedBox(height: 16));
+      }
+
+      nutrientWidgets.add(
+        const Text(
+          'Minerals',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+      nutrientWidgets.add(const SizedBox(height: 8));
+      nutrientWidgets.addAll(
+        minerals.map((m) => _buildNutrientListItem(m.toString())).toList(),
+      );
+    }
+
+    // Show a message if both lists are empty
+    if (nutrientWidgets.isEmpty) {
+      nutrientWidgets.add(
+        Text(
+          'No additional vitamin or mineral data available.',
+          style: TextStyle(color: Colors.grey[700], fontSize: 14),
+        ),
+      );
+    }
+
+    // Return the section wrapped in the card
     return _buildTitledSection(
       title: 'Other Nutrients',
-      child: Column(
-        children: [
-          _buildSimpleNutrientRow('Vitamins', vitamins.join(', ')),
-          _buildSimpleNutrientRow('Minerals', minerals.join(', ')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleNutrientRow(String label, String value) {
-    return Container(
+      child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
-        // ✅ CHANGED: Use card decoration
         decoration: _getCardDecoration(),
         margin: const EdgeInsets.only(bottom: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                // ✅ CHANGED: Light theme text
-                color: Colors.black,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                // ✅ CHANGED: Light theme text
-                color: Colors.grey[700],
-                fontSize: 14,
-              ),
-            ),
-          ],
-        )
+          children: nutrientWidgets,
+        ),
+      ),
     );
   }
 
+  Widget _buildNutrientListItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0, left: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(
+              color: Colors.grey[800], // Darker dot
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildIngredientInsights(String insights) {
     return _buildTitledSection(
       title: 'Ingredient Insights',

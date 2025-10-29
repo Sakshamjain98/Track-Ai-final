@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/features/home/homepage/desc%20and%20scan/gemini.dart';
 
+import '../../../../core/routes/routes.dart';
 import 'LabelAnalysisScreen.dart';
 
 
@@ -1309,7 +1310,11 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _resetAnalysis,
+              onPressed: (){
+
+            Navigator.pushNamed(context, AppRoutes.home);
+
+            },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
