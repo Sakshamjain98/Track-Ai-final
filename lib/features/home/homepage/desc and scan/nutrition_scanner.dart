@@ -329,9 +329,6 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       HapticFeedback.lightImpact();
     }
   }
-
-  // --- Widget Builders ---
-
   Widget _buildNutritionalEstimate() {
     if (_nutritionData == null) return const SizedBox();
 
@@ -364,7 +361,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
           ),
           const SizedBox(height: 20),
 
-          // Calories
+          // 🍽 Calories card
           Container(
             padding: const EdgeInsets.symmetric(vertical: 24),
             width: double.infinity,
@@ -372,107 +369,107 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               color: kCardColorDarker,
               borderRadius: BorderRadius.circular(12),
             ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center, // Center the Row's content
-                    children: [
-                      Icon(
-                        Icons.local_fire_department,
-                        // 2. Parameters must go *inside* the Icon() parentheses
-                        color: kAccentColor,
-                        size: 24, // Matched size to the text
-                      ),
-                      const SizedBox(width: 8), // Adds spacing between icon and text
-                      const Text(
-                        "Calories",
-                        style: TextStyle(
-                          color: kTextSecondaryColor, // Using your theme's secondary color
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12), // This was correct
-                  Text(
-                    '$calories',
-                    style: const TextStyle(
-                      fontSize: 52,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.cyan, // Kept your color
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.local_fire_department,
+                      color: kAccentColor,
+                      size: 24,
                     ),
-                  ),
-                  const Text(
-                    'kcal',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Calories",
+                      style: TextStyle(
+                        color: kTextSecondaryColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$calories',
+                  style: const TextStyle(
+                    fontSize: 52,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.cyan,
                   ),
-                ],
-              )
+                ),
+                const Text(
+                  'kcal',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
-          // Macronutrients Grid
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-              final childAspectRatio = constraints.maxWidth > 600 ? 1.0 : 1.5;
-
-              return GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: childAspectRatio,
-                children: [
-                  _buildNutrientCard(
-                    'Protein',
-                    '${breakdown['protein_g'] ?? 0}',
-                    'g',
-                    lucide.LucideIcons.zap,
-                   Colors.amber,
-                  ),
-                  _buildNutrientCard(
-                    'Carbs',
-                    '${breakdown['carbohydrates_g'] ?? 0}',
-                    'g',
-                    lucide.LucideIcons.wheat,
-
-                    kSuccessColor,
-                  ),
-                  _buildNutrientCard(
-                    'Fat',
-                    '${breakdown['fat_g'] ?? 0}',
-                    'g',
-                    lucide.LucideIcons.droplet,
-                    Colors.blue,
-                  ),
-                  _buildNutrientCard(
-                    'Fiber',
-                    '${breakdown['fiber_g'] ?? 0}',
-                    'g',
-                    Icons.eco,
-                    const Color(0xFFE37F4A),
-                  ),
-                ],
-              );
-            },
+          // ✅ FIXED: Nutrient Cards without GridView
+          Row(
+            children: [
+              Expanded(
+                child: _buildNutrientCard(
+                  'Protein',
+                  '${breakdown['protein_g'] ?? 0}',
+                  'g',
+                  lucide.LucideIcons.zap,
+                  Colors.amber,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildNutrientCard(
+                  'Carbs',
+                  '${breakdown['carbohydrates_g'] ?? 0}',
+                  'g',
+                  lucide.LucideIcons.wheat,
+                  kSuccessColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildNutrientCard(
+                  'Fat',
+                  '${breakdown['fat_g'] ?? 0}',
+                  'g',
+                  lucide.LucideIcons.droplet,
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildNutrientCard(
+                  'Fiber',
+                  '${breakdown['fiber_g'] ?? 0}',
+                  'g',
+                  Icons.eco,
+                  const Color(0xFFE37F4A),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 24),
 
-          // Log This Meal Button
+          // 🧾 Log meal button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                // Log meal logic
+                // TODO: Add log meal logic
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.cyan,
@@ -498,40 +495,49 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
     );
   }
 
-  Widget _buildNutrientCard(String title, String value, String unit,
-      IconData icon, Color iconColor) {
+
+
+  Widget _buildNutrientCard(
+      String title,
+      String value,
+      String unit,
+      IconData icon,
+      Color iconColor,
+      ) {
     return Container(
       decoration: BoxDecoration(
         color: kCardColorDarker,
         borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 12),
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(height: 6),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
               color: kTextColor,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: kTextColor,
                   ),
@@ -540,7 +546,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
                 Text(
                   unit,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: kTextSecondaryColor,
                   ),
                 ),
@@ -551,6 +557,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       ),
     );
   }
+
 
   Widget _buildHealthScore() {
     if (_nutritionData == null) return const SizedBox();
@@ -765,7 +772,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
 
     return Container(
       decoration: _getCardDecoration(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(17),
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -903,7 +910,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
           ),
           const SizedBox(height: 20),
 
-          // Ingredients List
+          // Ingredients List with new card style
           ..._editableIngredients.asMap().entries.map((entry) {
             final index = entry.key;
             final ingredient = entry.value;
@@ -995,13 +1002,32 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: kCardColorDarker,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(Icons.eco, color: kSuccessColor, size: 24),
+          // Ingredient icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: kCardColorDarker,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.eco, color: kSuccessColor, size: 20),
+          ),
           const SizedBox(width: 12),
+
+          // Ingredient name and weight
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1025,9 +1051,13 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               ],
             ),
           ),
+
+          // Delete button
           IconButton(
             onPressed: () => _removeIngredient(index),
             icon: Icon(Icons.delete_outline, color: kDangerColor),
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
@@ -1255,8 +1285,8 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
                 child: ElevatedButton(
                   onPressed: _resetAnalysis,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kCardColor,
-                    foregroundColor: kAccentColor,
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
