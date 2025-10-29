@@ -471,7 +471,7 @@ class _BodyCompositionAnalyzerState extends State<BodyCompositionAnalyzer> {
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: isDark ? Colors.grey[900] : Colors.grey[200],
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
               children: _unitOptions.map((option) =>

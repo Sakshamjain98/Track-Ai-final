@@ -63,50 +63,63 @@ Return the information in this EXACT JSON format:
       final imageBytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
-      // This is the prompt from your *previous* message,
-      // which is required by your NutritionScannerScreen.dart
-      final prompt = """
+      final prompt = '''
 First, carefully examine this image to determine if it contains food items.
+
 IMPORTANT: You MUST respond with ONLY a valid JSON object, no additional text, markdown, or code blocks.
+
 If the image does NOT contain food (like objects, people, scenery, etc.), respond with:
 {
   "isFood": false,
   "errorMessage": "I can only analyze food items. The image you provided appears to contain [describe what you see]. Please upload an image of food for analysis."
 }
-If the image DOES contain food, respond with this EXACT JSON structure, estimating values from the image:
+
+If the image DOES contain food, respond with this EXACT JSON structure:
 {
   "isFood": true,
-  "foodName": "e.g., 'Large Vegetable Salad'",
-  "totalEstimatedWeight_g": 2730,
-  "healthScore": 8,
-  "healthDescription": "Brief health assessment explaining the score. e.g., 'This meal is very healthy due to its high volume of diverse vegetables and fruits, providing a wide range of vitamins, minerals, and fiber. It is low in processed ingredients and saturated fat...'",
-  "descriptionAnalysis": "Detailed analysis of the meal. e.g., 'This meal is very healthy due to its high volume of diverse vegetables and fruits... The sugar content is moderate, primarily from natural sources.'",
-  
+  "foodName": "e.g., Avocado Toast with Egg",
+  "totalEstimatedWeight_g": 350,
+  "healthScore": 7,
+  "healthDescription": "This avocado toast with egg is a relatively healthy meal. It provides healthy fats from avocado, protein from the egg, and fiber from the whole-wheat toast. However, the overall health score could be improved by adding more vegetables and reducing the amount of salt and oil.",
+  "description": "This avocado toast with egg consists of whole-wheat toast topped with mashed avocado and sliced hard-boiled egg. The avocado provides healthy monounsaturated fats, fiber, and several vitamins and minerals. The egg is a good source of protein and essential nutrients. The whole-wheat toast provides complex carbohydrates and fiber. The meal is seasoned with salt, pepper, and possibly red pepper flakes.",
   "nutritionalBreakdown": {
-    "calories": 879,
-    "protein_g": 30,
-    "carbohydrates_g": 210,
-    "fat_g": 8,
-    "fiber_g": 65
+    "calories": 350,
+    "protein_g": 15,
+    "carbohydrates_g": 30,
+    "fat_g": 20,
+    "fiber_g": 7
   },
-  
   "ingredients": [
-    {"name": "Red Bell Pepper", "weight_g": 300},
-    {"name": "Red Grapes", "weight_g": 250},
-    {"name": "Cucumber", "weight_g": 400},
-    {"name": "Tomato", "weight_g": 300},
-    {"name": "Pumpkin", "weight_g": 500},
-    {"name": "Broccoli", "weight_g": 300}
+    {"name": "Whole-Wheat Toast", "weight_g": 60},
+    {"name": "Avocado", "weight_g": 120},
+    {"name": "Egg", "weight_g": 60},
+    {"name": "Salt", "weight_g": 1},
+    {"name": "Pepper", "weight_g": 0.5},
+    {"name": "Red Pepper Flakes", "weight_g": 0.5}
   ],
-  
   "healthBenefits": [
-    {"ingredient": "Broccoli", "benefit": "Broccoli is a cruciferous vegetable rich in vitamins C and K, fiber, and antioxidants. It supports immune function, bone health, and may have cancer-preventive properties."},
-    {"ingredient": "Pumpkin", "benefit": "Pumpkin is an excellent source of vitamin A, fiber, and antioxidants. It supports eye health, digestive health, and may help boost immunity."},
-    {"ingredient": "Red Bell Pepper", "benefit": "Red bell peppers are high in vitamin C and antioxidants, supporting immune function and skin health."}
-  ]
+    {
+      "ingredient": "Avocado",
+      "benefit": "Avocados are rich in healthy monounsaturated fats, fiber, and various vitamins and minerals. They support heart health, improve digestion, and may help with weight management."
+    },
+    {
+      "ingredient": "Egg",
+      "benefit": "Eggs are an excellent source of high-quality protein and contain essential nutrients like choline, vitamin B12, and selenium. They support muscle health, brain function, and overall nutrition."
+    },
+    {
+      "ingredient": "Whole-Wheat Toast",
+      "benefit": "Whole-wheat toast provides complex carbohydrates and fiber, which can help regulate blood sugar levels and promote digestive health."
+    }
+  ],
+  "origin": "International - Popular breakfast/brunch item",
+  "whoShouldEat": "Suitable for most individuals seeking a balanced meal with healthy fats, protein, and fiber. Good for active individuals, health-conscious people, and those looking for sustained energy.",
+  "whoShouldAvoid": "Consult with healthcare provider if you have specific dietary restrictions. People with egg allergies should avoid. Those on low-sodium diets should reduce salt.",
+  "allergenInfo": "Contains: Eggs, Gluten (from wheat). May contain traces of other allergens depending on preparation.",
+  "quickNote": "This meal provides a good balance of macronutrients. The healthy fats from avocado can help with nutrient absorption. Consider adding more vegetables for additional vitamins and minerals."
 }
+
 Remember: Respond with ONLY the JSON object, nothing else.
-""";
+''';
 
       return await _callGeminiVision(prompt, base64Image);
     } catch (e) {

@@ -1077,7 +1077,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
           icon: const Icon(Icons.arrow_back, color: kTextColor),
         ),
         title: Text(
-          _nutritionData?['foodName'] ?? 'Food Scanner',
+          _nutritionData?['foodName'] ?? 'Nutrition Scanner',
           style: const TextStyle(
             color: kTextColor,
             fontWeight: FontWeight.bold,
@@ -1109,7 +1109,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
             Expanded(
               flex: isTablet ? 6 : 7,
               child: Container(
-                color: Colors.grey[100],
+                color: Colors.black,
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1123,7 +1123,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
                       Text(
                         'Ready to Scan Food',
                         style: TextStyle(
-                          color: kTextColor,
+                          color: Colors.grey,
                           fontSize: isTablet ? 24 : 18,
                           fontWeight: FontWeight.w500,
                         ),

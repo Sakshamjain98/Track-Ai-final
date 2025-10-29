@@ -76,14 +76,16 @@ class _AIMealPlannerState extends State<AIMealPlanner> {
     '30 Days'
   ];
   final List<String> _dietOptions = [
-    'No Specific Diet',
+
+
     'Vegetarian',
-    'Non-Vegetarian',
     'Vegan',
     'Keto',
     'Paleo',
     'Gluten-Free',
     'Dairy-Free',
+    'No Specific Diet',
+    'Non-Vegetarian',
   ];
 
   // --- TOTAL STEPS UPDATED ---
