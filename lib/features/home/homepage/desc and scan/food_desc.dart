@@ -7,10 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/features/home/homepage/desc%20and%20scan/gemini.dart';
 
+import 'LabelAnalysisScreen.dart';
+
 
 class FoodDescriptionScreen extends StatefulWidget {
-  const FoodDescriptionScreen({Key? key}) : super(key: key);
-
+  final File? imageFile;
+  const FoodDescriptionScreen({Key? key, this.imageFile, }) : super(key: key);
   @override
   State<FoodDescriptionScreen> createState() => _FoodDescriptionScreenState();
 }
@@ -35,8 +37,12 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
   bool _showCameraInterface = true;
 
   @override
+  @override
   void initState() {
     super.initState();
+
+    // --- FIX 1: Initialize controllers FIRST and ALWAYS ---
+    // These must be initialized outside the 'if' block.
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -55,6 +61,21 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+
+    // Now, check if an image was passed in.
+    if (widget.imageFile != null) {
+
+      // Correctly call setState
+      setState(() {
+        _selectedImage = widget.imageFile;
+        _showCameraInterface = false; // Bypass the selector
+      });
+
+      // Call analysis *after* the state is set and the frame is built
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _analyzeFood();
+      });
+    }
   }
 
   @override
@@ -971,7 +992,13 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
                     child: _buildHorizontalActionButton(
                       icon: Icons.document_scanner_outlined,
                       title: 'Scan Label',
-                      onTap: () => _pickImage(ImageSource.camera),
+                      // Example: Inside your _buildHorizontalActionButton 'onTap'
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LabelAnalysisScreen()),
+                        );
+                      },
                       color: Colors.black,
                     ),
                   ),

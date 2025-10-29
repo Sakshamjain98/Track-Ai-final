@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/services/auth_services.dart';
@@ -15,6 +18,7 @@ import 'package:trackai/features/admin/services/announcement_notification_servic
 import 'package:trackai/core/routes/routes.dart';
 
 import '../../../library/presentation/library_screen.dart';
+import 'desc and scan/LabelAnalysisScreen.dart';
 import 'desc and scan/nutrition_scanner.dart';
 
 class HomePage extends StatefulWidget {
@@ -33,10 +37,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late Animation<double> _fabExpandAnimation;
   late Animation<Offset> _fabSlideAnimation1;
   late Animation<Offset> _fabSlideAnimation2;
+
+  late Animation<Offset> _fabSlideAnimation3;
+
   late Animation<double> _fabRotationAnimation;
   bool _isFabExpanded = false;
   bool _patternBackgroundEnabled = false;
   late List<Widget> _pages;
+
 
   int _currentStreak = 0;
   int _longestStreak = 0;
@@ -123,6 +131,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             curve: const Interval(0.2, 0.9, curve: Curves.easeOutBack),
           ),
         );
+    _fabSlideAnimation3 = Tween<Offset>(
+      begin: const Offset(0.4, 0.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _fabExpandController,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+    ));
+
 
     _fabRotationAnimation = Tween<double>(begin: 0.0, end: 0.125).animate(
       CurvedAnimation(parent: _fabExpandController, curve: Curves.easeInOut),
@@ -141,6 +157,60 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     setState(() {
       _patternBackgroundEnabled = enabled;
     });
+  }
+
+  Future<File?> _pickImageForAnalysis(BuildContext context) async {
+    final ImagePicker picker = ImagePicker();
+    File? imageFile;
+
+    // Show the source selection dialog
+    final ImageSource? source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null) return null; // User cancelled the dialog
+
+    // Pick the image
+    try {
+      final XFile? xFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (xFile != null) {
+        imageFile = File(xFile.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick image: $e')),
+        );
+      }
+    }
+
+    return imageFile;
   }
 
   Future<void> _loadStreakData() async {
@@ -198,23 +268,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     HapticFeedback.lightImpact();
   }
 
+// In _HomePageState, replace the old methods with these:
+
   void _onDescribeFood() async {
-    _toggleFabExpansion();
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (mounted) {
+    _toggleFabExpansion(); // Close the FAB
+    final File? imageFile = await _pickImageForAnalysis(context);
+
+    if (imageFile != null && mounted) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const FoodDescriptionScreen()),
+        MaterialPageRoute(
+          builder: (context) => FoodDescriptionScreen(imageFile: imageFile),
+        ),
       );
     }
   }
 
   void _onScanNutrition() async {
-    _toggleFabExpansion();
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (mounted) {
+    _toggleFabExpansion(); // Close the FAB
+    final File? imageFile = await _pickImageForAnalysis(context);
+
+    if (imageFile != null && mounted) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => NutritionScannerScreen(),
+          builder: (context) => NutritionScannerScreen(imageFile: imageFile),
+        ),
+      );
+    }
+  }
+
+  // NEW METHOD
+  void _onScanLabel() async {
+    _toggleFabExpansion(); // Close the FAB
+    final File? imageFile = await _pickImageForAnalysis(context);
+
+    if (imageFile != null && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => LabelAnalysisScreen(imageFile: imageFile),
         ),
       );
     }
@@ -238,85 +328,84 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   void _showStreakDialog(bool isDark, double font(double size)) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBackground(isDark),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: AppColors.primary(isDark).withOpacity(0.2),
-            width: 1,
+      builder: (context) =>
+          AlertDialog(
+            backgroundColor: AppColors.cardBackground(isDark),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: AppColors.primary(isDark).withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.local_fire_department,
+                  color: AppColors.primary(isDark),
+                  size: font(0.06),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Streak Stats',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(isDark),
+                    fontWeight: FontWeight.bold,
+                    fontSize: font(0.05),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStreakStatRow(
+                  'Current Streak',
+                  '$_currentStreak days',
+                  Icons.whatshot,
+                  isDark,
+                  font,
+                ),
+                const SizedBox(height: 16),
+                _buildStreakStatRow(
+                  'Longest Streak',
+                  '$_longestStreak days',
+                  Icons.emoji_events,
+                  isDark,
+                  font,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Keep logging in daily to maintain your streak!',
+                  style: TextStyle(
+                    color: AppColors.textSecondary(isDark),
+                    fontSize: font(0.035),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: AppColors.primary(isDark),
+                    fontSize: font(0.04),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        title: Row(
-          children: [
-            Icon(
-              Icons.local_fire_department,
-              color: AppColors.primary(isDark),
-              size: font(0.06),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Streak Stats',
-              style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontWeight: FontWeight.bold,
-                fontSize: font(0.05),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildStreakStatRow(
-              'Current Streak',
-              '$_currentStreak days',
-              Icons.whatshot,
-              isDark,
-              font,
-            ),
-            const SizedBox(height: 16),
-            _buildStreakStatRow(
-              'Longest Streak',
-              '$_longestStreak days',
-              Icons.emoji_events,
-              isDark,
-              font,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Keep logging in daily to maintain your streak!',
-              style: TextStyle(
-                color: AppColors.textSecondary(isDark),
-                fontSize: font(0.035),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Close',
-              style: TextStyle(
-                color: AppColors.primary(isDark),
-                fontSize: font(0.04),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _buildStreakStatRow(
-    String title,
-    String value,
-    IconData icon,
-    bool isDark,
-    double Function(double) font,
-  ) {
+  Widget _buildStreakStatRow(String title,
+      String value,
+      IconData icon,
+      bool isDark,
+      double Function(double) font,) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -347,8 +436,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
+    final screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
 
     double font(double size) => screenWidth * size;
     double space(double h) => screenHeight * h;
@@ -403,11 +498,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(
-    bool isDark,
-    ThemeProvider themeProvider,
-    double Function(double) font,
-  ) {
+  PreferredSizeWidget _buildAppBar(bool isDark,
+      ThemeProvider themeProvider,
+      double Function(double) font,) {
     return AppBar(
       automaticallyImplyLeading: false,
       elevation: 0,
@@ -446,12 +539,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       actions: [
         // Announcements bell icon with unseen count
         StreamBuilder<int>(
-          stream: AnnouncementNotificationService.getUnseenAnnouncementsCountStream(),
+          stream: AnnouncementNotificationService
+              .getUnseenAnnouncementsCountStream(),
           builder: (context, snapshot) {
             final unseenCount = snapshot.data ?? 0;
-            
+
             return GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.announcements),
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.announcements),
               child: Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
@@ -513,7 +608,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             );
           },
         ),
-        
+
         // Streak stats (fire icon)
         GestureDetector(
           onTap: () => _showStreakDialog(isDark, font),
@@ -529,43 +624,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
             child: _isLoadingStreak
                 ? Container(
-                    padding: const EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: font(0.04),
-                      height: font(0.04),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
-                      ),
-                    ),
-                  )
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: font(0.04),
+                height: font(0.04),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                ),
+              ),
+            )
                 : Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.local_fire_department,
-                          color: Colors.red,
-                          size: font(0.06),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _currentStreak > 99
-                              ? '99+'
-                              : _currentStreak.toString(),
-                          style: TextStyle(
-                            color: isDark ? Colors.white : Colors.black,
-                            fontSize: font(0.04),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_fire_department,
+                    color: Colors.red,
+                    size: font(0.06),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _currentStreak > 99
+                        ? '99+'
+                        : _currentStreak.toString(),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontSize: font(0.04),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ],
+              ),
+            ),
           ),
         ),
         // Container(
@@ -643,189 +738,255 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildExpandableFAB(bool isDark, double Function(double) font) {
-  return AnimatedBuilder(
-    animation: _fabExpandController,
-    builder: (context, child) {
-      return Stack(
-        alignment: Alignment.bottomRight,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (_fabExpandController.value > 0.0)
-                SlideTransition(
-                  position: _fabSlideAnimation2,
-                  child: FadeTransition(
-                    opacity: _fabExpandAnimation,
-                    child: GestureDetector(
-                      onTap: _onScanNutrition,
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 16, bottom: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground(isDark)
-                                    .withOpacity(0.95),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+    return AnimatedBuilder(
+      animation: _fabExpandController,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_fabExpandController.value > 0.0)
+                  SlideTransition(
+                    position: _fabSlideAnimation2,
+                    child: FadeTransition(
+                      opacity: _fabExpandAnimation,
+                      child: GestureDetector(
+                        onTap: _onScanNutrition,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 16, bottom: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBackground(isDark)
+                                      .withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'Scan Nutrition',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(isDark),
+                                    fontSize: font(0.035),
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ],
-                              ),
-                              child: Text(
-                                'Scan Nutrition',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary(isDark),
-
-                                  fontSize: font(0.035),
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground(isDark)
-                                    .withOpacity(0.95),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBackground(isDark)
+                                      .withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.qr_code_scanner,
+                                  color: const Color(0xFF26A69A),
+                                  size: font(0.05),
+                                ),
                               ),
-                              child: Icon(
-                                Icons.qr_code_scanner,
-                                color: const Color(0xFF26A69A),
-                                size: font(0.05),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              if (_fabExpandController.value > 0.0)
-                SlideTransition(
-                  position: _fabSlideAnimation1,
-                  child: FadeTransition(
-                    opacity: _fabExpandAnimation,
-                    child: GestureDetector(
-                      onTap: _onDescribeFood,
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 16, bottom: 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground(isDark)
-                                    .withOpacity(0.95),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                if (_fabExpandController.value > 0.0)
+                  SlideTransition(
+                    position: _fabSlideAnimation1,
+                    child: FadeTransition(
+                      opacity: _fabExpandAnimation,
+                      child: GestureDetector(
+                        onTap: _onScanLabel,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 16, bottom: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBackground(isDark)
+                                      .withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'Scan Label',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(isDark),
+                                    fontSize: font(0.035),
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ],
-                              ),
-                              child: Text(
-                                'Describe Food',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary(isDark),
-                                  fontSize: font(0.035),
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground(isDark)
-                                    .withOpacity(0.95),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBackground(isDark)
+                                      .withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.document_scanner_outlined,
+                                  color: const Color(0xFF26A69A),
+                                  size: font(0.05),
+                                ),
                               ),
-                              child: Icon(
-                                Icons.restaurant_menu,
-                                color: const Color(0xFF26A69A),
-                                size: font(0.05),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              AnimatedBuilder(
-                animation: _fabAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _fabAnimation.value,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: FloatingActionButton(
-                        heroTag: "main_fab",
-                        onPressed: _toggleFabExpansion,
-                        backgroundColor: AppColors.primary(isDark), // Changed from green to theme-based color
-                        child: AnimatedBuilder(
-                          animation: _fabRotationAnimation,
-                          builder: (context, child) {
-                            return Transform.rotate(
-                              angle:
-                                  _fabRotationAnimation.value * 2 * 3.14159,
-                              child: Icon(
-                                Icons.add,
-                                color: AppColors.textPrimary(isDark), // Ensures white in dark, black in light
-                                size: font(0.07),
+                if (_fabExpandController.value > 0.0)
+                  SlideTransition(
+                    position: _fabSlideAnimation1,
+                    child: FadeTransition(
+                      opacity: _fabExpandAnimation,
+                      child: GestureDetector(
+                        onTap: _onDescribeFood,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 16, bottom: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBackground(isDark)
+                                      .withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'Describe Food',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(isDark),
+                                    fontSize: font(0.035),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
-                            );
-                          },
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBackground(isDark)
+                                      .withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.restaurant_menu,
+                                  color: const Color(0xFF26A69A),
+                                  size: font(0.05),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      );
-    },
-  );
-}
+                  ),
+                AnimatedBuilder(
+                  animation: _fabAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _fabAnimation.value,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8, right: 16),
+                        child: FloatingActionButton(
+                          heroTag: "main_fab",
+                          onPressed: _toggleFabExpansion,
+                          backgroundColor: AppColors.primary(isDark),
+                          child: AnimatedBuilder(
+                            animation: _fabRotationAnimation,
+                            builder: (context, child) {
+                              return Transform.rotate(
+                                angle: _fabRotationAnimation.value * 2 *
+                                    3.14159,
+                                child: Icon(
+                                  Icons.add,
+                                  color: AppColors.textPrimary(isDark),
+                                  size: font(0.07),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
-class PatternBackgroundPainter extends CustomPainter {
+  class PatternBackgroundPainter extends CustomPainter {
   final Color color;
   PatternBackgroundPainter({required this.color});
 

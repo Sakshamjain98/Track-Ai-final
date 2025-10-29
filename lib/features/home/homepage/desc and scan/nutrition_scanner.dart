@@ -19,7 +19,8 @@ const Color kDangerColor = Color(0xFFDC3545);
 // -----------------------------------------
 
 class NutritionScannerScreen extends StatefulWidget {
-  const NutritionScannerScreen({Key? key}) : super(key: key);
+  final File? imageFile;
+  const NutritionScannerScreen({Key? key,this.imageFile,}) : super(key: key);
 
   @override
   State<NutritionScannerScreen> createState() => _NutritionScannerScreenState();
@@ -50,8 +51,11 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
   final _ingredientWeightController = TextEditingController();
 
   @override
+  @override
   void initState() {
     super.initState();
+
+    // --- 1. Initialize controllers first ---
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -70,6 +74,19 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+
+    // --- 2. Add this logic to check for the passed image ---
+    if (widget.imageFile != null) {
+      setState(() {
+        _selectedImage = widget.imageFile;
+        _showCameraInterface = false; // Bypass the selector
+      });
+
+      // Call analysis after the first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _analyzeFoodImage();
+      });
+    }
   }
 
   @override

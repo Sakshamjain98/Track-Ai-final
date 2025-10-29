@@ -253,8 +253,8 @@ If it is a valid nutrition label, respond with this EXACT JSON structure:
     "sodium": 0
   },
   "otherNutrients": ["nutrient1", "nutrient2"],
-  "vitamins": ["vitamin1", "vitamin2"],
-  "minerals": ["mineral1", "mineral2"],
+ "vitamins": ["e.g., Vitamin D (10% DV)", "e.g., Calcium (20% DV)"],
+  "minerals": ["e.g., Iron (8% DV)", "e.g., Potassium (5% DV)"],
   "ingredientInsights": "analysis of key ingredients and their health implications"
 }
 """;
