@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-// Note: Assuming 'gemini.dart' and 'appcolors.dart' paths are correct in your project
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/features/home/homepage/desc%20and%20scan/gemini.dart';
 
@@ -30,8 +29,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
 
   // AI Data Structure
   Map<String, dynamic>? _aiData;
-  // State variable to control the display of the initial camera interface
-  bool _showCameraInterface = true;
 
   @override
   void initState() {
@@ -81,8 +78,7 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     );
   }
 
-  // UPDATED: Added analysisType parameter for future logic differentiation
-  Future<void> _pickImage(ImageSource source, {String analysisType = 'food'}) async {
+  Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? image = await _picker.pickImage(
         source: source,
@@ -97,20 +93,17 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
           _analysisResult = null;
           _isNotFood = false;
           _aiData = null;
-          // Hide the camera interface once an image is picked
-          _showCameraInterface = false;
         });
 
         HapticFeedback.lightImpact();
-        await _analyzeFood(analysisType: analysisType);
+        await _analyzeFood();
       }
     } catch (e) {
       _showErrorSnackBar('Failed to pick image: $e');
     }
   }
 
-  // UPDATED: Added analysisType parameter
-  Future<void> _analyzeFood({String analysisType = 'food'}) async {
+  Future<void> _analyzeFood() async {
     if (_selectedImage == null) return;
 
     setState(() {
@@ -118,8 +111,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     });
 
     try {
-      // Logic for calling different Gemini API methods would be here
-      // For now, using describeFoodFromImage for all, but keeping analysisType for future expansion
       final result = await _gemini.describeFoodFromImage(_selectedImage!);
 
       try {
@@ -161,17 +152,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       _showErrorSnackBar('Analysis failed: $e');
     }
   }
-
-  // Helper to remove prefixes the AI sometimes includes in the value string
-  String _cleanInternalPrefixes(String text) {
-    // Targets known problematic prefixes from the AI's response values.
-    text = text.replaceAll(
-        RegExp(r'^\s*(description|healthDescription|origin|whoShouldEat|whoShouldAvoid|quickNote|allergenInfo)[:\s]*',
-            caseSensitive: false),
-        '');
-    return text.trim();
-  }
-
   void _parseAIResponse(String response) {
     try {
       final jsonData = json.decode(response);
@@ -187,23 +167,16 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
 
       setState(() {
         _aiData = {
-          'foodName': jsonData['foodName'] ?? 'Food Item',
           'healthScore': jsonData['healthScore'] ?? 5,
-          // Apply internal cleaning, but DO NOT limit length for description blocks (limitLength: false)
-          'healthDescription': _cleanText(_cleanInternalPrefixes(jsonData['healthDescription'] ?? 'No health description available'), limitLength: false),
-          'description': _cleanText(_cleanInternalPrefixes(jsonData['description'] ?? 'No description available'), limitLength: false),
-
-          // Apply limitLength: true (default) for ingredient list items
+          'healthDescription': _cleanText(jsonData['healthDescription'] ?? 'No health description available'),
+          'description': _cleanText(jsonData['description'] ?? 'No description available'),
           'ingredients': List<String>.from(jsonData['ingredients'] ?? ['No ingredients listed'])
               .map((ingredient) => _cleanText(ingredient))
               .toList(),
-
-          'origin': _cleanText(_cleanInternalPrefixes(jsonData['origin'] ?? 'Unknown'), limitLength: false),
-          'whoShouldEat': _cleanInternalPrefixes(jsonData['whoShouldEat'] ?? 'General population'),
-          'whoShouldAvoid': _cleanInternalPrefixes(jsonData['whoShouldAvoid'] ?? 'No specific restrictions'),
-          'allergenInfo': _cleanInternalPrefixes(jsonData['allergenInfo'] ?? 'No allergen information available'),
-          'quickNote': _cleanInternalPrefixes(jsonData['quickNote'] ?? 'No additional notes'),
-          'nutritionalBreakdown': jsonData['nutritionalBreakdown'] ?? null,
+          'origin': _cleanText(jsonData['origin'] ?? 'Unknown'),
+          'whoShouldEat': jsonData['whoShouldEat'] ?? 'General population',
+          'whoShouldAvoid': jsonData['whoShouldAvoid'] ?? 'No specific restrictions',
+          'quickNote': jsonData['quickNote'] ?? 'No additional notes',
         };
         _isNotFood = false;
       });
@@ -212,22 +185,20 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       _parseTextResponse(response);
     }
   }
-
-  // FIX: Added limitLength parameter to control text truncation only on short fields
-  String _cleanText(String text, {bool limitLength = true}) {
-    // Remove JSON-like artifacts
+  String _cleanText(String text) {
+    // Remove quotation marks and brackets from ingredients
     text = text
         .replaceAll('"', '')
         .replaceAll('[', '')
         .replaceAll(']', '')
+    // FIX: Move the dash to the start of the character class to remove the range ambiguity.
         .replaceAll(RegExp(r'^[-:\s]+'), '') // Remove leading dashes, colons, whitespace
-        .replaceAll(RegExp(r'[-:\s]+$'), '') // Remove trailing dashes, colons, whitespace
-        .trim();
+        .replaceAll(RegExp(r'[-:\s]+$'), ''); // Remove trailing dashes, colons, whitespace
 
-    // Only apply character limit if explicitly requested
-    if (limitLength && text.length > 300) {
+    // Limit description to approximately 6-7 lines
+    if (text.length > 300) { // Approximate character limit for 6-7 lines
       // Ensure we don't end the substring on a partial word before adding '...'
-      int safeLength = text.lastIndexOf(' ', 300);
+      int safeLength = text.substring(0, 300).lastIndexOf(' ');
       if (safeLength > 0) {
         text = text.substring(0, safeLength) + '...';
       } else {
@@ -237,7 +208,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
 
     return text;
   }
-
   void _parseTextResponse(String response) {
     try {
       Map<String, dynamic> parsedData = {};
@@ -247,35 +217,33 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
           ? int.parse(healthScoreMatch.group(1)!)
           : 5;
 
-      // Apply limitLength: false for descriptive blocks
-      parsedData['healthDescription'] = _cleanText(_cleanInternalPrefixes(_extractSection(response,
+      parsedData['healthDescription'] = _cleanText(_extractSection(response,
           ['Health Description', 'Health Score Description'],
-          'This food item has been analyzed for nutritional value.')), limitLength: false);
+          'This food item has been analyzed for nutritional value.'));
 
-      parsedData['description'] = _cleanText(_cleanInternalPrefixes(_extractSection(response,
+      parsedData['description'] = _cleanText(_extractSection(response,
           ['Description', 'Food Description'],
-          'Food item description not available.')), limitLength: false);
+          'Food item description not available.'));
 
-      // Apply limitLength: true (default) for ingredient list items
       parsedData['ingredients'] = _extractIngredients(response)
           .map((ingredient) => _cleanText(ingredient))
           .toList();
 
-      parsedData['origin'] = _cleanText(_cleanInternalPrefixes(_extractSection(response,
+      parsedData['origin'] = _cleanText(_extractSection(response,
           ['Origin', 'Country of Origin'],
-          'Origin information not available.')), limitLength: false);
+          'Origin information not available.'));
 
-      parsedData['whoShouldEat'] = _cleanInternalPrefixes(_extractSection(response,
+      parsedData['whoShouldEat'] = _extractSection(response,
           ['Who Should Eat', 'Who Should Prefer', 'Recommended For', 'Good For'],
-          'Suitable for most individuals.'));
+          'Suitable for most individuals.');
 
-      parsedData['whoShouldAvoid'] = _cleanInternalPrefixes(_extractSection(response,
+      parsedData['whoShouldAvoid'] = _extractSection(response,
           ['Who Should Avoid', 'Not Recommended For', 'Avoid If'],
-          'Consult with healthcare provider if you have specific dietary restrictions.'));
+          'Consult with healthcare provider if you have specific dietary restrictions.');
 
-      parsedData['quickNote'] = _cleanInternalPrefixes(_extractSection(response,
+      parsedData['quickNote'] = _extractSection(response,
           ['Quick Note', 'Fun Fact', 'Did You Know'],
-          'Nutritional information based on standard serving size.'));
+          'Nutritional information based on standard serving size.');
 
       setState(() {
         _aiData = parsedData;
@@ -354,8 +322,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       _analysisResult = null;
       _isNotFood = false;
       _aiData = null;
-      // Show the camera interface when analysis is reset
-      _showCameraInterface = true;
     });
     _slideController.reset();
     _fadeController.reset();
@@ -404,7 +370,9 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
                   color: Colors.black,
                 ),
               ),
+              const SizedBox(height: 8),
             ],
+
           ),
           const SizedBox(height: 12),
           Container(
@@ -419,7 +387,7 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
                   height: 8,
                   width: MediaQuery.of(context).size.width * (_aiData!['healthScore'] / 10),
                   decoration: BoxDecoration(
-                    color: _getHealthScoreColor(_aiData!['healthScore']),
+                    color: Colors.green[400],
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -427,6 +395,7 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
             ),
           ),
           const SizedBox(height: 8),
+
           Text(
             _aiData!['healthDescription'],
             style: const TextStyle(
@@ -438,13 +407,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
         ],
       ),
     );
-  }
-
-  Color _getHealthScoreColor(int score) {
-    if (score >= 8) return Colors.green[400]!;
-    if (score >= 6) return Colors.lightGreen[400]!;
-    if (score >= 4) return Colors.orange[400]!;
-    return Colors.red[400]!;
   }
 
   Widget _buildDescriptionSection() {
@@ -534,7 +496,7 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('• ', style: TextStyle(fontSize: 20, color: Colors.black)),
+                        const Text('• ', style: TextStyle(fontSize: 14, color: Colors.black)),
                         Expanded(
                           child: Text(
                             ingredient,
@@ -738,83 +700,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
     );
   }
 
-  Widget _buildNutritionalBreakdownSection() {
-    if (_aiData?['nutritionalBreakdown'] == null) return const SizedBox();
-
-    final nutrition = _aiData!['nutritionalBreakdown'];
-
-    return Container(
-      decoration: _getCardDecoration(),
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.health_and_safety, color: Colors.purple[600], size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Nutritional Breakdown',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                _buildNutritionRow('Calories', '${nutrition['calories'] ?? 'N/A'} kcal'),
-                _buildNutritionRow('Protein', '${nutrition['protein'] ?? 'N/A'} g'),
-                _buildNutritionRow('Carbohydrates', '${nutrition['carbohydrates'] ?? 'N/A'} g'),
-                _buildNutritionRow('Fat', '${nutrition['fat'] ?? 'N/A'} g'),
-                _buildNutritionRow('Fiber', '${nutrition['fiber'] ?? 'N/A'} g'),
-                _buildNutritionRow('Sugar', '${nutrition['sugar'] ?? 'N/A'} g'),
-                _buildNutritionRow('Sodium', '${nutrition['sodium'] ?? 'N/A'} mg'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNutritionRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black87,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.black,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -826,9 +711,9 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back, color: Colors.black),
         ),
-        title: Text(
-          _aiData?['foodName'] ?? 'Describe Food',
-          style: const TextStyle(
+        title: const Text(
+          'Describe Food',
+          style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
           ),
@@ -842,162 +727,131 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
             ),
         ],
       ),
-      // Conditional switch between the new camera interface and the analysis view
-      body: _selectedImage == null && _showCameraInterface
+      body: _selectedImage == null
           ? _buildImageSelector()
           : _buildAnalysisView(),
     );
   }
 
-  // --- NEW SPLIT-SCREEN CAMERA INTERFACE ---
   Widget _buildImageSelector() {
-    return Column(
-      children: [
-        // Camera Preview Section (Top 70%)
-        Expanded(
-          flex: 7,
-          child: Container(
-            color: Colors.black,
-            child: Center(
-              // NOTE: In a real app, this is where you would integrate the CameraPreview widget.
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              decoration: _getCardDecoration(),
+              padding: const EdgeInsets.all(20),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.camera_alt,
-                    size: 64,
-                    color: Colors.white.withOpacity(0.7),
+                  const Icon(
+                    Icons.restaurant_menu,
+                    size: 48,
+                    color: Colors.black,
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Ready to Scan',
+                    'Describe Your Food',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Point camera at food or label',
+                    'Take a photo or select from gallery to get detailed food description and insights',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
                       fontSize: 14,
+                      color: Colors.grey[700],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
-
-        // Action Buttons Section (Bottom 30%) - HORIZONTAL LAYOUT
-        Expanded(
-          flex: 3,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  offset: Offset(0, -2),
+            const SizedBox(height: 32),
+            Container(
+              decoration: _getCardDecoration(),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _showImageSourceDialog(),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.add_photo_alternate, size: 40, color: Colors.black),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Select Image',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Camera or Gallery',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Scan Food Button
-                  Expanded(
-                    child: _buildHorizontalActionButton(
-                      icon: Icons.restaurant,
-                      title: 'Scan Food',
-                      // Defaults to 'food' analysis type
-                      onTap: () => _pickImage(ImageSource.camera, analysisType: 'food'),
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 10), // Spacing between buttons
-
-                  // Scan Label Button
-                  Expanded(
-                    child: _buildHorizontalActionButton(
-                      icon: Icons.qr_code_scanner,
-                      title: 'Scan Label',
-                      // Sets analysis type to 'label'
-                      onTap: () => _pickImage(ImageSource.camera, analysisType: 'label'),
-                      color: Colors.blue,
-                    ),
-                  ),
-                  const SizedBox(width: 10), // Spacing between buttons
-
-                  // Choose from Gallery Button
-                  Expanded(
-                    child: _buildHorizontalActionButton(
-                      icon: Icons.photo_library,
-                      title: 'Gallery',
-                      // Defaults to 'food' analysis type for gallery
-                      onTap: () => _pickImage(ImageSource.gallery, analysisType: 'food'),
-                      color: Colors.purple,
-                    ),
-                  ),
-                ],
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  // --- HELPER FOR HORIZONTAL BUTTONS ---
-  Widget _buildHorizontalActionButton({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    required Color color,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          height: 120, // Give the button a fixed height
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+  Future<void> _showImageSourceDialog() async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1,
+          ),
+          title: const Text(
+            'Select Image Source',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 30),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.black),
+                title: const Text('Camera', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.black),
+                title: const Text('Gallery', style: TextStyle(color: Colors.black)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1007,17 +861,16 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Food Image
           Container(
             width: double.infinity,
             height: 200,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: Colors.black.withOpacity(0.1),
                   blurRadius: 6,
-                  offset: Offset(0, 2),
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -1027,7 +880,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
             ),
           ),
           const SizedBox(height: 24),
-
           if (_isAnalyzing) ...[
             _buildLoadingWidget(),
           ] else if (_analysisResult != null) ...[
@@ -1039,131 +891,6 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
               _buildFormattedAnalysis(_analysisResult!),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildAIResults() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Column(
-          children: [
-            // Food Name (if available)
-            if (_aiData?['foodName'] != null)
-              Container(
-                decoration: _getCardDecoration(),
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Icon(Icons.restaurant, color: Colors.amber[600], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _aiData!['foodName'],
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Health Score Section
-            _buildHealthScoreSection(),
-
-            // Description Section
-            _buildDescriptionSection(),
-
-            // Ingredients Section
-            _buildIngredientsSection(),
-
-            // Origin Section
-            _buildOriginSection(),
-
-            // Recommendations Section
-            _buildRecommendationsSection(),
-
-            // Allergen Information (if available)
-            if (_aiData?['allergenInfo'] != null)
-              Container(
-                decoration: _getCardDecoration(),
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.orange[600], size: 20),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Allergen Information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _aiData!['allergenInfo'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Nutritional Breakdown (if available)
-            _buildNutritionalBreakdownSection(),
-
-            // Quick Note Section
-            _buildQuickNoteSection(),
-
-            // Try Another Button
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(top: 8, bottom: 24),
-              child: ElevatedButton(
-                onPressed: _resetAnalysis,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 2,
-                ),
-                child: const Text(
-                  'Analyze Another Food',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1258,6 +985,25 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAIResults() {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          children: [
+            _buildHealthScoreSection(),
+            _buildDescriptionSection(),
+            _buildIngredientsSection(),
+            _buildOriginSection(),
+            _buildRecommendationsSection(),
+            _buildQuickNoteSection(),
+          ],
+        ),
       ),
     );
   }
