@@ -20,10 +20,12 @@
 - [🎯 Business Value](#-business-value-proposition)
 - [📈 Key Metrics](#-key-metrics)
 - [✨ Features](#-comprehensive-feature-set)
-- [🧱 Architecture](#-architecture--folder-structure)
+- [🧱 Architecture](#-architecture--folder-structure)<img width="874" height="565" alt="image" src="https://github.com/user-attachments/assets/0a9a9682-2eb5-463f-8ed9-7bf385f16fac" />
+
 - [⚙️ Installation](#️-installation)
 - [🧠 Tech Stack](#-tech-stack)
 - [📚 API Integrations](#-api-integrations)
+
 - [📄 License](#-license)
 
 ---
