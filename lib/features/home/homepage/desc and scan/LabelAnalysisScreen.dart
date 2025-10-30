@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -511,7 +513,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 // --- START OF NEW LOGIC ---
                 if (_labelData == null) return;
 
@@ -534,7 +536,23 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
 
                 // 3. Add to the log
                 logProvider.addEntry(entry);
-
+// --- 4. NEW: Save to Firestore for Analytics ---
+                try {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user != null) {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .collection('tracking')
+                        .doc('nutrition') // The tracker ID
+                        .collection('entries')
+                        .add(entry.toJson()); // Save the same entry
+                  }
+                } catch (e) {
+                  print("Error saving log to Firestore: $e");
+                  // Optionally show a silent error
+                }
+                // --- END OF NEW LOGIC ---
                 // 4. Show success and go back
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -581,7 +599,9 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             width: double.infinity,
             margin: const EdgeInsets.only(top: 8, bottom: 24),
             child: ElevatedButton(
-              onPressed: _resetAnalysis,
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.home); // Navigate home
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,

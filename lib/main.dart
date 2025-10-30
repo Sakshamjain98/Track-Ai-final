@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 
-import 'package:trackai/features/analytics/analytics_provider.dart';
+import 'package:trackai/features/analytics/screens/progress_overview.dart';
 import 'package:trackai/core/provider/favourite_provider.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/core/routes/routes.dart';
@@ -57,6 +57,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
         ChangeNotifierProvider(create: (_) => DailyLogProvider()),
+
       ],
       child: const MyApp(),
     ),

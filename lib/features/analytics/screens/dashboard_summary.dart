@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
-import 'package:trackai/features/analytics/analytics_provider.dart';
+import 'package:trackai/features/analytics/screens/progress_overview.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 import 'dart:math' as math; // For BMI indicator positioning
 
@@ -492,55 +493,75 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
       ],
     );
   }
-
   Widget _buildTrackerChart(
       BuildContext context,
       String trackerName,
       List<Map<String, dynamic>> data,
       bool isDark,
       ) {
-    // ✅ Safely build FlSpot list
+    // Safely build FlSpot list and parse timestamps
     final List<FlSpot> spots = [];
-    for (int i = 0; i < data.length; i++) {
-      final yVal = data[i]['value'];
-      if (yVal != null && yVal is num) {
+    final List<DateTime?> dates = []; // Store corresponding dates
+
+    // --- Sort data by timestamp ascending ---
+    // Create a mutable copy to sort
+    List<Map<String, dynamic>> sortedData = List.from(data);
+    sortedData.sort((a, b) {
+      final dateA = DateTime.tryParse(a['timestamp']?.toString() ?? '');
+      final dateB = DateTime.tryParse(b['timestamp']?.toString() ?? '');
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1; // Put nulls last (or first if you prefer)
+      if (dateB == null) return -1;
+      return dateA.compareTo(dateB); // Sort oldest to newest
+    });
+    // --- End Sorting ---
+
+
+    for (int i = 0; i < sortedData.length; i++) {
+      final yVal = sortedData[i]['value'];
+      final timestampString = sortedData[i]['timestamp']?.toString();
+      DateTime? entryDate = DateTime.tryParse(timestampString ?? '');
+
+      if (yVal != null && yVal is num && entryDate != null) {
+        // Use index 'i' as the X value for plotting
         spots.add(FlSpot(i.toDouble(), yVal.toDouble()));
+        dates.add(entryDate); // Store the date at the same index
+      } else {
+        // If data is invalid, add a placeholder to keep indices aligned
+        spots.add(FlSpot(i.toDouble(), 0)); // Or handle differently
+        dates.add(null);
       }
     }
 
+
     if (spots.isEmpty) {
+      // Keep the empty state message
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: _getCardDecoration(isDark),
-        height: 120,
+        height: 120, // Keep height consistent
         alignment: Alignment.center,
-        child: Text(
-          'No data logged for this tracker yet.',
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary(isDark),
-          ),
+        child: Text('No data logged for $trackerName yet.',
+          style: TextStyle(fontSize: 14, color: AppColors.textSecondary(isDark)),
+          textAlign: TextAlign.center, // Center text
         ),
       );
     }
 
-    // ✅ Calculate dynamic Y range
+    // Calculate dynamic Y range (unchanged)
     double minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
     double maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-
-    // If all values are same → avoid flat grey area
-    if (minY == maxY) {
-      minY -= 1;
-      maxY += 1;
-    }
-
-    // Add small margin for better visuals
+    if (minY == maxY) { minY -= 1; maxY += 1; }
     final double yRange = maxY - minY;
     minY = (minY - yRange * 0.1).clamp(0, double.infinity);
     maxY += yRange * 0.1;
+    maxY = math.max(maxY, minY + 1); // Ensure maxY is always greater than minY
 
-    // <--- FIX: Changed line color to black/white
-    final Color lineColor = isDark ? Colors.white : Colors.black;
+    final Color lineColor = isDark ? Colors.white : Colors.black; // Line color (unchanged)
+
+    // Determine interval for X-axis labels to avoid clutter
+    final double bottomTitleInterval = (spots.length / 5).ceil().toDouble().clamp(1.0, spots.length.toDouble());
+
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -548,130 +569,106 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Header (unchanged)
           Row(
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: lineColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: lineColor, shape: BoxShape.circle)),
               const SizedBox(width: 8),
-              Text(
-                trackerName,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(isDark),
-                ),
-              ),
+              Text(trackerName, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            _getTrackerUnit(trackerName),
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary(isDark),
-            ),
-          ),
+          Text(_getTrackerUnit(trackerName), style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark))),
           const SizedBox(height: 16),
 
-          // ✅ Chart
+          // Chart
           SizedBox(
-            height: 180,
+            height: 180, // Chart height (unchanged)
             child: LineChart(
               LineChartData(
                 minY: minY,
                 maxY: maxY,
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: true,
-                  horizontalInterval: yRange / 5,
+                gridData: FlGridData( // Grid lines (unchanged)
+                  show: true, drawVerticalLine: true,
+                  horizontalInterval: (maxY - minY) / 5, // Adjust interval based on range
                   verticalInterval: 1,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.withOpacity(0.2),
-                    strokeWidth: 1,
-                  ),
-                  getDrawingVerticalLine: (value) => FlLine(
-                    color: Colors.grey.withOpacity(0.2),
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1),
+                  getDrawingVerticalLine: (value) => FlLine(color: Colors.grey.withOpacity(0.2), strokeWidth: 1),
                 ),
                 titlesData: FlTitlesData(
+                  // Y-Axis Titles (unchanged)
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 36,
+                      showTitles: true, reservedSize: 36,
+                      interval: (maxY - minY) / 5, // Match grid interval
                       getTitlesWidget: (value, meta) => Text(
-                        value.toStringAsFixed(0),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                        ),
+                        value.toStringAsFixed( (maxY - minY) < 5 ? 1 : 0), // Show decimals for small ranges
+                        style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54),
+                        textAlign: TextAlign.right, // Align right
                       ),
                     ),
                   ),
+                  // --- X-Axis Titles (UPDATED) ---
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize:
-                      24, // <--- FIX: Added reserved space for X-axis labels
-                      interval: 1,
+                      reservedSize: 24, // Keep reserved space
+                      interval: bottomTitleInterval, // Show fewer labels if many points
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
-                        if (index >= 0 && index < data.length) {
-                          final record = data[index];
-
-                          // ✨✨✨ START OF FIX ✨✨✨
-                          // Fallback to show the index number if the label is null or empty
-                          final String text = record['label']?.toString() ?? '';
-                          final String fallbackText = value.toInt().toString();
-                          final String displayText =
-                          text.isNotEmpty ? text : fallbackText;
-                          // ✨✨✨ END OF FIX ✨✨✨
-
+                        // Check bounds and if the date exists
+                        if (index >= 0 && index < dates.length && dates[index] != null) {
+                          // Format the date (e.g., "10/30")
+                          final String dateText = DateFormat('M/d').format(dates[index]!);
                           return Padding(
                             padding: const EdgeInsets.only(top: 4.0),
                             child: Text(
-                              displayText, // <-- Use the new display text
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isDark ? Colors.white70 : Colors.black54,
-                              ),
+                              dateText,
+                              style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54),
                             ),
                           );
                         }
-                        return const SizedBox.shrink();
+                        return const SizedBox.shrink(); // Hide label if index out of bounds or date is null
                       },
                     ),
                   ),
-                  topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                  // --- END X-Axis Update ---
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide top
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)), // Hide right
                 ),
-                borderData: FlBorderData(
+                borderData: FlBorderData( // Border (unchanged)
                   show: true,
-                  border:
-                  Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
+                  border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
                 ),
-                lineBarsData: [
+                lineBarsData: [ // Line data (unchanged)
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
                     color: lineColor,
                     barWidth: 2,
-                    dotData: FlDotData(show: true),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: lineColor.withOpacity(0.15),
-                    ),
+                    dotData: FlDotData(show: true), // Show dots on data points
+                    belowBarData: BarAreaData(show: true, color: lineColor.withOpacity(0.15)),
                   ),
                 ],
+                // Optional: Add touch tooltips if desired
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (LineBarSpot touchedSpot) => Colors.blueGrey.withOpacity(0.8), // ✅ Correct type
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final index = spot.spotIndex;
+                        final dateStr = (index >= 0 && index < dates.length && dates[index] != null)
+                            ? DateFormat('MMM d').format(dates[index]!) // e.g. "Oct 30"
+                            : 'Index $index';
+                        return LineTooltipItem(
+                          '${spot.y.toStringAsFixed(1)} on $dateStr',
+                          const TextStyle(color: Colors.white, fontSize: 12),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+
               ),
             ),
           ),
@@ -679,7 +676,6 @@ class _DashboardSummaryPageState extends State<DashboardSummaryPage>
       ),
     );
   }
-
   String _getTrackerUnit(String trackerName) {
     switch (trackerName) {
       case 'Sleep Tracker':

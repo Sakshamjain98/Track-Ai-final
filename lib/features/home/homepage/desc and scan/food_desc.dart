@@ -896,14 +896,7 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          if (_selectedImage != null || _analysisResult != null)
-            IconButton(
-              onPressed: _resetAnalysis,
-              icon: const Icon(Icons.refresh, color: Colors.black),
-              tooltip: 'Start Over',
-            ),
-        ],
+
       ),
       // Conditional switch between the new camera interface and the analysis view
       body: _selectedImage == null && _showCameraInterface
@@ -1208,7 +1201,9 @@ class _FoodDescriptionScreenState extends State<FoodDescriptionScreen>
               width: double.infinity,
               margin: const EdgeInsets.only(top: 8, bottom: 24),
               child: ElevatedButton(
-                onPressed: _resetAnalysis,
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.home); // Navigate home
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,

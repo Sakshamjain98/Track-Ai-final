@@ -12,6 +12,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart' as lucide;
 import 'package:intl/intl.dart';
 import '../homepage/log/daily_log_provider.dart';
 import '../homepage/log/food_log_entry.dart';
+import 'meal_detail_screen.dart';
 const Color kBackgroundColor = Colors.white;
 const Color kCardColor = Color(0xFFF8F9FA);
 const Color kCardColorDarker = Color(0xFFE9ECEF);
@@ -671,8 +672,14 @@ class _HomescreenState extends State<Homescreen> {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact(); // Add feedback on tap
-        _showMealDetailsDialog(entry); // Call the details dialog
-      },
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MealDetailScreen(entry: entry), // Pass the entry
+          ),
+        );
+      // -----------------------------
+    },
       // Make sure the tap hits the whole area
       behavior: HitTestBehavior.opaque,
       child: Container(

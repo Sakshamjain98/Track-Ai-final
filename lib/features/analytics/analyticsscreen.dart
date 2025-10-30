@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
-import 'package:trackai/features/analytics/analytics_provider.dart';
+import 'package:trackai/features/analytics/analytics_provider.dart' hide AnalyticsProvider;
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/analytics/screens/dashboard_summary.dart';
 import 'package:trackai/features/analytics/screens/progress_overview.dart';

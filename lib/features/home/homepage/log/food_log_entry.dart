@@ -1,4 +1,5 @@
 // lib/features/home/models/food_log_entry.dart
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 
 class FoodLogEntry {
   final String id;
@@ -8,12 +9,10 @@ class FoodLogEntry {
   final int carbs;
   final int fat;
   final int fiber;
-  final DateTime timestamp;
-  // --- ADD THESE ---
+  final DateTime timestamp; // Keep this as DateTime
   final int? healthScore;
   final String? healthDescription;
-
-  final String? imagePath; // Path to the saved image file  // ---------------
+  final String? imagePath;
 
   FoodLogEntry({
     required this.id,
@@ -25,13 +24,23 @@ class FoodLogEntry {
     required this.fat,
     required this.fiber,
     required this.timestamp,
-    // --- ADD THESE ---
     this.healthScore,
     this.healthDescription,
-    // ---------------
   });
 
+  // --- MODIFIED fromJson ---
   factory FoodLogEntry.fromJson(Map<String, dynamic> json) {
+    // Read the Timestamp from Firestore and convert to DateTime
+    DateTime parsedTimestamp;
+    if (json['timestamp'] is Timestamp) {
+      parsedTimestamp = (json['timestamp'] as Timestamp).toDate();
+    } else if (json['timestamp'] is String) {
+      // Fallback if it's somehow still saved as a string (e.g., old data)
+      parsedTimestamp = DateTime.tryParse(json['timestamp']) ?? DateTime.now();
+    } else {
+      parsedTimestamp = DateTime.now(); // Default fallback
+    }
+
     return FoodLogEntry(
       id: json['id'],
       name: json['name'],
@@ -40,15 +49,14 @@ class FoodLogEntry {
       carbs: json['carbs'],
       fat: json['fat'],
       fiber: json['fiber'] ?? 0,
-      timestamp: DateTime.parse(json['timestamp']),
-      // --- ADD THESE ---
-      healthScore: json['healthScore'] as int?, // Allow null
-      healthDescription: json['healthDescription'] as String?, // Allow null
-      // ---------------
-      imagePath: json['imagePath'] as String?, // Load the path
+      timestamp: parsedTimestamp, // Use the parsed DateTime
+      healthScore: json['healthScore'] as int?,
+      healthDescription: json['healthDescription'] as String?,
+      imagePath: json['imagePath'] as String?,
     );
   }
 
+  // --- MODIFIED toJson ---
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -58,12 +66,11 @@ class FoodLogEntry {
       'carbs': carbs,
       'fat': fat,
       'fiber': fiber,
-      'timestamp': timestamp.toIso8601String(),
-      // --- ADD THESE ---
+      // Save as Firestore Timestamp object
+      'timestamp': Timestamp.fromDate(timestamp), // <-- THIS IS THE KEY CHANGE
       'healthScore': healthScore,
       'healthDescription': healthDescription,
-      // ---------------
-      'imagePath': imagePath, // Save the path
+      'imagePath': imagePath,
     };
   }
 }
