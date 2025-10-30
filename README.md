@@ -13,22 +13,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/yourusername/trackai.svg?style=flat&color=yellow)](https://github.com/yourusername/trackai)
 
----
-# 🚀 TrackAI - Enterprise Health Intelligence Platform
-
-<div align="center">
-
-![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-3.5+-0175C2?style=for-the-badge&logo=dart&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
-![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=for-the-badge&logo=google&logoColor=white)
-
-**An AI-powered health tracking ecosystem with 11+ specialized trackers, nutrition intelligence, and personalized wellness insights**
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/yourusername/trackai?style=social)](https://github.com/yourusername/trackai)
-
-</div>
 
 ---
 
@@ -62,6 +46,7 @@
 
 **TrackAI** is a production-ready, enterprise-grade Flutter application that transforms personal health management through artificial intelligence and comprehensive tracking capabilities.  
 Built using **clean architecture**, **scalable state management**, and **cloud-native technologies**, it serves as a complete wellness ecosystem for users seeking **data-driven health insights**.
+![IMG-20251030-WA0024](https://github.com/user-attachments/assets/c73e939c-ce41-4e35-b286-9156c963cf8d)
 
 ---
 
