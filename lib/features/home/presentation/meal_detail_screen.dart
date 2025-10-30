@@ -150,11 +150,11 @@ class MealDetailScreen extends StatelessWidget {
             Center(
               child: Column(
                 children: [
-                  Icon(lucide.LucideIcons.flame, color: Colors.cyan, size: sw * 0.07),
+                  Icon(lucide.LucideIcons.flame, color: Colors.black, size: sw * 0.07),
                   SizedBox(height: sh * 0.01),
                   Text(
                     '${entry.calories}',
-                    style: TextStyle(fontSize: sw * 0.12, fontWeight: FontWeight.bold, color: Colors.cyan),
+                    style: TextStyle(fontSize: sw * 0.12, fontWeight: FontWeight.bold, color: Colors.black),
                   ),
                   Text(
                     'kcal',

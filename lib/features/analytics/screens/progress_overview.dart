@@ -1805,11 +1805,48 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
   Widget _buildNutritionCard(AnalyticsProvider provider, bool isDark) {
     final totalCalories = _nutritionData['totalCalories']?.toDouble() ?? 0;
     final dailyAverage = _nutritionData['dailyAverage']?.toDouble() ?? 0;
-    // *** MODIFIED ***: Get the new macro map
     final dailyMacroGrams =
         _nutritionData['dailyMacroGrams'] as Map<String, dynamic>? ??
             <String, dynamic>{};
     final entries = _nutritionData['entries'] ?? 0;
+
+    // --- LOGIC MOVED HERE ---
+    // We calculate the max value here so we can pass it to the Y-axis, Grid, and Chart
+    final now = DateTime.now();
+    final startOfWeek = _selectedNutritionTimeframe == 'This Week'
+        ? now.subtract(Duration(days: now.weekday - 1))
+        : now.subtract(Duration(days: now.weekday + 6));
+
+    final days = List.generate(7, (index) {
+      final date = startOfWeek.add(Duration(days: index));
+      return date.toIso8601String().split('T')[0];
+    });
+
+    final values = days.map((date) {
+      final macroData = dailyMacroGrams[date] as Map<String, dynamic>?;
+      if (macroData == null) {
+        return {'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0};
+      }
+      return {
+        'protein': (macroData['protein'] as num?)?.toDouble() ?? 0.0,
+        'carbs': (macroData['carbs'] as num?)?.toDouble() ?? 0.0,
+        'fat': (macroData['fat'] as num?)?.toDouble() ?? 0.0,
+        'fiber': (macroData['fiber'] as num?)?.toDouble() ?? 0.0,
+      };
+    }).toList();
+
+    final maxValue = values.isEmpty
+        ? 1.0
+        : values
+        .map((dayMacros) =>
+    dayMacros['protein']! +
+        dayMacros['carbs']! +
+        dayMacros['fat']! +
+        dayMacros['fiber']!)
+        .reduce((a, b) => a > b ? a : b);
+
+    final chartMaxValue = maxValue == 0 ? 50.0 : maxValue * 1.2;
+    // --- END OF MOVED LOGIC ---
 
     return Container(
       width: double.infinity,
@@ -1818,8 +1855,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row (Unchanged)
           Row(
-            // ... (Header row is unchanged)
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -1847,8 +1884,9 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
             ],
           ),
           const SizedBox(height: 16),
+          // Timeframe chips (Unchanged)
           Text(
-            'Calorie intake for:', // This label is still fine
+            'Calorie intake for:',
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary(isDark),
@@ -1856,7 +1894,6 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           ),
           const SizedBox(height: 12),
           Row(
-            // ... (Timeframe chips are unchanged)
             children: [
               _buildTimeFrameChip(
                 'This Week',
@@ -1884,8 +1921,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
               ? _buildNutritionLoading(isDark)
               : Column(
             children: [
+              // Total Calories and Daily Avg (Unchanged)
               Row(
-                // ... (Total Calories and Daily Avg text is unchanged)
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
@@ -1937,9 +1974,37 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              // *** MODIFIED ***: Pass the new map
-              _buildWeeklyChart(dailyMacroGrams, isDark),
-              // *** MODIFIED ***: Legend will be updated
+
+              // --- MODIFIED CHART SECTION ---
+              SizedBox(
+                height: 120, // Height for chart + X-axis labels
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // 1. Y-AXIS
+                    _buildYAxis(chartMaxValue, isDark),
+                    const SizedBox(width: 8),
+                    // 2. CHART (with grid lines behind it)
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          // NEW: Grid lines
+                          _buildGridLines(chartMaxValue, isDark),
+                          // The bars
+                          _buildWeeklyChart(
+                            days: days,
+                            values: values,
+                            chartMaxValue: chartMaxValue,
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // --- END OF MODIFIED SECTION ---
+
               const SizedBox(height: 16),
               _buildLegend(isDark),
               const SizedBox(height: 20),
@@ -1950,7 +2015,123 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ),
     );
   }
+  // --- ADD THIS NEW WIDGET ---
+  Widget _buildGridLines(double chartMaxValue, bool isDark) {
+    const double chartHeight = 80.0;
+    const double bottomPadding = 40.0; // Total space at bottom for labels
+    const double barBottom = 24.0; // Actual space for text below bar
+    List<Widget> lines = [];
 
+    // --- Horizontal Lines ---
+    lines.add(
+      Positioned(
+        bottom: barBottom, // Align with the bottom of the bar
+        left: 0,
+        right: 0,
+        child: Container(height: 1, color: Colors.grey[300]),
+      ),
+    );
+
+    double increment = 1000;
+    if (chartMaxValue < 100) increment = 25;
+    else if (chartMaxValue < 500) increment = 100;
+    else if (chartMaxValue < 2000) increment = 500;
+
+    for (double i = increment; i <= chartMaxValue; i += increment) {
+      double bottom = ((i / chartMaxValue) * chartHeight) + barBottom;
+      if (bottom > (chartHeight + barBottom)) continue;
+      lines.add(
+        Positioned(
+          bottom: bottom,
+          left: 0,
+          right: 0,
+          child: Container(height: 1, color: Colors.grey[300]),
+        ),
+      );
+    }
+
+    // --- Vertical Lines ---
+    lines.add(
+      Positioned(
+        bottom: barBottom,
+        top: 120 - (chartHeight + barBottom), // 120 (total) - 80 (bar) - 24 (text)
+        left: 0,
+        right: 0,
+        child: Row(
+          children: List.generate(7, (index) {
+            return Expanded(
+              child: (index == 6)
+                  ? const SizedBox() // Don't draw line after last day
+                  : Container(
+                alignment: Alignment.centerRight,
+                child: Container(width: 1, color: Colors.grey[300]),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+
+    return Stack(children: lines);
+  }
+// --- ADD THIS NEW WIDGET ---
+  // --- REPLACE THIS WIDGET ---
+  Widget _buildYAxis(double chartMaxValue, bool isDark) {
+    const double chartHeight = 80.0;
+    const double yAxisWidth = 30.0;
+    const double bottomPadding = 24.0; // Space for X-axis labels
+
+    List<Widget> labels = [];
+
+    // Add "0" label
+    labels.add(
+      Positioned(
+        bottom: bottomPadding, // Align with the bottom of the bar
+        right: 0,
+        child: Text(
+          '0',
+          style: TextStyle(
+            fontSize: 12, // <-- FONT SIZE INCREASED
+            color: AppColors.textSecondary(isDark),
+          ),
+        ),
+      ),
+    );
+
+    double increment = 1000;
+    if (chartMaxValue < 100) increment = 25;
+    else if (chartMaxValue < 500) increment = 100;
+    else if (chartMaxValue < 2000) increment = 500;
+
+    for (double i = increment; i <= chartMaxValue; i += increment) {
+      // Calculate position relative to the bar's height
+      double bottom = ((i / chartMaxValue) * chartHeight) + bottomPadding;
+
+      if (bottom > (chartHeight + bottomPadding) || bottom < (bottomPadding + 15)) continue;
+
+      labels.add(
+        Positioned(
+          bottom: bottom - 6, // Adjust to center the text
+          right: 0,
+          child: Text(
+            '${i.toInt()}',
+            style: TextStyle(
+              fontSize: 12, // <-- FONT SIZE INCREASED
+              color: AppColors.textSecondary(isDark),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: yAxisWidth,
+      height: 120, // Must match _buildWeeklyChart height
+      child: Stack(
+        children: labels,
+      ),
+    );
+  }
   Widget _buildLegend(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -2035,51 +2216,18 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
-  // *** REPLACE _buildWeeklyChart ***
-  Widget _buildWeeklyChart(Map<String, dynamic> dailyMacroGrams, bool isDark) {
-    final now = DateTime.now();
-    final startOfWeek = _selectedNutritionTimeframe == 'This Week'
-        ? now.subtract(Duration(days: now.weekday - 1))
-        : now.subtract(Duration(days: now.weekday + 6));
-
-    final days = List.generate(7, (index) {
-      final date = startOfWeek.add(Duration(days: index));
-      return date.toIso8601String().split('T')[0];
-    });
-
-    // MODIFIED: Get macro data for each day
-    final values = days.map((date) {
-      final macroData = dailyMacroGrams[date] as Map<String, dynamic>?;
-      if (macroData == null) {
-        return {'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0};
-      }
-      // Ensure all keys exist and are doubles
-      return {
-        'protein': (macroData['protein'] as num?)?.toDouble() ?? 0.0,
-        'carbs': (macroData['carbs'] as num?)?.toDouble() ?? 0.0,
-        'fat': (macroData['fat'] as num?)?.toDouble() ?? 0.0,
-        'fiber': (macroData['fiber'] as num?)?.toDouble() ?? 0.0,
-      };
-    }).toList();
-
-    // MODIFIED: Calculate max value from the sum of *macros* (grams)
-    final maxValue = values.isEmpty
-        ? 1.0
-        : values
-        .map((dayMacros) =>
-    dayMacros['protein']! +
-        dayMacros['carbs']! +
-        dayMacros['fat']! +
-        dayMacros['fiber']!)
-        .reduce((a, b) => a > b ? a : b);
-
-    // Use 50g as a default max if 0, otherwise add 20% padding
-    final chartMaxValue = maxValue == 0 ? 50.0 : maxValue * 1.2;
-
+  // --- REPLACE THIS WIDGET ---
+  Widget _buildWeeklyChart({
+    required List<String> days,
+    required List<Map<String, double>> values,
+    required double chartMaxValue,
+    required bool isDark,
+  }) {
     return Container(
-      height: 120, // Increased height for bar + text
+      height: 120, // Must match _buildYAxis height
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: days.asMap().entries.map((entry) {
           final index = entry.key;
           final dayMacros = values[index];
@@ -2102,7 +2250,6 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ),
     );
   }
-
   Widget _buildDayColumn(String day, Map<String, double> dayMacros,
       double totalValue, bool isDark, double chartMaxValue) {
     const double chartHeight = 80.0; // Max height of the bar itself
@@ -2134,7 +2281,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           width: 16,
           height: chartHeight,
           decoration: BoxDecoration(
-            color: AppColors.textSecondary(isDark).withOpacity(0.3),
+            color: Colors.transparent, // <-- FIX: Make it transparent
             borderRadius: BorderRadius.circular(4),
           ),
           child: ClipRRect(
@@ -2169,7 +2316,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
         ),
         Text(
           // Show total grams
-          totalValue > 0 ? '${totalValue.toInt()}g' : '0g',
+          totalValue > 0 ? '${totalValue.toInt()}g' : '',
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,
