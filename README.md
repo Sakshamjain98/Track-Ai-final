@@ -46,9 +46,9 @@
 
 **TrackAI** is a production-ready, enterprise-grade Flutter application that transforms personal health management through artificial intelligence and comprehensive tracking capabilities.  
 Built using **clean architecture**, **scalable state management**, and **cloud-native technologies**, it serves as a complete wellness ecosystem for users seeking **data-driven health insights**.
-![IMG-20251030-WA0024](https://github.com/user-attachments/assets/c73e939c-ce41-4e35-b286-9156c963cf8d)
 
----
+<img width="959" height="483" alt="image" src="https://github.com/user-attachments/assets/86824ad4-4cc9-4572-8f84-1319fab37f4f" />
+
 
 ## 🎯 Business Value Proposition
 
