@@ -14,7 +14,7 @@ class AnalyticsScreen extends StatefulWidget {
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
-  String _selectedView = 'Dashboard';
+  String _selectedView = 'Progress Overview';
 
   @override
   void initState() {

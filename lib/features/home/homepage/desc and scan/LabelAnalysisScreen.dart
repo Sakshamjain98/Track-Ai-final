@@ -152,6 +152,72 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
   }
 
   void _parseLabelResponse(Map<String, dynamic> jsonData) {
+    // Ensure nutrientBreakdown and its nested fields have default zero/empty values
+    final Map<String, dynamic> nutrientBreakdown =
+        (jsonData['nutrientBreakdown'] as Map<String, dynamic>?) ?? {};
+    jsonData['vitaminsInsight'] = jsonData['vitaminsInsight'] ?? '';
+    jsonData['mineralsInsight'] = jsonData['mineralsInsight'] ?? '';
+
+    // Helper to get a nutrient map with defaults if it's missing or not a map
+    Map<String, dynamic> _getNutrientData(String key) {
+      final data = nutrientBreakdown[key];
+      if (data is Map<String, dynamic>) {
+        return {
+          "amount": data['amount'] ?? "0g",
+          "dv": data['dv'] ?? "0% DV",
+          "insight": data['insight'] ?? "No specific insight available for this nutrient."
+        };
+      }
+      // Return a default structure if not found or not a map
+      return {
+        "amount": "0g",
+        "dv": "0% DV",
+        "insight": "No specific insight available for this nutrient."
+      };
+    }
+
+    // Populate nutrientBreakdown with defaults if any specific nutrient is missing
+    jsonData['nutrientBreakdown'] = {
+      'totalFat': _getNutrientData('totalFat'),
+      'saturatedFat': _getNutrientData('saturatedFat'),
+      'transFat': _getNutrientData('transFat'),
+      'cholesterol': _getNutrientData('cholesterol'),
+      'sodium': _getNutrientData('sodium'),
+      'totalCarbohydrate': _getNutrientData('totalCarbohydrate'),
+      'dietaryFiber': _getNutrientData('dietaryFiber'),
+      'totalSugars': _getNutrientData('totalSugars'),
+      'addedSugars': _getNutrientData('addedSugars'),
+      'protein': _getNutrientData('protein'),
+    };
+
+    // Set default calories to 0 if missing
+    jsonData['calories'] = jsonData['calories'] ?? 0;
+
+    // Ensure vitamins and minerals are lists (empty if null) and have default insights
+    jsonData['vitamins'] = (jsonData['vitamins'] as List?)?.map((v) {
+      if (v is Map<String, dynamic>) {
+        return {
+          "name": v['name'] ?? 'Unknown',
+          "amount": v['amount'] ?? '0',
+          "dv": v['dv'] ?? '0% DV',
+          "insight": v['insight'] ?? 'No specific insight available for this vitamin.'
+        };
+      }
+      return {}; // Return empty map if unexpected format
+    }).toList() ?? [];
+
+    jsonData['minerals'] = (jsonData['minerals'] as List?)?.map((m) {
+      if (m is Map<String, dynamic>) {
+        return {
+          "name": m['name'] ?? 'Unknown',
+          "amount": m['amount'] ?? '0',
+          "dv": m['dv'] ?? '0% DV',
+          "insight": m['insight'] ?? 'No specific insight available for this mineral.'
+        };
+      }
+      return {}; // Return empty map if unexpected format
+    }).toList() ?? [];
+
     setState(() {
       _labelData = jsonData;
     });
@@ -526,28 +592,38 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                   name: _labelData!['productName'] ?? 'Scanned Label',
                   calories: _labelData!['calories'] ?? 0,
-                  protein: (nutrients['protein'] ?? 0).toInt(),
-                  carbs: (nutrients['carbohydrates'] ?? 0).toInt(),
-                  fat: (nutrients['fat'] ?? 0).toInt(),
-                  fiber: (nutrients['fiber'] ?? 0).toInt(),
+                  protein: _parseAmount(nutrients['protein']),       // <-- FIX
+                  carbs: _parseAmount(nutrients['totalCarbohydrate']), // <-- FIX
+                  fat: _parseAmount(nutrients['totalFat']),           // <-- FIX
+                  fiber: _parseAmount(nutrients['dietaryFiber']),       // <-- FIX
                   timestamp: DateTime.now(),
-                  imagePath: _selectedImage?.path, // Get the path from the selected image
+                  imagePath: _selectedImage?.path,
                 );
 
                 // 3. Add to the log
-                logProvider.addEntry(entry);
+              await  logProvider.addEntry(entry);
 // --- 4. NEW: Save to Firestore for Analytics ---
                 try {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
                     await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.uid)
-                        .collection('tracking')
-                        .doc('nutrition') // The tracker ID
+                    // ...
                         .collection('entries')
-                        .add(entry.toJson()); // Save the same entry
+                        .add({ // <-- START OF FIX
+                      'id': entry.id,
+                      'name': entry.name,
+                      'calories': entry.calories,
+                      'protein': entry.protein,
+                      'carbs': entry.carbs,
+                      'fat': entry.fat,
+                      'fiber': entry.fiber,
+                      'timestamp': Timestamp.fromDate(entry.timestamp), // Manually create Timestamp
+                      'healthScore': entry.healthScore,
+                      'healthDescription': entry.healthDescription,
+                      'imagePath': entry.imagePath,
+                    }); // <-- END OF FIX
                   }
+// ...
                 } catch (e) {
                   print("Error saving log to Firestore: $e");
                   // Optionally show a silent error
@@ -588,9 +664,13 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           _buildNutrientBreakdownList(nutrients),
 
           // Other Nutrients
-          _buildOtherNutrients(data['vitamins'], data['minerals']),
-
-          // Ingredient Insights
+          // Other Nutrients
+          _buildOtherNutrients(
+            data['vitamins'],
+            data['minerals'],
+            data['vitaminsInsight'],
+            data['mineralsInsight'],
+          ),        // Ingredient Insights
           if (data['ingredientInsights'] != null)
             _buildIngredientInsights(data['ingredientInsights']),
 
@@ -599,9 +679,9 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             width: double.infinity,
             margin: const EdgeInsets.only(top: 8, bottom: 24),
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.home); // Navigate home
-              },
+              onPressed:  ( ){
+    Navigator.pushNamed(context, AppRoutes.home); // Navigate home
+    },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -645,7 +725,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           Text(
             '$calories',
             style: const TextStyle(
-              color: kPrimaryTeal, // Kept teal for highlight
+              color: Colors.black, // Kept teal for highlight
               fontSize: 48,
               fontWeight: FontWeight.bold,
             ),
@@ -654,7 +734,6 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
       ),
     );
   }
-
   Widget _buildMacroGrid(Map<String, dynamic> nutrients) {
     // This new layout uses Rows and Expanded widgets to prevent overflow
     return Column(
@@ -664,7 +743,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Protein',
-                '${nutrients['protein'] ?? 0}g',
+                nutrients['protein']?['amount'] ?? '0g', // <-- FIX
                 lucide.LucideIcons.zap,
                 Colors.amber,
               ),
@@ -673,7 +752,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Carbs',
-                '${nutrients['carbohydrates'] ?? 0}g',
+                nutrients['totalCarbohydrate']?['amount'] ?? '0g', // <-- FIX
                 lucide.LucideIcons.wheat,
                 Colors.green,
               ),
@@ -686,7 +765,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Fat',
-                '${nutrients['fat'] ?? 0}g',
+                nutrients['totalFat']?['amount'] ?? '0g', // <-- FIX
                 lucide.LucideIcons.droplet,
                 Colors.blue,
               ),
@@ -695,7 +774,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Fiber',
-                '${nutrients['fiber'] ?? 0}g',
+                nutrients['dietaryFiber']?['amount'] ?? '0g', // <-- FIX
                 Icons.eco,
                 const Color(0xFFE37F4A),
               ),
@@ -704,6 +783,14 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
         ),
       ],
     );
+  }
+  // Add this function anywhere inside your _LabelAnalysisScreenState
+  int _parseAmount(Map<String, dynamic>? nutrientData) {
+    if (nutrientData == null) return 0;
+    String amountStr = nutrientData['amount'] ?? '0';
+    // Remove non-numeric characters (like 'g' or 'mg')
+    amountStr = amountStr.replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(amountStr)?.toInt() ?? 0;
   }
   Widget _buildMacroTile(String label, String value, IconData icon, Color iconColor) {
     return Container(
@@ -778,136 +865,466 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
       ),
     );
   }
-
+  Widget _buildExpandableNutrientCard({
+    required String label,
+    required String amount,
+    required String dv,
+    required String insight,
+    List<Widget>? subNutrients, // For things like Saturated Fat under Total Fat
+  }) {
+    return Card(
+      elevation: 0, // Remove default Card elevation
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      color: Colors.grey[100], // Match light theme
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        title: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center, // Center vertically
+          children: [
+            Text(
+              amount,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              dv,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        children: [
+          // Main insight for the parent nutrient
+          if (insight.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.grey[600],
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    insight,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (subNutrients != null && subNutrients.isNotEmpty) const SizedBox(height: 16), // Space before sub-nutrients
+          ],
+          // Sub-nutrients (e.g., Saturated Fat under Total Fat)
+          if (subNutrients != null && subNutrients.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: subNutrients.map((sub) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0), // Add spacing for sub-items
+                child: sub,
+              )).toList(),
+            ),
+        ],
+      ),
+    );
+  }
   Widget _buildNutrientBreakdownList(Map<String, dynamic> nutrients) {
     return _buildTitledSection(
       title: 'Nutrient Breakdown (Per Serving)',
       child: Column(
         children: [
-          _buildNutrientRow('Total Fat', '${nutrients['fat'] ?? 0}g', '0% DV'),
-          _buildNutrientRow('Cholesterol', '${nutrients['cholesterol'] ?? 0}mg', '0% DV'),
-          _buildNutrientRow('Sodium', '${nutrients['sodium'] ?? 0}mg', '0% DV'),
-          _buildNutrientRow('Total Carbohydrate', '${nutrients['carbohydrates'] ?? 0}g', '0% DV'),
-          _buildNutrientRow('Protein', '${nutrients['protein'] ?? 0}g', '0% DV'),
+          // Use _buildExpandableNutrientCard for each major nutrient
+          _buildExpandableNutrientCard(
+            label: 'Total Fat',
+            amount: nutrients['totalFat']?['amount'] ?? '0g',
+            dv: nutrients['totalFat']?['dv'] ?? '0% DV',
+            insight: nutrients['totalFat']?['insight'] ?? '',
+            subNutrients: [
+              _buildNutrientRow('Saturated Fat', nutrients['saturatedFat']?['amount'] ?? '0g', nutrients['saturatedFat']?['dv'] ?? '0% DV', insight: nutrients['saturatedFat']?['insight']),
+              _buildNutrientRow('Trans Fat', nutrients['transFat']?['amount'] ?? '0g', nutrients['transFat']?['dv'] ?? '0% DV', insight: nutrients['transFat']?['insight']),
+            ],
+          ),
+          _buildExpandableNutrientCard(
+            label: 'Cholesterol',
+            amount: nutrients['cholesterol']?['amount'] ?? '0mg',
+            dv: nutrients['cholesterol']?['dv'] ?? '0% DV',
+            insight: nutrients['cholesterol']?['insight'] ?? '',
+          ),
+          _buildExpandableNutrientCard(
+            label: 'Sodium',
+            amount: nutrients['sodium']?['amount'] ?? '0mg',
+            dv: nutrients['sodium']?['dv'] ?? '0% DV',
+            insight: nutrients['sodium']?['insight'] ?? '',
+          ),
+          _buildExpandableNutrientCard(
+            label: 'Total Carbohydrate',
+            amount: nutrients['totalCarbohydrate']?['amount'] ?? '0g',
+            dv: nutrients['totalCarbohydrate']?['dv'] ?? '0% DV',
+            insight: nutrients['totalCarbohydrate']?['insight'] ?? '',
+            subNutrients: [
+              _buildNutrientRow('Dietary Fiber', nutrients['dietaryFiber']?['amount'] ?? '0g', nutrients['dietaryFiber']?['dv'] ?? '0% DV', insight: nutrients['dietaryFiber']?['insight']),
+              _buildNutrientRow('Total Sugars', nutrients['totalSugars']?['amount'] ?? '0g', nutrients['totalSugars']?['dv'] ?? '0% DV', insight: nutrients['totalSugars']?['insight']),
+              _buildNutrientRow('Includes Added Sugars', nutrients['addedSugars']?['amount'] ?? '0g', nutrients['addedSugars']?['dv'] ?? '0% DV', insight: nutrients['addedSugars']?['insight']),
+            ],
+          ),
+          _buildExpandableNutrientCard(
+            label: 'Protein',
+            amount: nutrients['protein']?['amount'] ?? '0g',
+            dv: nutrients['protein']?['dv'] ?? '0% DV',
+            insight: nutrients['protein']?['insight'] ?? '',
+          ),
         ],
       ),
     );
   }
-
-  Widget _buildNutrientRow(String label, String value, String dv) {
+  Widget _buildNutrientRow(String label, String value, String dv, {String? insight}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-      // ✅ CHANGED: Use card decoration
       decoration: _getCardDecoration(),
       margin: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column( // Now a column to hold insight
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              // ✅ CHANGED: Light theme text
-              color: Colors.black,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                value,
+                label,
                 style: const TextStyle(
-                  // ✅ CHANGED: Light theme text
                   color: Colors.black,
                   fontSize: 15,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              Text(
-                dv,
-                style: TextStyle(
-                  // ✅ CHANGED: Light theme text
-                  color: Colors.grey[700],
-                  fontSize: 12,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    dv,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          if (insight != null && insight.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.grey[600],
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    insight,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildOtherNutrients(List<dynamic>? vitamins, List<dynamic>? minerals) {
-    vitamins = vitamins ?? []; // Default to empty list
-    minerals = minerals ?? []; // Default to empty list
+  Widget _buildOtherNutrients(
+      List<dynamic>? vitamins,
+      List<dynamic>? minerals,
+      String? vitaminsInsight,
+      String? mineralsInsight,
+      ) {
+    vitamins = vitamins ?? [];
+    minerals = minerals ?? [];
+    vitaminsInsight = vitaminsInsight ?? '';
+    mineralsInsight = mineralsInsight ?? '';
 
-    List<Widget> nutrientWidgets = [];
-
-    // Add vitamins if they exist
-    if (vitamins.isNotEmpty) {
-      nutrientWidgets.add(
-        const Text(
-          'Vitamins',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-      nutrientWidgets.add(const SizedBox(height: 8));
-      nutrientWidgets.addAll(
-        vitamins.map((v) => _buildNutrientListItem(v.toString())).toList(),
-      );
-    }
-
-    // Add minerals if they exist
-    if (minerals.isNotEmpty) {
-      // Add space between the two lists
-      if (nutrientWidgets.isNotEmpty) {
-        nutrientWidgets.add(const SizedBox(height: 16));
-      }
-
-      nutrientWidgets.add(
-        const Text(
-          'Minerals',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-      nutrientWidgets.add(const SizedBox(height: 8));
-      nutrientWidgets.addAll(
-        minerals.map((m) => _buildNutrientListItem(m.toString())).toList(),
-      );
-    }
-
-    // Show a message if both lists are empty
-    if (nutrientWidgets.isEmpty) {
-      nutrientWidgets.add(
-        Text(
-          'No additional vitamin or mineral data available.',
-          style: TextStyle(color: Colors.grey[700], fontSize: 14),
-        ),
-      );
-    }
-
-    // Return the section wrapped in the card
+    // If we have data, build the expandable cards
     return _buildTitledSection(
       title: 'Other Nutrients',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- Vitamins Section ---
+          if (vitamins.isNotEmpty)
+            _buildCategoryExpansionCard(
+              title: 'Vitamins',
+              insight: vitaminsInsight,
+              children: vitamins.map((n) {
+                final nutrient = n as Map<String, dynamic>? ?? {};
+                // Use _buildNutrientRow for the inner items
+                return _buildNutrientRow(
+                  nutrient['name'] ?? 'Unknown',
+                  nutrient['amount'] ?? '0',
+                  nutrient['dv'] ?? '0% DV',
+                  insight: nutrient['insight'],
+                );
+              }).toList(),
+            ),
+
+          if (vitamins.isNotEmpty && minerals.isNotEmpty)
+            const SizedBox(height: 8), // Space between categories
+
+          // --- Minerals Section ---
+          if (minerals.isNotEmpty)
+            _buildCategoryExpansionCard(
+              title: 'Minerals',
+              insight: mineralsInsight,
+              children: minerals.map((n) {
+                final nutrient = n as Map<String, dynamic>? ?? {};
+                // Use _buildNutrientRow for the inner items
+                return _buildNutrientRow(
+                  nutrient['name'] ?? 'Unknown',
+                  nutrient['amount'] ?? '0',
+                  nutrient['dv'] ?? '0% DV',
+                  insight: nutrient['insight'],
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+  Widget _buildCategoryExpansionCard({
+    required String title,
+    required String insight,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      color: Colors.grey[100], // Use the new white background
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Add padding
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16, // Make category title slightly larger
+            fontWeight: FontWeight.w600, // Make it bold
+          ),
+        ),
+        // This removes the default up/down arrow to match your screenshot
+        trailing: Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
+        childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        children: [
+          // 1. The General Insight
+          if (insight.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.grey[600],
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      insight,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // 2. The List of Individual Nutrients
+          Column(
+            children: children.map((child) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: child, // child is already a _buildNutrientRow
+            )).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- ADD THESE THREE NEW WIDGETS ---
+
+  // 1. The tappable button
+  Widget _buildNutrientDialogButton({required String title, required List<dynamic> nutrients}) {
+    return GestureDetector(
+      onTap: () {
+        if (nutrients.isNotEmpty) {
+          _showNutrientDialog(title, nutrients);
+        } else {
+          _showErrorSnackBar('No $title data detected on this label.');
+        }
+      },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: _getCardDecoration(),
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: nutrientWidgets,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500)),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[600]),
+          ],
         ),
+      ),
+    );
+  }
+
+  void _showNutrientDialog(String title, List<dynamic> nutrients) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          title: Text(title, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: nutrients.length,
+              itemBuilder: (context, index) {
+                final nutrient = nutrients[index] as Map<String, dynamic>? ?? {};
+                final String name = nutrient['name'] ?? 'Unknown';
+                final String amount = nutrient['amount'] ?? '0';
+                final String dv = nutrient['dv'] ?? '0% DV';
+                final String insight = nutrient['insight'] ?? ''; // <-- Get the insight here
+                return _buildDialogNutrientItem(name, amount, dv, insight: insight); // <-- Pass the insight
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  Widget _buildDialogNutrientItem(String name, String amount, String dv, {String? insight}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+          color: Colors.grey[100], // Inner card color
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!)
+      ),
+      child: Column( // Changed to Column to hold insight
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    amount,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    dv,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (insight != null && insight.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.grey[600],
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    insight,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

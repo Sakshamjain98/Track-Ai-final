@@ -425,7 +425,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
                   style: const TextStyle(
                     fontSize: 52,
                     fontWeight: FontWeight.bold,
-                    color: Colors.cyan,
+                    color: Colors.black,
                   ),
                 ),
                 const Text(
@@ -522,7 +522,8 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
 
                 );
                 // 3. Add to the log
-                logProvider.addEntry(entry);
+              await  logProvider.addEntry(entry);
+                // --- 4. NEW: Save to Firestore for Analytics ---
                 // --- 4. NEW: Save to Firestore for Analytics ---
                 try {
                   final user = FirebaseAuth.instance.currentUser;
@@ -533,8 +534,21 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
                         .collection('tracking')
                         .doc('nutrition') // The tracker ID
                         .collection('entries')
-                        .add(entry.toJson()); // Save the same entry
+                        .add({ // <-- START OF FIX
+                      'id': entry.id,
+                      'name': entry.name,
+                      'calories': entry.calories,
+                      'protein': entry.protein,
+                      'carbs': entry.carbs,
+                      'fat': entry.fat,
+                      'fiber': entry.fiber,
+                      'timestamp': Timestamp.fromDate(entry.timestamp), // Manually create Timestamp
+                      'healthScore': entry.healthScore,
+                      'healthDescription': entry.healthDescription,
+                      'imagePath': entry.imagePath,
+                    }); // <-- END OF FIX
                   }
+// ...
                 } catch (e) {
                   print("Error saving log to Firestore: $e");
                   // Optionally show a silent error
@@ -784,8 +798,8 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
   Widget _buildDescriptionSection() {
     if (_nutritionData == null) return const SizedBox();
 
-    final analysis = _nutritionData!['descriptionAnalysis'] ?? '';
-    final ingredients = _nutritionData!['ingredients'] as List<dynamic>? ?? [];
+// This will check for both keys, fixing the bug
+    final analysis = _nutritionData!['descriptionAnalysis'] ?? _nutritionData!['description'] ?? '';    final ingredients = _nutritionData!['ingredients'] as List<dynamic>? ?? [];
     final ingredientNames =
     ingredients.map((ing) => ing['name'] as String? ?? '').join(', ');
 
@@ -865,6 +879,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildDescriptionSection(),
           const Text(
             'Detailed Analysis',
             style: TextStyle(
@@ -996,9 +1011,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               ],
             ),
           ),
-          const SizedBox(height: 20),
 
-          // Ingredients List with new card style
           ..._editableIngredients.asMap().entries.map((entry) {
             final index = entry.key;
             final ingredient = entry.value;
@@ -1056,7 +1069,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
 
           // Back to Results Button
           SizedBox(
@@ -1077,11 +1090,99 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _recalculateNutrition,// This is the new function
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black, // Use a prominent color
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.calculate_outlined, size: 20),
+              label: const Text(
+                'Recalculate Nutrition',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
+// Add this function inside your _NutritionScannerScreenState
 
+  Future<void> _recalculateNutrition() async {
+    if (_editableIngredients.isEmpty) {
+      _showErrorSnackBar('No ingredients to analyze.');
+      return;
+    }
+
+    // 1. Go back to overview tab and show loading
+    setState(() {
+      _currentTab = 0;
+      _isAnalyzing = true;
+    });
+    // Reset animations to show loading
+    _slideController.reset();
+    _fadeController.reset();
+
+    try {
+      // 2. Call the new Gemini method
+      //
+      // !!! IMPORTANT: This method needs to be added to your 'gemini.dart' file.
+      // See Step 3 below.
+      //
+      final result = await _gemini.describeFoodFromIngredients(_editableIngredients);
+
+      // 3. Process the result (same as the image analysis)
+      try {
+        final jsonData = json.decode(result);
+        final isFood = jsonData['isFood'] == true; // The new JSON should still have this flag
+
+        setState(() {
+          _isAnalyzing = false;
+        });
+
+        if (isFood) {
+          _parseFoodResponse(jsonData); // Reuse existing parser
+        } else {
+          setState(() {
+            _isNotFoodLabel = true; // Or just show an error
+            _nutritionData = null;
+            _showErrorSnackBar(
+                jsonData['errorMessage'] ?? 'Could not calculate nutrition.');
+          });
+        }
+
+        // 4. Show the new results
+        _fadeController.forward();
+        _slideController.forward();
+        HapticFeedback.mediumImpact();
+      } catch (parseError) {
+        setState(() {
+          _isAnalyzing = false;
+        });
+        print('Raw API Response (Invalid JSON): $result');
+        _showErrorSnackBar(
+            'Analysis failed. The AI response was not in the correct format.');
+      }
+    } catch (e) {
+      setState(() {
+        _isAnalyzing = false;
+      });
+      _showErrorSnackBar('Analysis failed: $e');
+    }
+  }
   Widget _buildIngredientItem(Map<String, dynamic> ingredient, int index) {
     final String name = ingredient['name'] ?? 'Unknown';
     final int weight = (ingredient['weight_g'] as num? ?? 0).toInt();
@@ -1489,6 +1590,7 @@ class _NutritionScannerScreenState extends State<NutritionScannerScreen>
       ),
     );
   }
+
 
   Widget _buildNotLabelWidget(
       {String message =

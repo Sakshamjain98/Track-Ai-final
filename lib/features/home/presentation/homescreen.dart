@@ -50,6 +50,7 @@ class _HomescreenState extends State<Homescreen> {
     _loadStreakData();
     _recordDailyLogin();
     _loadAccountCreationDate();
+
   }
 
   Future<void> _loadGoalsData() async {
@@ -426,7 +427,7 @@ class _HomescreenState extends State<Homescreen> {
                       progress: proteinProgress,
                       size: screenWidth * 0.15,
                       icon: lucide.LucideIcons.zap,
-                      color: Colors.amber,
+                      color: Colors.orange,
                     ),
                   ],
                 ),
@@ -589,7 +590,7 @@ class _HomescreenState extends State<Homescreen> {
             progress: fiberProgress, // <-- UPDATED
             size: sw * 0.15,
             icon: lucide.LucideIcons.leaf,
-            color: Colors.orange, // Fiber color (adjust if needed)
+            color: Colors.amber, // Fiber color (adjust if needed)
           ),
         ],
       ),

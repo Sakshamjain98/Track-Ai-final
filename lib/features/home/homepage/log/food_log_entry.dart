@@ -67,8 +67,7 @@ class FoodLogEntry {
       'fat': fat,
       'fiber': fiber,
       // Save as Firestore Timestamp object
-      'timestamp': Timestamp.fromDate(timestamp), // <-- THIS IS THE KEY CHANGE
-      'healthScore': healthScore,
+      'timestamp': timestamp.toIso8601String(), // <-- FIX: Save as a String      'healthScore': healthScore,
       'healthDescription': healthDescription,
       'imagePath': imagePath,
     };

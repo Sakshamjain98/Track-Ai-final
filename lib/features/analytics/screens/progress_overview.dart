@@ -1456,22 +1456,23 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
     }
   }
 
-  // *** MODIFIED THIS METHOD ***
+  // *** REPLACE THIS ENTIRE FUNCTION ***
   Future<Map<String, dynamic>> getNutritionData(String timeframe) async {
     if (_currentUserId == null) return {};
 
     try {
       final startDate = _getTimeframeStartDate(timeframe);
-      // We assume your food logs are saved to a 'nutrition' tracker
       final nutritionEntries = await _getTrackerEntries('nutrition', startDate);
       print('--- AnalyticsProvider: Processing ${nutritionEntries.length} nutrition entries for getNutritionData.');
+
       double totalCalories = 0;
       double totalProtein = 0;
       double totalCarbs = 0;
       double totalFat = 0;
+      double totalFiber = 0; // Added fiber total
 
-      // MODIFIED: This map will hold daily totals, broken down by meal
-      final dailyMealCalories = <String, Map<String, double>>{};
+      // MODIFIED: This map will hold daily totals for macros
+      final dailyMacroGrams = <String, Map<String, double>>{};
 
       for (var entry in nutritionEntries) {
         final calories =
@@ -1481,40 +1482,49 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
         final carbs =
             double.tryParse(entry['carbs']?.toString() ?? '0') ?? 0.0;
         final fat = double.tryParse(entry['fat']?.toString() ?? '0') ?? 0.0;
+        final fiber =
+            double.tryParse(entry['fiber']?.toString() ?? '0') ?? 0.0; // Added fiber
 
         totalCalories += calories;
         totalProtein += protein;
         totalCarbs += carbs;
         totalFat += fat;
+        totalFiber += fiber; // Added fiber
 
         final timestamp = DateTime.tryParse(entry['timestamp'] ?? '');
         if (timestamp != null) {
           final date = timestamp.toIso8601String().split('T')[0];
-          final mealCategory = _getMealCategory(timestamp);
-          print('--- AnalyticsProvider: Processing Entry - Date: $date, Meal: $mealCategory, Calories: $calories');
-          // Initialize the map for the day if it doesn't exist
-          dailyMealCalories.putIfAbsent(date,
-                  () => {'meal1': 0.0, 'meal2': 0.0, 'meal3': 0.0, 'meal4': 0.0});
 
-          // Add calories to the correct meal category
-          dailyMealCalories[date]![mealCategory] =
-              (dailyMealCalories[date]![mealCategory] ?? 0.0) + calories;
+          // Initialize the map for the day if it doesn't exist
+          dailyMacroGrams.putIfAbsent(date,
+                  () => {'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0});
+
+          // Add grams to the correct macro category
+          dailyMacroGrams[date]!['protein'] =
+              (dailyMacroGrams[date]!['protein'] ?? 0.0) + protein;
+          dailyMacroGrams[date]!['carbs'] =
+              (dailyMacroGrams[date]!['carbs'] ?? 0.0) + carbs;
+          dailyMacroGrams[date]!['fat'] =
+              (dailyMacroGrams[date]!['fat'] ?? 0.0) + fat;
+          dailyMacroGrams[date]!['fiber'] =
+              (dailyMacroGrams[date]!['fiber'] ?? 0.0) + fiber;
         }
       }
 
-      // MODIFIED: Calculate average based on unique days with entries
-      final uniqueDaysWithEntries = dailyMealCalories.keys.toSet().length;
-      final average = (uniqueDaysWithEntries > 0)
+      // Calculate average calories based on unique days with entries
+      final uniqueDaysWithEntries = dailyMacroGrams.keys.toSet().length;
+      final averageCalories = (uniqueDaysWithEntries > 0)
           ? (totalCalories / uniqueDaysWithEntries)
           : 0.0;
-      print('--- AnalyticsProvider: Final dailyMealCalories map: $dailyMealCalories');
+
       return {
         'totalCalories': totalCalories,
-        'dailyAverage': average, // MODIFIED: Use new average
+        'dailyAverage': averageCalories, // This is still daily avg CALORIES
         'protein': totalProtein,
         'carbs': totalCarbs,
         'fat': totalFat,
-        'dailyMealCalories': dailyMealCalories, // MODIFIED: Pass new map
+        'fiber': totalFiber,
+        'dailyMacroGrams': dailyMacroGrams, // MODIFIED: Pass new map
         'entries': nutritionEntries.length,
       };
     } catch (e) {
@@ -1792,14 +1802,12 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
-  // Nutrition Card from Progress Overview
   Widget _buildNutritionCard(AnalyticsProvider provider, bool isDark) {
     final totalCalories = _nutritionData['totalCalories']?.toDouble() ?? 0;
-    // *** MODIFIED ***: Get the new average
     final dailyAverage = _nutritionData['dailyAverage']?.toDouble() ?? 0;
-    // *** MODIFIED ***: Get the new meal map
-    final dailyMealCalories =
-        _nutritionData['dailyMealCalories'] as Map<String, dynamic>? ??
+    // *** MODIFIED ***: Get the new macro map
+    final dailyMacroGrams =
+        _nutritionData['dailyMacroGrams'] as Map<String, dynamic>? ??
             <String, dynamic>{};
     final entries = _nutritionData['entries'] ?? 0;
 
@@ -1811,6 +1819,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            // ... (Header row is unchanged)
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
@@ -1839,7 +1848,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Calorie intake for:',
+            'Calorie intake for:', // This label is still fine
             style: TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary(isDark),
@@ -1847,6 +1856,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           ),
           const SizedBox(height: 12),
           Row(
+            // ... (Timeframe chips are unchanged)
             children: [
               _buildTimeFrameChip(
                 'This Week',
@@ -1875,6 +1885,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
               : Column(
             children: [
               Row(
+                // ... (Total Calories and Daily Avg text is unchanged)
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Flexible(
@@ -1927,8 +1938,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
               ),
               const SizedBox(height: 20),
               // *** MODIFIED ***: Pass the new map
-              _buildWeeklyChart(dailyMealCalories, isDark),
-              // *** ADDED ***: Legend
+              _buildWeeklyChart(dailyMacroGrams, isDark),
+              // *** MODIFIED ***: Legend will be updated
               const SizedBox(height: 16),
               _buildLegend(isDark),
               const SizedBox(height: 20),
@@ -1940,15 +1951,14 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
-  // *** ADDED ***: Legend widget
   Widget _buildLegend(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLegendItem('Meal 1', Color(0xFF0288D1), isDark),
-        _buildLegendItem('Meal 2', Color(0xFF388E3C), isDark),
-        _buildLegendItem('Meal 3', Color(0xFFF57C00), isDark),
-        _buildLegendItem('Meal 4+', Color(0xFFD32F2F), isDark),
+        _buildLegendItem('Protein', Colors.amber, isDark),
+        _buildLegendItem('Carbs', const Color(0xFF28A745), isDark),
+        _buildLegendItem('Fat', Colors.blue, isDark),
+        _buildLegendItem('Fiber', const Color(0xFFE37F4A), isDark),
       ],
     );
   }
@@ -2025,8 +2035,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
-  // *** MODIFIED ***: To handle the new map and pass data to _buildDayColumn
-  Widget _buildWeeklyChart(Map<String, dynamic> dailyMealCalories, bool isDark) {
+  // *** REPLACE _buildWeeklyChart ***
+  Widget _buildWeeklyChart(Map<String, dynamic> dailyMacroGrams, bool isDark) {
     final now = DateTime.now();
     final startOfWeek = _selectedNutritionTimeframe == 'This Week'
         ? now.subtract(Duration(days: now.weekday - 1))
@@ -2037,54 +2047,55 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       return date.toIso8601String().split('T')[0];
     });
 
-    // MODIFIED: Get meal data for each day
+    // MODIFIED: Get macro data for each day
     final values = days.map((date) {
-      final mealData = dailyMealCalories[date] as Map<String, dynamic>?;
-      if (mealData == null) {
-        return {'meal1': 0.0, 'meal2': 0.0, 'meal3': 0.0, 'meal4': 0.0};
+      final macroData = dailyMacroGrams[date] as Map<String, dynamic>?;
+      if (macroData == null) {
+        return {'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0};
       }
       // Ensure all keys exist and are doubles
       return {
-        'meal1': (mealData['meal1'] as num?)?.toDouble() ?? 0.0,
-        'meal2': (mealData['meal2'] as num?)?.toDouble() ?? 0.0,
-        'meal3': (mealData['meal3'] as num?)?.toDouble() ?? 0.0,
-        'meal4': (mealData['meal4'] as num?)?.toDouble() ?? 0.0,
+        'protein': (macroData['protein'] as num?)?.toDouble() ?? 0.0,
+        'carbs': (macroData['carbs'] as num?)?.toDouble() ?? 0.0,
+        'fat': (macroData['fat'] as num?)?.toDouble() ?? 0.0,
+        'fiber': (macroData['fiber'] as num?)?.toDouble() ?? 0.0,
       };
     }).toList();
 
-    // MODIFIED: Calculate max value from the sum of meals
+    // MODIFIED: Calculate max value from the sum of *macros* (grams)
     final maxValue = values.isEmpty
         ? 1.0
         : values
-        .map((dayMeals) =>
-    dayMeals['meal1']! +
-        dayMeals['meal2']! +
-        dayMeals['meal3']! +
-        dayMeals['meal4']!)
+        .map((dayMacros) =>
+    dayMacros['protein']! +
+        dayMacros['carbs']! +
+        dayMacros['fat']! +
+        dayMacros['fiber']!)
         .reduce((a, b) => a > b ? a : b);
 
-    final chartMaxValue =
-    maxValue == 0 ? 1000.0 : maxValue * 1.2; // Use 1000 as a default max if 0
+    // Use 50g as a default max if 0, otherwise add 20% padding
+    final chartMaxValue = maxValue == 0 ? 50.0 : maxValue * 1.2;
 
     return Container(
-      height: 120, // MODIFIED: Increased height for bar + text
+      height: 120, // Increased height for bar + text
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: days.asMap().entries.map((entry) {
           final index = entry.key;
-          final dayMeals = values[index];
-          final totalValue = dayMeals['meal1']! +
-              dayMeals['meal2']! +
-              dayMeals['meal3']! +
-              dayMeals['meal4']!;
+          final dayMacros = values[index];
+          // Total value is now total grams
+          final totalValue = dayMacros['protein']! +
+              dayMacros['carbs']! +
+              dayMacros['fat']! +
+              dayMacros['fiber']!;
 
           return Flexible(
             child: _buildDayColumn(
               ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index],
-              dayMeals,
+              dayMacros, // Pass the map of macros
               totalValue,
               isDark,
-              chartMaxValue, // MODIFIED: Pass chartMaxValue
+              chartMaxValue,
             ),
           );
         }).toList(),
@@ -2092,26 +2103,29 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
   }
 
-  // *** REWRITTEN ***: To build a stacked bar chart
-  Widget _buildDayColumn(String day, Map<String, double> dayMeals,
+  Widget _buildDayColumn(String day, Map<String, double> dayMacros,
       double totalValue, bool isDark, double chartMaxValue) {
     const double chartHeight = 80.0; // Max height of the bar itself
 
-    // Define meal colors from the image
-    const meal1Color = Color(0xFF0288D1); // Blue
-    const meal2Color = Color(0xFF388E3C); // Green
-    const meal3Color = Color(0xFFF57C00); // Orange
-    const meal4Color = Color(0xFFD32F2F); // Red
+    // Define macro colors (from your NutritionScannerScreen)
+    const proteinColor = Colors.amber;
+    const carbsColor = Color(0xFF28A745); // kSuccessColor
+    const fatColor = Colors.blue;
+    const fiberColor = Color(0xFFE37F4A);
 
     // Calculate individual heights
-    final double meal1Height =
-    chartMaxValue > 0 ? (dayMeals['meal1']! / chartMaxValue) * chartHeight : 0;
-    final double meal2Height =
-    chartMaxValue > 0 ? (dayMeals['meal2']! / chartMaxValue) * chartHeight : 0;
-    final double meal3Height =
-    chartMaxValue > 0 ? (dayMeals['meal3']! / chartMaxValue) * chartHeight : 0;
-    final double meal4Height =
-    chartMaxValue > 0 ? (dayMeals['meal4']! / chartMaxValue) * chartHeight : 0;
+    final double proteinHeight = chartMaxValue > 0
+        ? (dayMacros['protein']! / chartMaxValue) * chartHeight
+        : 0;
+    final double carbsHeight = chartMaxValue > 0
+        ? (dayMacros['carbs']! / chartMaxValue) * chartHeight
+        : 0;
+    final double fatHeight = chartMaxValue > 0
+        ? (dayMacros['fat']! / chartMaxValue) * chartHeight
+        : 0;
+    final double fiberHeight = chartMaxValue > 0
+        ? (dayMacros['fiber']! / chartMaxValue) * chartHeight
+        : 0;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -2129,22 +2143,18 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Meal 4 (Top)
+                // Stacked from bottom to top
                 Container(
-                    height: meal4Height.clamp(0, chartHeight),
-                    color: meal4Color),
-                // Meal 3
+                    height: proteinHeight.clamp(0, chartHeight),
+                    color: proteinColor),
                 Container(
-                    height: meal3Height.clamp(0, chartHeight),
-                    color: meal3Color),
-                // Meal 2
+                    height: carbsHeight.clamp(0, chartHeight),
+                    color: carbsColor),
                 Container(
-                    height: meal2Height.clamp(0, chartHeight),
-                    color: meal2Color),
-                // Meal 1 (Bottom)
+                    height: fatHeight.clamp(0, chartHeight), color: fatColor),
                 Container(
-                    height: meal1Height.clamp(0, chartHeight),
-                    color: meal1Color),
+                    height: fiberHeight.clamp(0, chartHeight),
+                    color: fiberColor),
               ],
             ),
           ),
@@ -2158,7 +2168,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
           ),
         ),
         Text(
-          totalValue > 0 ? totalValue.toInt().toString() : '0',
+          // Show total grams
+          totalValue > 0 ? '${totalValue.toInt()}g' : '0g',
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,
@@ -2169,7 +2180,6 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ],
     );
   }
-
   Widget _buildNoNutritionData(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(12),
