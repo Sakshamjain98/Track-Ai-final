@@ -14,20 +14,48 @@
 [![Stars](https://img.shields.io/github/stars/yourusername/trackai.svg?style=flat&color=yellow)](https://github.com/yourusername/trackai)
 
 ---
+# 🚀 TrackAI - Enterprise Health Intelligence Platform
 
-### 📑 Contents
+<div align="center">
+
+![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-3.5+-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Gemini AI](https://img.shields.io/badge/Gemini_AI-8E75B2?style=for-the-badge&logo=google&logoColor=white)
+
+**An AI-powered health tracking ecosystem with 11+ specialized trackers, nutrition intelligence, and personalized wellness insights**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/yourusername/trackai?style=social)](https://github.com/yourusername/trackai)
+
+</div>
+
+---
+
+## 📑 Contents
+
+<table>
+<tr>
+<td width="50%">
+
 - [📊 Overview](#-project-overview)
 - [🎯 Business Value](#-business-value-proposition)
 - [📈 Key Metrics](#-key-metrics)
 - [✨ Features](#-comprehensive-feature-set)
-- [🧱 Architecture](#-architecture--folder-structure)<img width="874" height="565" alt="image" src="https://github.com/user-attachments/assets/0a9a9682-2eb5-463f-8ed9-7bf385f16fac" />
+- [🧱 Architecture](#-architecture--folder-structure)
+
+</td>
+<td width="50%">
 
 - [⚙️ Installation](#️-installation)
 - [🧠 Tech Stack](#-tech-stack)
 - [📚 API Integrations](#-api-integrations)
-
+- [🧪 Testing](#-testing)
 - [📄 License](#-license)
 
+</td>
+</tr>
+</table>
 ---
 
 ## 📊 Project Overview
