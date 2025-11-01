@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/recipes/presentation/recipe_library_screen.dart';
-import '../../features/analytics/screens/WhLib/period_cycle.dart';
+
+import '../../features/analytics/screens/CycleOS/period_cycle.dart';
 
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({Key? key}) : super(key: key);
@@ -125,7 +126,7 @@ class LibraryScreen extends StatelessWidget {
                   // Full-width Period Cycle card
                   _buildLibraryCard(
                     context,
-                    'Period Cycle',
+                    'CycleOS',
                     'Track your menstrual cycle and health insights.',
                     Icons.favorite_outline,
                     primaryTextColor,

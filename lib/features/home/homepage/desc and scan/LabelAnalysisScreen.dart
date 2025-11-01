@@ -535,13 +535,17 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
     );
   }
   // --- NEW LABEL RESULTS UI (Matches Screenshots) ---
-
+// --- REPLACE THIS ENTIRE WIDGET ---
   Widget _buildLabelResults() {
     final data = _labelData!;
     final nutrients = data['nutrientBreakdown'] ?? {};
+    // ✅ --- NEW: Get the multiplier once ---
+    final double servingsMultiplier = _getServingsMultiplier();
+    final String servingContext = servingsMultiplier == 1.0
+        ? "Per Serving"
+        : "Total (${servingsMultiplier} Servings)";
 
     return SingleChildScrollView(
-      // ✅ UPDATED: Removed bottom padding
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,7 +554,6 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           Text(
             data['productName'] ?? 'Food Label Analysis',
             style: const TextStyle(
-              // ✅ CHANGED: Light theme text
               color: Colors.black,
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -560,56 +563,60 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           Text(
             'Per Serving: ${data['servingSize'] ?? 'N/A'} | Servings: ${data['servingsPerContainer'] ?? 'N/A'}',
             style: TextStyle(
-              // ✅ CHANGED: Light theme text
               color: Colors.grey[600],
               fontSize: 14,
             ),
           ),
+
+
           const SizedBox(height: 24),
 
           // Calories
-          _buildCalorieDisplay(data['calories'] ?? 0),
+          // ✅ --- MODIFIED: Pass multiplier ---
+          _buildCalorieDisplay(data['calories'] ?? 0, servingsMultiplier),
           const SizedBox(height: 24),
 
           // Macro Grid
-          _buildMacroGrid(nutrients),
+          // ✅ --- MODIFIED: Pass multiplier ---
+          _buildMacroGrid(nutrients, servingsMultiplier),
           const SizedBox(height: 24),
 
-          // Log 1 Serving Button
+          // Log 1 Serving Button (This remains unchanged, as logging "1 serving" is correct)
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () async {
-                // --- START OF NEW LOGIC ---
+                // ... (Your existing logging logic remains the same) ...
                 if (_labelData == null) return;
 
                 // 1. Get the provider
                 final logProvider = context.read<DailyLogProvider>();
                 final nutrients = _labelData!['nutrientBreakdown'] ?? {};
 
-                // 2. Create the log entry
+                // 2. Create the log entry (still logs 1 serving)
                 final entry = FoodLogEntry(
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                   name: _labelData!['productName'] ?? 'Scanned Label',
                   calories: _labelData!['calories'] ?? 0,
-                  protein: _parseAmount(nutrients['protein']),       // <-- FIX
-                  carbs: _parseAmount(nutrients['totalCarbohydrate']), // <-- FIX
-                  fat: _parseAmount(nutrients['totalFat']),           // <-- FIX
-                  fiber: _parseAmount(nutrients['dietaryFiber']),       // <-- FIX
+                  protein: _parseAmount(nutrients['protein']),
+                  carbs: _parseAmount(nutrients['totalCarbohydrate']),
+                  fat: _parseAmount(nutrients['totalFat']),
+                  fiber: _parseAmount(nutrients['dietaryFiber']),
                   timestamp: DateTime.now(),
                   imagePath: _selectedImage?.path,
                 );
 
                 // 3. Add to the log
-              await  logProvider.addEntry(entry);
-// --- 4. NEW: Save to Firestore for Analytics ---
+                await  logProvider.addEntry(entry);
+                // 4. Save to Firestore
                 try {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
                     await FirebaseFirestore.instance
-                    // ...
+                        .collection('users')
+                        .doc(user.uid)
                         .collection('entries')
-                        .add({ // <-- START OF FIX
+                        .add({
                       'id': entry.id,
                       'name': entry.name,
                       'calories': entry.calories,
@@ -617,18 +624,15 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
                       'carbs': entry.carbs,
                       'fat': entry.fat,
                       'fiber': entry.fiber,
-                      'timestamp': Timestamp.fromDate(entry.timestamp), // Manually create Timestamp
+                      'timestamp': Timestamp.fromDate(entry.timestamp),
                       'healthScore': entry.healthScore,
                       'healthDescription': entry.healthDescription,
                       'imagePath': entry.imagePath,
-                    }); // <-- END OF FIX
+                    });
                   }
-// ...
                 } catch (e) {
                   print("Error saving log to Firestore: $e");
-                  // Optionally show a silent error
                 }
-                // --- END OF NEW LOGIC ---
                 // 4. Show success and go back
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -637,7 +641,6 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
                   ),
                 );
                 Navigator.pop(context);
-                // --- END OF NEW LOGIC ---
               },
               icon: const Icon(Icons.add_circle_outline, color: Colors.white),
               label: const Text(
@@ -645,7 +648,6 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
               ),
               style: ElevatedButton.styleFrom(
-                // ✅ CHANGED: Consistent button style
                 backgroundColor: Colors.cyan,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -656,32 +658,29 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Quick Summary
+          // --- The rest of your widgets remain the same ---
           if (data['quickSummary'] != null)
             _buildQuickSummary(data['quickSummary']),
 
-          // Nutrient Breakdown
+          // This list correctly stays as "Per Serving"
           _buildNutrientBreakdownList(nutrients),
 
-          // Other Nutrients
-          // Other Nutrients
           _buildOtherNutrients(
             data['vitamins'],
             data['minerals'],
             data['vitaminsInsight'],
             data['mineralsInsight'],
-          ),        // Ingredient Insights
+          ),
           if (data['ingredientInsights'] != null)
             _buildIngredientInsights(data['ingredientInsights']),
 
-          // ✅ ADDED: "Analyze Another" button at the end
           Container(
             width: double.infinity,
             margin: const EdgeInsets.only(top: 8, bottom: 24),
             child: ElevatedButton(
               onPressed:  ( ){
-    Navigator.pushNamed(context, AppRoutes.home); // Navigate home
-    },
+                Navigator.pushNamed(context, AppRoutes.home);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
@@ -704,28 +703,33 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
       ),
     );
   }
+  // --- REPLACE THIS ENTIRE WIDGET ---
+  Widget _buildCalorieDisplay(int caloriesPerServing, double multiplier) {
+    // ✅ --- NEW: Calculate total calories ---
+    final int totalCalories = (caloriesPerServing * multiplier).round();
 
-  Widget _buildCalorieDisplay(int calories) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      // ✅ CHANGED: Use card decoration
       decoration: _getCardDecoration(),
       child: Column(
         children: [
+          // ✅ --- MODIFIED: Title is now dynamic ---
           Text(
-            'Total Calories ',
+            multiplier == 1.0
+                ? 'Total Calories (Per Serving)'
+                : 'Total Calories',
             style: TextStyle(
-              // ✅ CHANGED: Light theme text
               color: Colors.grey[700],
               fontSize: 16,
             ),
           ),
           const SizedBox(height: 8),
+          // ✅ --- MODIFIED: Show total value ---
           Text(
-            '$calories',
+            '$totalCalories',
             style: const TextStyle(
-              color: Colors.black, // Kept teal for highlight
+              color: Colors.black,
               fontSize: 48,
               fontWeight: FontWeight.bold,
             ),
@@ -734,8 +738,51 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
       ),
     );
   }
-  Widget _buildMacroGrid(Map<String, dynamic> nutrients) {
-    // This new layout uses Rows and Expanded widgets to prevent overflow
+  // --- ADD THIS NEW HELPER METHOD ---
+  double _getServingsMultiplier() {
+    if (_labelData == null) return 1.0;
+
+    // Get the value, which could be a String, int, double, or null
+    final servingsValue = _labelData!['servingsPerContainer'];
+
+    if (servingsValue == null) return 1.0;
+
+    // Handle if it's already a number
+    if (servingsValue is num) {
+      return servingsValue.toDouble() > 0 ? servingsValue.toDouble() : 1.0;
+    }
+
+    // Handle if it's a string (e.g., "2.5", "About 2")
+    if (servingsValue is String) {
+      // Clean the string to only have numbers and a decimal point
+      final cleanString = servingsValue.replaceAll(RegExp(r'[^0-9.]'), '');
+      final parsedValue = double.tryParse(cleanString);
+      return (parsedValue != null && parsedValue > 0) ? parsedValue : 1.0;
+    }
+
+    // Default for any other type
+    return 1.0;
+  }
+// --- REPLACE THIS ENTIRE WIDGET ---
+  Widget _buildMacroGrid(Map<String, dynamic> nutrients, double multiplier) {
+
+    // ✅ --- NEW: Helper to calculate total and format as string ---
+    String getTotalAmountString(Map<String, dynamic>? nutrientData) {
+      // Use your existing _parseAmount helper
+      int amountPerServing = _parseAmount(nutrientData);
+
+      // Calculate total
+      int totalAmount = (amountPerServing * multiplier).round();
+
+      // Try to preserve the unit (g vs mg)
+      String unit = "g"; // default
+      if (nutrientData != null && nutrientData['amount'] != null) {
+        String amountStr = nutrientData['amount'].toString().toLowerCase();
+        if (amountStr.contains("mg")) unit = "mg";
+      }
+      return '$totalAmount$unit';
+    }
+
     return Column(
       children: [
         Row(
@@ -743,7 +790,8 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Protein',
-                nutrients['protein']?['amount'] ?? '0g', // <-- FIX
+                // ✅ --- MODIFIED: Use new helper ---
+                getTotalAmountString(nutrients['protein']),
                 lucide.LucideIcons.zap,
                 Colors.amber,
               ),
@@ -752,7 +800,8 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Carbs',
-                nutrients['totalCarbohydrate']?['amount'] ?? '0g', // <-- FIX
+                // ✅ --- MODIFIED: Use new helper ---
+                getTotalAmountString(nutrients['totalCarbohydrate']),
                 lucide.LucideIcons.wheat,
                 Colors.green,
               ),
@@ -765,7 +814,8 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Fat',
-                nutrients['totalFat']?['amount'] ?? '0g', // <-- FIX
+                // ✅ --- MODIFIED: Use new helper ---
+                getTotalAmountString(nutrients['totalFat']),
                 lucide.LucideIcons.droplet,
                 Colors.blue,
               ),
@@ -774,7 +824,8 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
             Expanded(
               child: _buildMacroTile(
                 'Fiber',
-                nutrients['dietaryFiber']?['amount'] ?? '0g', // <-- FIX
+                // ✅ --- MODIFIED: Use new helper ---
+                getTotalAmountString(nutrients['dietaryFiber']),
                 Icons.eco,
                 const Color(0xFFE37F4A),
               ),

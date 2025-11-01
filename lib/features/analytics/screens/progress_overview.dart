@@ -365,52 +365,30 @@ class AnalyticsProvider extends ChangeNotifier {
     return buffer.toString();
   }
 
+// In AnalyticsProvider class
+
   Future<List<Map<String, dynamic>>> _getTrackerEntries(
       String trackerId,
       DateTime startDate,
       ) async {
     try {
-      // *** MODIFICATION ***
-      // Check if we are fetching nutrition data.
-      // 'nutrition' is not a standard tracker, it's from DailyLogProvider.
-      // We must fetch from the correct collection.
-      // Based on your files, `daily_log_provider.dart` saves to SharedPreferences,
-      // NOT Firebase. This is a critical issue.
-
-      // *** ASSUMPTION ***
-      // I will assume 'nutrition_scanner.dart' and 'LabelAnalysisScreen.dart'
-      // *also* save a copy to a Firestore collection named 'nutrition_log'
-      // for long-term analytics, using a structure similar to FoodLogEntry.
-      // If they don't, this analytics page CANNOT get weekly/monthly data.
-
-      // Let's assume the log entries ARE saved to a collection, e.g., 'nutrition_log'
-      // If `daily_log_provider.dart` is the *only* source, this whole page's
-      // weekly/monthly logic is impossible as SharedPreferences is only for the current day.
-
-      // I will proceed assuming a Firestore collection named 'nutrition_log' exists.
-      // If not, you must implement saving entries to Firestore.
-
       String collectionName = 'entries'; // Default
       String docId = trackerId; // Default
 
       if (trackerId == 'nutrition') {
-        // This is a custom path for nutrition data
-        docId = 'nutrition_data'; // Or whatever you use
-        collectionName = 'nutrition_log';
+        docId = 'nutrition';
+        collectionName = 'entries'; // This matches your daily_log_provider
       } else if (trackerId == 'menstrual') {
         docId = 'menstrual';
         collectionName = 'entries';
       }
 
-      // We will query the root 'tracking' collection for simplicity
-      // based on the structure in `loadProgressData`
-
       Query query = _firestore
           .collection('users')
           .doc(_currentUserId)
           .collection('tracking')
-          .doc(trackerId) // e.g., 'sleep', 'mood', 'nutrition'
-          .collection('entries') // e.g., 'entries'
+          .doc(docId)
+          .collection(collectionName)
           .where(
         'timestamp',
         isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
@@ -420,27 +398,29 @@ class AnalyticsProvider extends ChangeNotifier {
 
       final querySnapshot = await query.get();
       if (trackerId == 'nutrition') {
-        print('--- AnalyticsProvider: Found ${querySnapshot.docs.length} nutrition documents in Firestore for this timeframe.');
+        print(
+            '--- AnalyticsProvider: Found ${querySnapshot.docs.length} nutrition documents in Firestore for this timeframe.');
       }
       return querySnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         if (data['timestamp'] is Timestamp) {
+          // ✅ --- THIS IS THE FIX ---
           data['timestamp'] =
-              (data['timestamp'] as Timestamp).toDate().toIso8601String();
+              (data['timestamp'] as Timestamp).toDate().toIso8601String(); // Was .toIso8061String()
+          // --- END OF FIX ---
         }
         data['id'] = doc.id;
         return data;
       }).toList();
     } catch (e) {
       debugPrint('Error getting tracker entries for $trackerId: $e');
-      // Return empty list on error
       if (trackerId == 'nutrition') {
-        debugPrint("COULD NOT FIND 'nutrition' ENTRIES. MAKE SURE YOU ARE SAVING FOOD LOGS TO FIRESTORE: /users/<uid>/tracking/nutrition/entries");
+        debugPrint(
+            "COULD NOT FIND 'nutrition' ENTRIES. MAKE SURE YOU ARE SAVING FOOD LOGS TO FIRESTORE: /users/<uid>/tracking/nutrition/entries");
       }
       return [];
     }
   }
-
   String _getTrackerIdFromName(String trackerName) {
     final Map<String, String> trackerMap = {
       'Sleep Tracker': 'sleep',
@@ -1463,7 +1443,8 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
     try {
       final startDate = _getTimeframeStartDate(timeframe);
       final nutritionEntries = await _getTrackerEntries('nutrition', startDate);
-      print('--- AnalyticsProvider: Processing ${nutritionEntries.length} nutrition entries for getNutritionData.');
+      print(
+          '--- AnalyticsProvider: Processing ${nutritionEntries.length} nutrition entries for getNutritionData.');
 
       double totalCalories = 0;
       double totalProtein = 0;
@@ -1496,8 +1477,10 @@ Keep the tone supportive, educational, and medically appropriate. Focus on actio
           final date = timestamp.toIso8601String().split('T')[0];
 
           // Initialize the map for the day if it doesn't exist
-          dailyMacroGrams.putIfAbsent(date,
-                  () => {'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0});
+          dailyMacroGrams.putIfAbsent(
+              date,
+                  () =>
+              {'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0});
 
           // Add grams to the correct macro category
           dailyMacroGrams[date]!['protein'] =
@@ -1990,6 +1973,24 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
                         children: [
                           // NEW: Grid lines
                           _buildGridLines(chartMaxValue, isDark),
+
+                          // ✅ --- ADDED X AND Y AXIS LINES ---
+                          // Y-Axis Line
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 24, // Space for X-axis labels
+                            child: Container(width: 1, color: Colors.black.withOpacity(0.5)),
+                          ),
+                          // X-Axis Line
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 24, // Space for X-axis labels
+                            child: Container(height: 1, color: Colors.black.withOpacity(0.5)),
+                          ),
+                          // --- END OF FIX ---
+
                           // The bars
                           _buildWeeklyChart(
                             days: days,
@@ -2015,6 +2016,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ),
     );
   }
+
   // --- ADD THIS NEW WIDGET ---
   Widget _buildGridLines(double chartMaxValue, bool isDark) {
     const double chartHeight = 80.0;
@@ -2033,8 +2035,10 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
 
     double increment = 1000;
-    if (chartMaxValue < 100) increment = 25;
-    else if (chartMaxValue < 500) increment = 100;
+    if (chartMaxValue < 100)
+      increment = 25;
+    else if (chartMaxValue < 500)
+      increment = 100;
     else if (chartMaxValue < 2000) increment = 500;
 
     for (double i = increment; i <= chartMaxValue; i += increment) {
@@ -2054,7 +2058,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     lines.add(
       Positioned(
         bottom: barBottom,
-        top: 120 - (chartHeight + barBottom), // 120 (total) - 80 (bar) - 24 (text)
+        top: 120 -
+            (chartHeight + barBottom), // 120 (total) - 80 (bar) - 24 (text)
         left: 0,
         right: 0,
         child: Row(
@@ -2074,7 +2079,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
 
     return Stack(children: lines);
   }
-// --- ADD THIS NEW WIDGET ---
+
+  // --- ADD THIS NEW WIDGET ---
   // --- REPLACE THIS WIDGET ---
   Widget _buildYAxis(double chartMaxValue, bool isDark) {
     const double chartHeight = 80.0;
@@ -2099,15 +2105,18 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
     );
 
     double increment = 1000;
-    if (chartMaxValue < 100) increment = 25;
-    else if (chartMaxValue < 500) increment = 100;
+    if (chartMaxValue < 100)
+      increment = 25;
+    else if (chartMaxValue < 500)
+      increment = 100;
     else if (chartMaxValue < 2000) increment = 500;
 
     for (double i = increment; i <= chartMaxValue; i += increment) {
       // Calculate position relative to the bar's height
       double bottom = ((i / chartMaxValue) * chartHeight) + bottomPadding;
 
-      if (bottom > (chartHeight + bottomPadding) || bottom < (bottomPadding + 15)) continue;
+      if (bottom > (chartHeight + bottomPadding) ||
+          bottom < (bottomPadding + 15)) continue;
 
       labels.add(
         Positioned(
@@ -2132,6 +2141,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ),
     );
   }
+
   Widget _buildLegend(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -2250,6 +2260,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ),
     );
   }
+
   Widget _buildDayColumn(String day, Map<String, double> dayMacros,
       double totalValue, bool isDark, double chartMaxValue) {
     const double chartHeight = 80.0; // Max height of the bar itself
@@ -2327,6 +2338,7 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       ],
     );
   }
+
   Widget _buildNoNutritionData(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -2452,6 +2464,8 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
                         Flexible(
                           child: Text(
                             tracker,
+                            // ✅ --- RESPONSIVE FIX ---
+                            softWrap: true,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -2626,8 +2640,9 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       List<dynamic> lastWeekData,
       bool isDark,
       ) {
-    final maxY =
-    [thisWeekData.length, lastWeekData.length, 10].reduce((a, b) => a > b ? a : b).toDouble();
+    final maxY = [thisWeekData.length, lastWeekData.length, 10]
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble();
 
     return Container(
       height: 100,
@@ -2712,12 +2727,15 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
         children: [
           Row(
             children: [
-              Text(
-                'Select Trackers to Compare',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(isDark),
+              // ✅ --- RESPONSIVE FIX ---
+              Flexible(
+                child: Text(
+                  'Select Trackers to Compare',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(isDark),
+                  ),
                 ),
               ),
               const Spacer(),
@@ -3010,22 +3028,21 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment:
-            CrossAxisAlignment.start, // Aligns chip to top
+          // ✅ --- RESPONSIVE FIX: Changed Row to Wrap ---
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 8.0, // Adds space if the chip wraps
             children: [
-              Expanded(
-                child: Text(
-                  '${correlation['tracker1']} ↔ ${correlation['tracker2']}',
-                  softWrap: true, // <-- FIX: Allows text to wrap
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary(isDark),
-                  ),
+              Text(
+                '${correlation['tracker1']} ↔ ${correlation['tracker2']}',
+                softWrap: true,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(isDark),
                 ),
               ),
-              const SizedBox(width: 8), // Adds spacing
               _buildDetailChip(
                 strength,
                 strengthIcon,
@@ -3050,12 +3067,15 @@ class _ProgressOverviewPageState extends State<ProgressOverviewPage> {
                 isPositive ? Icons.arrow_upward : Icons.arrow_downward,
                 isDark,
               ),
-              const Spacer(),
-              Text(
-                '$dataPoints data points',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary(isDark),
+              // ✅ --- RESPONSIVE FIX: Replaced Spacer with Flexible Text ---
+              Flexible(
+                child: Text(
+                  '$dataPoints data points',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary(isDark),
+                  ),
                 ),
               ),
             ],

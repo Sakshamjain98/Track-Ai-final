@@ -19,13 +19,14 @@ import 'package:trackai/features/admin/admin_panel_screen.dart';
 import 'package:trackai/features/announcements/announcements_page.dart';
 
 // Ensure correct relative paths based on your project structure
-import '../../features/analytics/screens/WhLib/DailyDetailsScreen.dart';
-import '../../features/analytics/screens/WhLib/LogActivityScreen.dart';
-import '../../features/analytics/screens/WhLib/LogMoodScreen.dart';
-import '../../features/analytics/screens/WhLib/LogNotesScreen.dart';
-import '../../features/analytics/screens/WhLib/LogPeriodScreen.dart';
-import '../../features/analytics/screens/WhLib/LogSymptomsScreen.dart';
-import '../../features/analytics/screens/WhLib/period_cycle.dart';
+import '../../features/analytics/screens/CycleOS/DailyDetailsScreen.dart';
+import '../../features/analytics/screens/CycleOS/LogActivityScreen.dart';
+import '../../features/analytics/screens/CycleOS/LogMoodScreen.dart';
+import '../../features/analytics/screens/CycleOS/LogNotesScreen.dart';
+import '../../features/analytics/screens/CycleOS/LogPeriodScreen.dart';
+import '../../features/analytics/screens/CycleOS/LogSymptomsScreen.dart';
+import '../../features/analytics/screens/CycleOS/period_cycle.dart';
+
 import '../../feedback/presentation/feedback_screen.dart';
 
 class AppRoutes {

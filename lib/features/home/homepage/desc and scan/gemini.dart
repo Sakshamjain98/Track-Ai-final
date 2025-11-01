@@ -66,15 +66,11 @@ OR
     }
   }
 
-  // --- FUNCTION 2 (STEP 2) ---
-  // This prompt is now from 'calculate-nutrition-from-ingredients.ts'
-  // It ONLY returns nutrition data.
+
   Future<String> describeFoodFromIngredients(
       List<Map<String, dynamic>> ingredients) async {
     try {
-      // Create the ingredient list string for the prompt
-      // IMPORTANT: Your app uses 'weight_g', but the web AI prompt expects 'weightGrams'.
-      // We must check for both to be safe, but we'll send 'weightGrams' in the prompt text.
+
       final ingredientListString = ingredients
           .map((ing) {
         final weight = ing['weightGrams'] ?? ing['weight_g'] ?? 0;
@@ -277,7 +273,6 @@ You MUST respond with ONLY a valid JSON object in this EXACT format:
     }
   }
 
-  // --- Your existing function (unchanged) ---
   Future<String> analyzeNutritionLabel(File imageFile) async {
     try {
       final imageBytes = await imageFile.readAsBytes();
