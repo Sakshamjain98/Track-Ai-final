@@ -3,11 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
+import 'package:trackai/features/admin/services/ManageReviewersScreen.dart';
+import 'package:trackai/features/admin/services/PublishArticleScreen.dart';
 import 'package:trackai/features/auth/views/login_page.dart';
 import 'package:trackai/features/admin/announcement_management_screen.dart';
 import 'package:trackai/features/home/ai-options/recipeGenerator.dart';
 
 import '../recipes/presentation/admin_recipe_upload_screen.dart';
+
 
 class AdminPanelScreen extends StatelessWidget {
   const AdminPanelScreen({Key? key}) : super(key: key);
@@ -62,7 +65,7 @@ class AdminPanelScreen extends StatelessWidget {
               gradient: AppColors.backgroundLinearGradient(isDarkTheme),
             ),
             child: Center(
-              child: Padding(
+              child: SingleChildScrollView( // Added SingleChildScrollView
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -85,9 +88,9 @@ class AdminPanelScreen extends StatelessWidget {
                         color: AppColors.primary(isDarkTheme),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Welcome Message
                     Text(
                       'This is Admin Panel',
@@ -98,9 +101,9 @@ class AdminPanelScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Admin Details Card
                     Container(
                       width: double.infinity,
@@ -241,25 +244,22 @@ class AdminPanelScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
+
+
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              // TODO: Add user management functionality
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('User management coming soon!'),
-                                  backgroundColor: isDarkTheme ? AppColors.white : AppColors.black,
-                                ),
-                              );
+                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (builder)=> ManageReviewersScreen()));
                             },
                             icon: Icon(
                               Icons.people,
                               color: isDarkTheme ? AppColors.white : AppColors.black,
                             ),
                             label: Text(
-                              'Users',
+                              'Add Reviewers',
                               style: TextStyle(
                                 color: isDarkTheme ? AppColors.white : AppColors.black,
                                 fontWeight: FontWeight.w600,
@@ -281,19 +281,14 @@ class AdminPanelScreen extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Analytics coming soon!'),
-                                  backgroundColor: isDarkTheme ? AppColors.white : AppColors.black,
-                                ),
-                              );
+                             Navigator.pushReplacement(context, MaterialPageRoute(builder: (builder)=>PublishArticleScreen()));
                             },
                             icon: Icon(
                               Icons.analytics,
                               color: isDarkTheme ? AppColors.white : AppColors.black,
                             ),
                             label: Text(
-                              'Analytics',
+                              'Publish articles',
                               style: TextStyle(
                                 color: isDarkTheme ? AppColors.white : AppColors.black,
                                 fontWeight: FontWeight.w600,
@@ -359,12 +354,12 @@ class AdminPanelScreen extends StatelessWidget {
       if (user != null) {
         await FirebaseAuth.instance.signOut();
       }
-      
+
       // Navigate back to login page for both Firebase and offline admin
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
-          (route) => false,
+              (route) => false,
         );
       }
     } catch (e) {
@@ -379,3 +374,4 @@ class AdminPanelScreen extends StatelessWidget {
     }
   }
 }
+

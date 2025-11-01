@@ -549,73 +549,123 @@ Ensure all outputs are numbers (use floating point numbers where appropriate, e.
 ''';
 
   }
-
+  static String _mapWorkoutFrequencyToActivityLevel(String workoutFrequency) {
+    // NOTE: You must adjust these values to match your
+    // 'workoutFrequency' options from your onboarding flow.
+    switch (workoutFrequency.toLowerCase()) {
+      case '0-2 workouts/week': // Example
+        return 'light';
+      case '3-5 workouts/week': // Example
+        return 'moderate';
+      case '6+ workouts/week': // Example
+        return 'active';
+      default:
+        return 'light'; // Default fallback
+    }
+  }
   static String _createNutritionPrompt(Map data, int? age, double? bmi) {
-    // These values are now correct because onboardingflow.dart is fixed
-    final isMetric = data['isMetric'] ?? false;
+    final String activityLevel = _mapWorkoutFrequencyToActivityLevel(
+      data['workoutFrequency'] ?? 'light',
+    );
+
     final double weight = (data['weightKg'] ?? 70).toDouble();
     final double height = (data['heightCm'] ?? 170).toDouble();
+    final String gender = data['gender'] ?? 'other';
+    final String goal = data['goal'] ?? 'maintenance';
 
-    // These are the new, correct variables from your flow
-    final targetAmount = data['targetAmount']; // This is in KG
-    final targetTimeframe = data['targetTimeframe']; // This is in weeks
+    // --- 2. Target Logic (Matches web logic) ---
+    dynamic targetAmount = data['targetAmount']; // This is in KG
+    dynamic targetTimeframe = data['targetTimeframe']; // This is in weeks
 
-    // Determine target weight for the prompt
-    double? targetWeightInKg;
-    if (data['goal'] == 'lose_weight' && targetAmount != null) {
-      targetWeightInKg = weight - targetAmount;
-    } else if (data['goal'] == 'gain_weight' && targetAmount != null) {
-      targetWeightInKg = weight + targetAmount;
+    // Ensure types are correct, converting from dynamic
+    final double? targetWeightChangeKg = (targetAmount is num) ? targetAmount.toDouble() : null;
+    final int? timeFrameWeeks = (targetTimeframe is num) ? targetTimeframe.toInt() : null;
+
+    // It ensures weight loss is negative and gain is positive for the prompt.
+    double? finalTargetChangeKg = targetWeightChangeKg;
+    if (goal == 'weight_loss' && targetWeightChangeKg != null && targetWeightChangeKg > 0) {
+      finalTargetChangeKg = -targetWeightChangeKg;
+    } else if (goal == 'weight_gain' && targetWeightChangeKg != null && targetWeightChangeKg < 0) {
+      finalTargetChangeKg = -targetWeightChangeKg;
     }
 
     return '''
-Calculate daily nutrition goals for a person with these details:
+You are an expert nutritionist. Calculate the personalized daily macronutrient recommendations based on the following user details.
+Use the Mifflin-St Jeor equation for Basal Metabolic Rate (BMR):
+BMR (kcal/day) = 10 * weight (kg) + 6.25 * height (cm) - 5 * age (years) + s
+where s is +5 for males and -161 for females. For 'other' gender, use an average (e.g., -78).
 
-Personal Information:
+Then, calculate Total Daily Energy Expenditure (TDEE) by multiplying BMR by an activity factor:
+- Light: 1.375
+- Moderate: 1.55
+- Active: 1.725
+
+Adjust TDEE for the goal:
+- Maintenance: TDEE
+- Weight Loss or Weight Gain:
+  ${(finalTargetChangeKg != null) ? '''
+  ${(timeFrameWeeks != null) ? '''
+  A target weight change of $finalTargetChangeKg kg over $timeFrameWeeks weeks is specified.
+  Calculate the required daily calorie deficit or surplus: ($finalTargetChangeKg * 7700 kcal) / ($timeFrameWeeks * 7 days).
+  Adjust TDEE by this daily amount to get the target calories.
+  Comment on the safety and feasibility of this rate. A sustainable rate is typically 0.5-1 kg/week for loss, and 0.25-0.5 kg/week for gain. If the calculated rate is too aggressive, advise the user and suggest a more moderate calorie adjustment (e.g., +/- 300-500 kcal from TDEE).
+  ''' : '''
+  Target weight change is specified but no timeframe. Use a default deficit/surplus of 500 kcal from TDEE. For weight loss, TDEE - 500 kcal. For weight gain, TDEE + 500 kcal.
+  '''}
+  ''' : '''
+  No specific target weight change or timeframe provided for weight loss/gain. Use a default deficit/surplus of 500 kcal from TDEE. For weight loss, TDEE - 500 kcal. For weight gain, TDEE + 500 kcal.
+  '''}
+  Ensure the calorie target is not excessively low (e.g., below BMR or 1200 kcal for women / 1500 kcal for men).
+
+Calculate macronutrients based on the final target daily calories:
+- Protein: 1.8g per kg of body weight. (This is a consistent value within the web's 1.6-2.2g/kg range).
+- Fat: 25% of total target calories. (This is a consistent value within the web's 20-35% range).
+- Carbohydrates: Remainder of calories.
+- Fiber: 14 grams per 1000 calories.
+(1g Protein = 4 kcal, 1g Carb = 4 kcal, 1g Fat = 9 kcal)
+
+Provide the calculated calories, protein, carbs, fat, and fiber.
+Also, provide a simple, friendly explanation with markdown bolding for titles:
+
+**Your Daily Energy Needs:**
+- Explain BMR and state the calculated value.
+- Explain TDEE and state the calculated value.
+
+**Your Calorie Goal:**
+- State the final target daily calories.
+- Explain the deficit or surplus.
+
+**Your Custom Macro Plan:**
+- Briefly explain how macros were calculated.
+
+**Goal Feasibility (if applicable):**
+${(finalTargetChangeKg != null && timeFrameWeeks != null) ? '''
+- Comment on the safety and feasibility of their goal rate.
+''' : ''}
+
+AVOID using complex jargon or restating mathematical formulas.
+
+User Details:
 - Age: ${age ?? 'Unknown'} years
-- Gender: ${data['gender'] ?? 'Unknown'}
-- Height: ${height.toStringAsFixed(1)} cm
+- Gender: $gender
 - Weight: ${weight.toStringAsFixed(1)} kg
-- BMI: ${bmi?.toStringAsFixed(1) ?? 'Unknown'}
+- Height: ${height.toStringAsFixed(1)} cm
+- Activity Level: $activityLevel
+- Goal: $goal
+${(finalTargetChangeKg != null) ? '- Target Weight Change: $finalTargetChangeKg kg' : ''}
+${(timeFrameWeeks != null) ? '- Timeframe: $timeFrameWeeks weeks' : ''}
 
-Fitness Information:
-- Workout Frequency: ${data['workoutFrequency'] ?? 'Unknown'}
-- Primary Goal: ${data['goal'] ?? 'Unknown'}
-- Diet Preference: ${data['dietPreference'] ?? 'Unknown'}
-
-Target:
-- Goal: ${data['goal'] ?? 'Unknown'}
-${targetAmount != null ? '- Target Amount: $targetAmount kg' : ''}
-${targetTimeframe != null ? '- Timeframe: $targetTimeframe weeks' : ''}
-${targetWeightInKg != null ? '- Calculated Target Weight: ${targetWeightInKg.toStringAsFixed(1)} kg' : ''}
-
-
-IMPORTANT GUIDELINES:
-- For WEIGHT LOSS: Use 20% calorie deficit from TDEE, prioritize protein (2.2g/kg bodyweight)
-- For WEIGHT GAIN: Use 10% calorie surplus from TDEE, moderate protein (2.0g/kg bodyweight)
-- For MAINTENANCE: Use TDEE calories, balanced protein (1.8g/kg bodyweight)
-
-Please calculate and return ONLY a JSON response with these exact fields:
-"calories": [daily calorie target as integer - ensure appropriate deficit/surplus],
-"protein": [daily protein in grams as integer - based on bodyweight],
-"carbs": [daily carbs in grams as integer - fill remaining calories after protein/fat],
-"fat": [daily fat in grams as integer - around 25% of calories],
-"fiber": [daily fiber in grams as integer - 14g per 1000 calories],
-"bmr": [basal metabolic rate as integer - Harris Benedict],
-"tdee": [total daily energy expenditure as integer - BMR × activity factor],
-"explanation": "[brief explanation of how these macros support their specific goal]"
-
-Base calculations on:
-- Harris-Benedict equation for BMR
-- Activity level from workout frequency
-- Appropriate calorie deficit/surplus for goal
-- Protein based on bodyweight and goal
-- Fat around 25% of calories
-- Carbs fill remaining calories
-Return ONLY the JSON, no other text.
+Output the results strictly in the JSON format you were trained on, with these exact fields:
+"calories": [integer],
+"protein": [integer],
+"carbs": [integer],
+"fat": [integer],
+"fiber": [integer],
+"bmr": [integer],
+"tdee": [integer],
+"explanation": "[string explanation]"
 ''';
   }
-
   static Map<String, dynamic>? _parseGeminiResponse(String content) {
     try {
       // The content should be a clean JSON string if responseMimeType works

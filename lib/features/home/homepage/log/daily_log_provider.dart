@@ -1,11 +1,10 @@
 // lib/features/home/providers/daily_log_provider.dart
 
-import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 
-import 'food_log_entry.dart'; // Add intl: ^0.18.1 to pubspec.yaml
+import 'food_log_entry.dart';
 
 class DailyLogProvider with ChangeNotifier {
   List<FoodLogEntry> _entries = [];
@@ -17,80 +16,114 @@ class DailyLogProvider with ChangeNotifier {
     'fiber': 0,
   };
 
-  static const String _logKey = 'daily_log';
-  static const String _dateKey = 'log_date';
-
   List<FoodLogEntry> get entries => _entries;
   Map<String, num> get consumedTotals => _consumedTotals;
 
-  DailyLogProvider() {
-    _loadLog(); // Load log when the app starts
-  }
+  // Constructor is now empty.
+  // We will load data from the Homescreen's initState.
+  DailyLogProvider();
 
-  // This is the daily reset logic
-  Future<void> checkDailyReset() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final savedDate = prefs.getString(_dateKey);
-
-    if (savedDate != today) {
-      // It's a new day! Clear the log.
-      await _clearLog(prefs, today);
-    } else {
-      // It's the same day, just load the log
-      _loadLog();
-    }
-  }
-
-  Future<void> _loadLog() async {
-    final prefs = await SharedPreferences.getInstance();
-    final logString = prefs.getString(_logKey);
-
-    if (logString != null) {
-      final List<dynamic> logData = json.decode(logString);
-      _entries = logData.map((item) => FoodLogEntry.fromJson(item)).toList();
-    } else {
-      _entries = [];
-    }
-    _recalculateTotals();
-    notifyListeners();
-  }
+  // REMOVED: checkDailyReset()
+  // REMOVED: _loadLog()
 
   Future<void> addEntry(FoodLogEntry entry) async {
-    _entries.insert(0, entry); // Add new item to the top
-    _recalculateTotals();
-    await _saveLog();
-    notifyListeners();
-  }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // Not logged in
 
-  void _recalculateTotals() {
-    _consumedTotals = {
-      'calories': 0,
-      'protein': 0,
-      'carbs': 0,
-      'fat': 0,
-      'fiber': 0,
-    };
-    for (var entry in _entries) {
-      _consumedTotals['calories'] = _consumedTotals['calories']! + entry.calories;
-      _consumedTotals['protein'] = _consumedTotals['protein']! + entry.protein;
-      _consumedTotals['carbs'] = _consumedTotals['carbs']! + entry.carbs;
-      _consumedTotals['fat'] = _consumedTotals['fat']! + entry.fat;
-      _consumedTotals['fiber'] = _consumedTotals['fiber']! + entry.fiber;
+    try {
+      // --- FIX: Add directly to Firestore ---
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('tracking')
+          .doc('nutrition')
+          .collection('entries')
+          .doc(entry.id) // Use the entry's ID as the document ID
+          .set(entry.toMap()); // Use the new toMap() method
+
+      _entries.insert(0, entry); // Add to local list
+      _recalculateTotals(); // Update local totals
+      notifyListeners();
+    } catch (e) {
+      print("Error adding entry to Firestore: $e");
+      // Optionally re-throw or show a user-facing error
     }
   }
 
-  Future<void> _saveLog() async {
-    final prefs = await SharedPreferences.getInstance();
-    final logString = json.encode(_entries.map((e) => e.toJson()).toList());
-    await prefs.setString(_logKey, logString);
+  // Renamed from _calculateTotals to _recalculateTotals for clarity
+  void _recalculateTotals() {
+    _consumedTotals = {
+      'calories': 0.0,
+      'protein': 0.0,
+      'carbs': 0.0,
+      'fat': 0.0,
+      'fiber': 0.0,
+    };
+
+    // Sum all entries
+    for (final entry in _entries) {
+      _consumedTotals['calories'] = (_consumedTotals['calories'] ?? 0) + entry.calories;
+      _consumedTotals['protein'] = (_consumedTotals['protein'] ?? 0) + entry.protein;
+      _consumedTotals['carbs'] = (_consumedTotals['carbs'] ?? 0) + entry.carbs;
+      _consumedTotals['fat'] = (_consumedTotals['fat'] ?? 0) + entry.fat;
+      _consumedTotals['fiber'] = (_consumedTotals['fiber'] ?? 0) + entry.fiber;
+    }
   }
 
-  Future<void> _clearLog(SharedPreferences prefs, String today) async {
-    _entries = [];
-    _recalculateTotals();
-    await prefs.remove(_logKey);
-    await prefs.setString(_dateKey, today); // Set the new date
+  // This function is still needed for logout
+  void clearLog() {
+    _entries.clear();
+    _consumedTotals = {
+      'calories': 0.0,
+      'protein': 0.0,
+      'carbs': 0.0,
+      'fat': 0.0,
+      'fiber': 0.0,
+    };
     notifyListeners();
   }
+
+  // This function is now the ONLY way to load data
+  Future<void> loadEntriesForDate(DateTime date) async {
+    // --- 1. CRITICAL: Clear old data first ---
+    clearLog();
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // Not logged in
+
+    try {
+      // --- 2. Define date range for the query ---
+      DateTime startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      DateTime endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      // --- 3. Fetch data from Firestore ---
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('tracking')
+          .doc('nutrition')
+          .collection('entries')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      // --- 4. Process and add entries ---
+      final List<FoodLogEntry> loadedEntries = [];
+      for (var doc in querySnapshot.docs) {
+        // --- FIX: Use fromMap ---
+        loadedEntries.add(FoodLogEntry.fromMap(doc.data()));
+      }
+
+      _entries = loadedEntries;
+      _recalculateTotals(); // Re-calculate totals based on loaded entries
+    } catch (e) {
+      print("Error loading log entries: $e");
+    } finally {
+      notifyListeners();
+    }
+  }
+
+// REMOVED: _saveLog()
+// REMOVED: _clearLog(SharedPreferences prefs, String today)
 }

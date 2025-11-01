@@ -82,7 +82,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    context.read<DailyLogProvider>().checkDailyReset();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Load the log for the current user and today's date
+        Provider.of<DailyLogProvider>(context, listen: false)
+            .loadEntriesForDate(DateTime.now());
+      }
+    });
     _pages = [
       const Homescreen(),
       const Trackerscreen(),
@@ -314,6 +320,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _handleLogout() async {
     try {
+      context.read<DailyLogProvider>().clearLog();
       await FirebaseService.signOut();
     } catch (e) {
       if (mounted) {

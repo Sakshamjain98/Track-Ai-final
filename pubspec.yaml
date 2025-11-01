@@ -39,8 +39,11 @@ dependencies:
   cupertino_icons:
   firebase_core:
   cloud_firestore:
+  flutter_markdown:
+  url_launcher:
   google_sign_in:
   firebase_auth:
+  table_calendar:
   provider:
   shared_preferences:
   font_awesome_flutter:

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:trackai/core/constants/appcolors.dart'; // Assuming AppColors handles basic black/white based on theme
+import 'package:trackai/core/constants/appcolors.dart';
 import 'package:trackai/core/themes/theme_provider.dart';
 import 'package:trackai/features/recipes/presentation/recipe_library_screen.dart';
 import '../../features/analytics/screens/WhLib/period_cycle.dart';
-import '../../features/recipes/presentation/ReadMeWhenFreeScreen.dart';
-
 
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({Key? key}) : super(key: key);
@@ -14,7 +12,6 @@ class LibraryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        // Use simple black/white based on theme
         final bool isDarkTheme = themeProvider.isDarkMode;
         final Color backgroundColor = isDarkTheme ? Colors.black : Colors.white;
         final Color primaryTextColor = isDarkTheme ? Colors.white : Colors.black;
@@ -22,8 +19,6 @@ class LibraryScreen extends StatelessWidget {
         final Color cardBackgroundColor = isDarkTheme ? Colors.grey[900]! : Colors.grey[100]!;
         final Color borderColor = isDarkTheme ? Colors.grey[700]! : Colors.grey[300]!;
         final Color iconContainerColor = isDarkTheme ? Colors.grey[800]! : Colors.grey[200]!;
-        final Color iconColor = isDarkTheme ? Colors.white70 : Colors.black87;
-
 
         final screenWidth = MediaQuery.of(context).size.width;
         final screenHeight = MediaQuery.of(context).size.height;
@@ -32,7 +27,7 @@ class LibraryScreen extends StatelessWidget {
           backgroundColor: backgroundColor,
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(screenWidth * 0.06), // Responsive padding
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -40,9 +35,9 @@ class LibraryScreen extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(screenWidth * 0.03),
                         decoration: BoxDecoration(
-                          color: iconContainerColor, // Simple background
+                          color: iconContainerColor,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: borderColor,
@@ -51,109 +46,108 @@ class LibraryScreen extends StatelessWidget {
                         ),
                         child: Icon(
                           Icons.library_books,
-                          color: primaryTextColor, // Black/White icon
-                          size: 28,
+                          color: primaryTextColor,
+                          size: screenWidth * 0.07, // Responsive icon size
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: screenWidth * 0.04),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Library',
-                              style: TextStyle(
-                                color: primaryTextColor,
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            // REMOVED: "Your personal collection..." text
-                          ],
+                        child: Text(
+                          'Library',
+                          style: TextStyle(
+                            color: primaryTextColor,
+                            fontSize: screenWidth * 0.07, // Responsive font size
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
                     ],
                   ),
 
-                  const SizedBox(height: 32),
+                  SizedBox(height: screenHeight * 0.04),
 
-                  // First Row - Recipe Library & Workouts Library
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start, // Align tops
-                    children: [
-                      Expanded(
-                        child: _buildLibraryCard(
-                          context,
-                          'Recipe Library',
-                          'Browse delicious cooking guides and recipes.',
-                          Icons.restaurant_menu_outlined,
-                          primaryTextColor, // Use primary text color for icon
-                          isDarkTheme,
-                          cardBackgroundColor,
-                          borderColor,
-                          primaryTextColor,
-                          secondaryTextColor,
-                          iconContainerColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const RecipeLibraryScreen(),
-                              ),
-                            );
-                          },
+                  // First Row - Recipe Library & Workouts Library with Equal Heights
+                  IntrinsicHeight( // This ensures equal heights
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _buildLibraryCard(
+                            context,
+                            'Recipe Library',
+                            'Browse delicious cooking guides and recipes.',
+                            Icons.restaurant_menu_outlined,
+                            primaryTextColor,
+                            isDarkTheme,
+                            cardBackgroundColor,
+                            borderColor,
+                            primaryTextColor,
+                            secondaryTextColor,
+                            iconContainerColor,
+                            screenWidth,
+                            screenHeight,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const RecipeLibraryScreen(),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildLibraryCard(
-                          context,
-                          'Workouts Library',
-                          'Access workout guide videos.',
-                          Icons.fitness_center_outlined,
-                          primaryTextColor, // Use primary text color for icon
-                          isDarkTheme,
-                          cardBackgroundColor,
-                          borderColor,
-                          primaryTextColor,
-                          secondaryTextColor,
-                          iconContainerColor,
-                          onTap: () => _showComingSoon(context, isDarkTheme),
+                        SizedBox(width: screenWidth * 0.04),
+                        Expanded(
+                          child: _buildLibraryCard(
+                            context,
+                            'Workouts Library',
+                            'Access workout guide videos.',
+                            Icons.fitness_center_outlined,
+                            primaryTextColor,
+                            isDarkTheme,
+                            cardBackgroundColor,
+                            borderColor,
+                            primaryTextColor,
+                            secondaryTextColor,
+                            iconContainerColor,
+                            screenWidth,
+                            screenHeight,
+                            onTap: () => _showComingSoon(context, isDarkTheme),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 16),
+                  SizedBox(height: screenHeight * 0.02),
 
-                  // MODIFIED: Second Row is now just the full-width Period Cycle card
+                  // Full-width Period Cycle card
                   _buildLibraryCard(
                     context,
                     'Period Cycle',
                     'Track your menstrual cycle and health insights.',
                     Icons.favorite_outline,
-                    primaryTextColor, // This is the default icon color
+                    primaryTextColor,
                     isDarkTheme,
                     cardBackgroundColor,
                     borderColor,
                     primaryTextColor,
                     secondaryTextColor,
                     iconContainerColor,
-                    isNew: true, // This will now trigger the NEW pink styling
+                    screenWidth,
+                    screenHeight,
+                    isNew: true,
                     isFullWidth: true,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const PeriodDashboard(),
+                          builder: (context) => MainNavigationScreen(),
                         ),
                       );
                     },
                   ),
-
-                  // REMOVED: "Read Me When Free" Card
-
                 ],
               ),
             ),
@@ -163,47 +157,40 @@ class LibraryScreen extends StatelessWidget {
     );
   }
 
-  // --- WIDGET MODIFIED ---
-  // This function now includes the 'isNew' styling from your first file
   Widget _buildLibraryCard(
       BuildContext context,
       String title,
       String description,
       IconData icon,
-      Color iconColor, // Pass the decided icon color (black/white)
+      Color iconColor,
       bool isDarkTheme,
       Color cardBackgroundColor,
       Color borderColor,
       Color primaryTextColor,
       Color secondaryTextColor,
       Color iconContainerColor,
-      {
+      double screenWidth,
+      double screenHeight, {
         bool isFullWidth = false,
         bool isBeta = false,
         bool isNew = false,
         required VoidCallback onTap,
       }) {
-
-    // Define badge colors based on theme
     final Color badgeBgColor = isDarkTheme ? Colors.white : Colors.black;
     final Color badgeTextColor = isDarkTheme ? Colors.black : Colors.white;
     final Color betaBadgeBgColor = isDarkTheme ? Colors.grey[800]! : Colors.grey[300]!;
     final Color betaBadgeTextColor = isDarkTheme ? Colors.grey[400]! : Colors.grey[700]!;
-
-    // The "New" border color is now pink
     final Color newBorderColor = isDarkTheme ? Colors.pinkAccent[100]! : Colors.pinkAccent;
 
-
-    // --- NEW LOGIC from your first file ---
-    // Define final colors/decorations based on 'isNew'
+    // Define colors/decorations based on 'isNew'
     final Color finalIconColor;
     final Decoration finalIconContainerDecoration;
     final Decoration finalNewBadgeDecoration;
 
     if (isNew) {
-      finalIconColor = Colors.white; // Icon is white on pink bg
+      finalIconColor = Colors.white;
       finalIconContainerDecoration = BoxDecoration(
-        gradient: LinearGradient( // Pink gradient bg for icon
+        gradient: LinearGradient(
           colors: [Colors.pink, Colors.pink.shade400],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -221,7 +208,7 @@ class LibraryScreen extends StatelessWidget {
           ),
         ],
       );
-      finalNewBadgeDecoration = BoxDecoration( // Pink gradient bg for badge
+      finalNewBadgeDecoration = BoxDecoration(
         gradient: LinearGradient(colors: [Colors.pink, Colors.pink.shade400]),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
@@ -233,9 +220,9 @@ class LibraryScreen extends StatelessWidget {
         ],
       );
     } else {
-      finalIconColor = iconColor; // Use the passed (black/white) color
+      finalIconColor = iconColor;
       finalIconContainerDecoration = BoxDecoration(
-        color: iconContainerColor, // Use the passed (grey) color
+        color: iconContainerColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: borderColor,
@@ -243,34 +230,30 @@ class LibraryScreen extends StatelessWidget {
         ),
       );
       finalNewBadgeDecoration = BoxDecoration(
-        color: badgeBgColor, // Black/White badge
+        color: badgeBgColor,
         borderRadius: BorderRadius.circular(12),
       );
     }
-    // --- END NEW LOGIC ---
-
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: isFullWidth ? double.infinity : null,
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(screenWidth * 0.05), // Responsive padding
         decoration: BoxDecoration(
-          color: cardBackgroundColor, // Simple background
+          color: cardBackgroundColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            // Will use newBorderColor (pink) if isNew is true
             color: isNew ? newBorderColor : borderColor,
-            width: isNew ? 1.5 : 1, // Slightly thicker border if new
+            width: isNew ? 1.5 : 1,
           ),
-          // Simplified shadow + new pink shadow
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(isDarkTheme ? 0.2 : 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
-            if (isNew) // Add pink glow from your first file
+            if (isNew)
               BoxShadow(
                 color: Colors.pink.withOpacity(0.2),
                 blurRadius: 10,
@@ -280,18 +263,19 @@ class LibraryScreen extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Important for IntrinsicHeight
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: finalIconContainerDecoration, // <-- USE NEW DECORATION
+                  padding: EdgeInsets.all(screenWidth * 0.03),
+                  decoration: finalIconContainerDecoration,
                   child: Icon(
                     icon,
-                    color: finalIconColor, // <-- USE NEW COLOR
-                    size: 24,
+                    color: finalIconColor,
+                    size: screenWidth * 0.06, // Responsive icon size
                   ),
                 ),
                 Row(
@@ -299,16 +283,16 @@ class LibraryScreen extends StatelessWidget {
                     if (isNew)
                       Container(
                         margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.02,
+                          vertical: screenHeight * 0.005,
                         ),
-                        decoration: finalNewBadgeDecoration, // <-- USE NEW DECORATION
+                        decoration: finalNewBadgeDecoration,
                         child: Text(
                           'New',
                           style: TextStyle(
-                            color: Colors.white, // <-- Text on pink is white
-                            fontSize: 10,
+                            color: Colors.white,
+                            fontSize: screenWidth * 0.025,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
                           ),
@@ -316,12 +300,12 @@ class LibraryScreen extends StatelessWidget {
                       ),
                     if (isBeta)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.02,
+                          vertical: screenHeight * 0.005,
                         ),
                         decoration: BoxDecoration(
-                          color: betaBadgeBgColor, // Greyish beta badge
+                          color: betaBadgeBgColor,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: borderColor,
@@ -332,7 +316,7 @@ class LibraryScreen extends StatelessWidget {
                           'Beta',
                           style: TextStyle(
                             color: betaBadgeTextColor,
-                            fontSize: 10,
+                            fontSize: screenWidth * 0.025,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
                           ),
@@ -342,23 +326,27 @@ class LibraryScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: screenHeight * 0.02),
             Text(
               title,
               style: TextStyle(
                 color: primaryTextColor,
-                fontSize: 18,
+                fontSize: screenWidth * 0.045, // Responsive font size
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.3,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: TextStyle(
-                color: secondaryTextColor,
-                fontSize: 14,
-                height: 1.4,
+            SizedBox(height: screenHeight * 0.01),
+            Flexible( // Allows text to wrap and fill available space
+              child: Text(
+                description,
+                style: TextStyle(
+                  color: secondaryTextColor,
+                  fontSize: screenWidth * 0.035, // Responsive font size
+                  height: 1.4,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -376,12 +364,12 @@ class LibraryScreen extends StatelessWidget {
         content: Row(
           children: [
             Icon(
-              Icons.info_outline, // Changed icon
+              Icons.info_outline,
               color: snackBarText.withOpacity(0.8),
               size: 20,
             ),
             const SizedBox(width: 12),
-            Expanded( // Ensure text wraps
+            Expanded(
               child: Text(
                 'Coming soon! Stay tuned for updates.',
                 style: TextStyle(
@@ -398,7 +386,7 @@ class LibraryScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        margin: const EdgeInsets.all(16), // Add margin
+        margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 2),
       ),
     );

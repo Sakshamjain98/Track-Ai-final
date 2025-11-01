@@ -641,7 +641,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
               },
               icon: const Icon(Icons.add_circle_outline, color: Colors.white),
               label: const Text(
-                  'Log 1 Serving',
+                  'Log this Serving',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
               ),
               style: ElevatedButton.styleFrom(
@@ -714,7 +714,7 @@ class _LabelAnalysisScreenState extends State<LabelAnalysisScreen> {
       child: Column(
         children: [
           Text(
-            'Calories per Serving',
+            'Total Calories ',
             style: TextStyle(
               // ✅ CHANGED: Light theme text
               color: Colors.grey[700],

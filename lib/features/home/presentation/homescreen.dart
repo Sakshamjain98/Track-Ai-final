@@ -386,7 +386,7 @@ class _HomescreenState extends State<Homescreen> {
                 progress: caloriesProgress,
                 size: screenWidth * 0.25,
                 icon: lucide.LucideIcons.flame,
-                color: Colors.cyan, // Your theme's calorie color
+                color: Colors.black, // Your theme's calorie color
               ),
             ],
           ),
@@ -717,7 +717,7 @@ class _HomescreenState extends State<Homescreen> {
             SizedBox(height: sh * 0.01),
             Row(
               children: [
-                Icon(lucide.LucideIcons.flame, color: Colors.cyan, size: sw * 0.045),
+                Icon(lucide.LucideIcons.flame, color: Colors.black, size: sw * 0.045),
                 SizedBox(width: sw * 0.01),
                 Text(
                   '${entry.calories} calories',

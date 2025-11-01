@@ -9,7 +9,7 @@ class FoodLogEntry {
   final int carbs;
   final int fat;
   final int fiber;
-  final DateTime timestamp; // Keep this as DateTime
+  final DateTime timestamp;
   final int? healthScore;
   final String? healthDescription;
   final String? imagePath;
@@ -28,36 +28,36 @@ class FoodLogEntry {
     this.healthDescription,
   });
 
-  // --- MODIFIED fromJson ---
-  factory FoodLogEntry.fromJson(Map<String, dynamic> json) {
+  // --- FIX 1: Renamed from 'fromJson' to 'fromMap' ---
+  factory FoodLogEntry.fromMap(Map<String, dynamic> map) {
     // Read the Timestamp from Firestore and convert to DateTime
     DateTime parsedTimestamp;
-    if (json['timestamp'] is Timestamp) {
-      parsedTimestamp = (json['timestamp'] as Timestamp).toDate();
-    } else if (json['timestamp'] is String) {
+    if (map['timestamp'] is Timestamp) {
+      parsedTimestamp = (map['timestamp'] as Timestamp).toDate();
+    } else if (map['timestamp'] is String) {
       // Fallback if it's somehow still saved as a string (e.g., old data)
-      parsedTimestamp = DateTime.tryParse(json['timestamp']) ?? DateTime.now();
+      parsedTimestamp = DateTime.tryParse(map['timestamp']) ?? DateTime.now();
     } else {
       parsedTimestamp = DateTime.now(); // Default fallback
     }
 
     return FoodLogEntry(
-      id: json['id'],
-      name: json['name'],
-      calories: json['calories'],
-      protein: json['protein'],
-      carbs: json['carbs'],
-      fat: json['fat'],
-      fiber: json['fiber'] ?? 0,
+      id: map['id'],
+      name: map['name'],
+      calories: map['calories'],
+      protein: map['protein'],
+      carbs: map['carbs'],
+      fat: map['fat'],
+      fiber: map['fiber'] ?? 0,
       timestamp: parsedTimestamp, // Use the parsed DateTime
-      healthScore: json['healthScore'] as int?,
-      healthDescription: json['healthDescription'] as String?,
-      imagePath: json['imagePath'] as String?,
+      healthScore: map['healthScore'] as int?,
+      healthDescription: map['healthDescription'] as String?,
+      imagePath: map['imagePath'] as String?,
     );
   }
 
-  // --- MODIFIED toJson ---
-  Map<String, dynamic> toJson() {
+  // --- FIX 2: Renamed to 'toMap' and saving as a Timestamp ---
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
@@ -66,8 +66,9 @@ class FoodLogEntry {
       'carbs': carbs,
       'fat': fat,
       'fiber': fiber,
-      // Save as Firestore Timestamp object
-      'timestamp': timestamp.toIso8601String(), // <-- FIX: Save as a String      'healthScore': healthScore,
+      // --- CRITICAL FIX: Save as a Firestore Timestamp object ---
+      'timestamp': Timestamp.fromDate(timestamp),
+      'healthScore': healthScore,
       'healthDescription': healthDescription,
       'imagePath': imagePath,
     };
